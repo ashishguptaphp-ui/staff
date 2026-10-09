@@ -38,6 +38,12 @@ Desktop.ini
 /dist/
 /config/Migrations/schema-dump-*.php
 /config/app_local.php
+# CakePHP DebugKit database
+/tmp/debug_kit.sqlite
+
+# Ignore all uploaded files
 /webroot/uploads/**
+
+# Keep directory placeholders, if needed
 !/webroot/uploads/**/
 !/webroot/uploads/**/.gitkeep
