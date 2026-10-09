@@ -573,6 +573,131 @@
         .form-group { margin: 10px 0; }
     </style>
 
+
+<style>
+/* The actual timeline (the vertical ruler) */
+.main-timeline {
+  position: relative;
+}
+
+/* The actual timeline (the vertical ruler) */
+.main-timeline::after {
+  content: "";
+  position: absolute;
+  width: 6px;
+  background-color: #939597;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  margin-left: -3px;
+}
+
+/* Container around content */
+.timeline {
+  position: relative;
+  background-color: inherit;
+  width: 50%;
+}
+
+/* The circles on the timeline */
+.timeline::after {
+  content: "";
+  position: absolute;
+  width: 25px;
+  height: 25px;
+  right: -13px;
+  background-color: #939597;
+  border: 5px solid #f5df4d;
+  top: 15px;
+  border-radius: 50%;
+  z-index: 1;
+}
+
+/* Place the container to the left */
+.left {
+  padding: 0px 40px 20px 0px;
+  left: 0;
+}
+
+/* Place the container to the right */
+.right {
+  padding: 0px 0px 20px 40px;
+  left: 50%;
+}
+
+/* Add arrows to the left container (pointing right) */
+.left::before {
+  content: " ";
+  position: absolute;
+  top: 18px;
+  z-index: 1;
+  right: 30px;
+  border: medium solid white;
+  border-width: 10px 0 10px 10px;
+  border-color: transparent transparent transparent white;
+}
+
+/* Add arrows to the right container (pointing left) */
+.right::before {
+  content: " ";
+  position: absolute;
+  top: 18px;
+  z-index: 1;
+  left: 30px;
+  border: medium solid white;
+  border-width: 10px 10px 10px 0;
+  border-color: transparent white transparent transparent;
+}
+
+/* Fix the circle for containers on the right side */
+.right::after {
+  left: -12px;
+}
+
+/* Media queries - Responsive timeline on screens less than 600px wide */
+@media screen and (max-width: 600px) {
+  /* Place the timelime to the left */
+  .main-timeline::after {
+    left: 31px;
+  }
+
+  /* Full-width containers */
+  .timeline {
+    width: 100%;
+    padding-left: 70px;
+    padding-right: 25px;
+  }
+
+  /* Make sure that all arrows are pointing leftwards */
+  .timeline::before {
+    left: 60px;
+    border: medium solid white;
+    border-width: 10px 10px 10px 0;
+    border-color: transparent white transparent transparent;
+  }
+
+  /* Make sure all circles are at the same spot */
+  .left::after,
+  .right::after {
+    left: 18px;
+  }
+
+  .left::before {
+    right: auto;
+  }
+
+  /* Make all right containers behave like the left ones */
+  .right {
+    left: 0%;
+  }
+}
+
+.d-none {
+    display: none !important;
+}
+
+</style>
+
 <h5 style="margin:0px;padding:10px; color: #1a237e; border-bottom: 2px solid #1a237e;">
        
         🔜👨‍💼 कर्मचारी निवड आणि रुजू प्रक्रिया
@@ -602,6 +727,14 @@
                 
                 foreach ($ng2g as $post): 
 
+                    $approvedLogDocument = $approvedLogDocuments[$post->soa_id] ?? null;
+                    $approvedLogUrl = null;
+                    if (!empty($approvedLogDocument)) {
+                        $approvedLogUrl = preg_match('/^https?:\/\//i', $approvedLogDocument)
+                            ? $approvedLogDocument
+                            : $this->Url->build('/' . ltrim($approvedLogDocument, '/'));
+                    }
+
                     if($post->post_type == 1){
                         continue;
                     }
@@ -622,32 +755,25 @@
                     <td id="actionBtns_<?= h($post->id) ?>">
                         <?php
                             if($post->is_onboarding_submitted == 1) {
-                               
-                            /*echo "<button class='btn btn-primary badge bg-purple text-light action-ud startApplication-open-onboarding' data-mode='2' app-step='1'  data-staffObject='". json_encode($post, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ."' data-id='".$post->id."'>
-                                                                        रुजू प्रक्रिया
-                                                                    </button>";  
-                              */                                 
                                                                
                             echo "<a href='#' style='text-decoration:none;' class='startApplication-open-onboarding' data-staffObject='". json_encode($post, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP)."' data-mode='1'  data-id='".$post->id."'>
                                 <i class='fa-solid fa-address-card'></i>  अर्ज पहा
                             </a><br/>";
 
-                            if($post->status === 'draft') {
+                             echo "<a href='" . h($approvedLogUrl ?? '#') . "' style='text-decoration:none;' target='_blank'" . ($approvedLogUrl ? '' : " onclick=\"return false;\"") . ">
+                                <i class='fa-solid fa-reorder'></i>  आदेश
+                            </a><br/>";
 
-                            echo "<a href='#' style='text-decoration:none;color:green;' class='approveApplication-open-transfer' data-staffObject='". json_encode($post, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP)."' data-id='".$post->id."' data-seq='".$idx."'>
-                                    <i class='fa-solid fa-arrow-trend-up'></i>  मंजुरी द्या
-                                </button><br/>";
-                                
-                               /* echo "<a href='#' style='text-decoration:none;color:#c98813;' class='returnApplication-open-transfer' data-id='".$post->id."' data-seq='".$idx."'>
-                                    <i class='fa-solid fa-reply-all'></i>  त्रुटी पुर्तेतसाठी परत पाठवा
-                                </a><br/>";
-                                */
+                             echo "<a href='#' style='text-decoration:none;' class='startApplicationHistory-open-view' data-staffObject='". json_encode($post, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP)."' data-mode='1'  data-id='".$post->id."'>
+                                <i class='fa-solid fa-comments'></i>  टिप्पणी
+                            </a><br/>";
 
-                                    echo "<a href='#' style='text-decoration:none;color:red;' class='rejectApplication-open-transfer' data-staffObject='". json_encode($post, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ."' data-id='".$post->id."' data-seq='".$idx."'>
-                                    <i class='fa-solid fa-arrow-trend-down'></i>  नामंजूर करा
-                                </a>";
-                            }
-                                
+                            /* echo "<a href='#' style='text-decoration:none;' class='forwardApplication-open-transfer' data-staffObject='". json_encode($post, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP)."' data-mode='1'  data-id='".$post->id."'>
+                                <i class='fa-solid fa-address-card'></i>  शालार्थ साठी नस्ती वर्ग करा
+                            </a><br/>";
+                            */
+
+                            
 
                              }else{
                                  echo "";
@@ -665,349 +791,6 @@
 </div>
 
 
-
-
-<!-- Slide Panel -->
-<div id="startApplicationSlider" class="slide-panel" aria-hidden="true" style="border:3px solid #537895;">
-     <!-- Header -->
-    <div class="slide-header d-flex justify-content-between align-items-center">
-        <div style="width:100%;">
-            <h5 class="mb-0"><i class="fas fa-arrow-trend-up me-1"></i> Staff Onboarding </h5>
-            <!--<small class="text-muted">Case ID: <span id="caseId"></span></small>-->
-            
-           
-        </div>
-        <button class="btn btn-sm btn-outline-danger startApplication-close-slider">X</button>
-    </div>
-
-    <!-- Body -->
-    <div class="slide-body">
-        <div class="form-container">
-            <div id="saStep1">
-                <form id="saFormStep1" enctype="multipart/form-data">
-                    <input type="hidden" id="sa_basic_data">
-                    <!--
-                        <button type="submit" class="btn btn-lg btn-primary w-100">Submit</button>
-                
-                    </form><form>-->
-                    <input type="hidden" value="" name="staffId" id="staffId">
-                    <div class="section">
-                        <div class="section-title">👤 <span id="empNameDetails"></span></div>
-                        <input type="hidden" id="appointmentDate" name="appointmentDate" class="form-control">
-                        <div class="row mb-2">
-                            <div class="col-md-3">
-                                <label for="institutionCode" class="form-label marathi-label">संस्था कोड <span class="english-label">(Institution Code)</span> &rarr; <span class="txtval"><?= h($user["username"]) ?></span></label>                            
-                            </div>
-                            <div class="col-md-6">                            
-                                <label for="institutionName" class="form-label marathi-label">संस्थेचे नाव <span class="english-label">(Institution Name)</span> &rarr; <span class="txtval"><?= h($sanstha["name"]) ?></span></label> 
-                            </div>
-                             <div class="col-md-3">                            
-                                <?php if($sanstha["minority_sanstha"]==2 || $sanstha["minority_sanstha"] == 3): ?>
-                                    <span class="badge rounded-pill bg-success">Minority Sanstha (<?php echo h($sanstha["sanstha_minority_name"]); ?>)</span>
-                                 <?php else: ?>    
-                                    <span class="badge rounded-pill bg-warning text-dark">Non-Minority Sanstha</span>
-                                <?php endif; ?>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row mb-2">
-                        <div class="col-md-3">
-                            <label for="udiseNumber" class="form-label marathi-label">UDISE क्रमांक 
-                                <span class="english-label">(UDISE Code)</span> &rarr; <span class="txtval" id="udiseNumber">  
-                                    </span></label> 
-                        </div>
-                    
-                        <div class="col-md-9">
-                            <label for="schoolName" class="form-label marathi-label">शाळेचे नाव 
-                                <span class="english-label">(School Name)</span> &rarr; <span class="txtval" id="schoolName"></span></label> 
-                        </div>                  
-                        
-                       
-                    </div>
-                                        
-                   
-                    <!-- 1.4 अध्यापन विषय -->
-                    <div class="row mb-3">
-                         <div class="col-md-3">
-                            <label for="candidateName " class="form-label english-label required-field">Candidate Name </label>
-                            <input type="text"
-                                class="form-control"
-                                id="candidateName"
-                                name="candidateName"
-                                required>
-                        </div>
-                        <div class="col-md-3">
-                            <label for="panNumber" class="form-label marathi-label required-field">पॅन क्रमांक <span class="english-label">(PAN)</span></label>
-                            <input type="text"
-                                class="form-control"
-                                id="panNumber"
-                                name="panNumber"
-                                pattern="^[A-Za-z]{5}[0-9]{4}[A-Za-z]$"
-                                maxlength="10"
-                                style="text-transform:uppercase"
-                                required>
-                        </div>
-                            <!-- 1.9 आधार क्रमांक -->
-                            <div class="col-md-3">
-                            <label for="aadharNumber" class="form-label marathi-label required-field">आधार क्रमांक <span class="english-label">(Aadhar)</span></label>
-                            <input type="text"
-                                class="form-control"
-                                id="aadharNumber"
-                                name="aadharNumber"
-                                pattern="^[0-9]{12}$"
-                                maxlength="12"
-                                inputmode="numeric"
-                                oninput="this.value=this.value.replace(/[^0-9]/g,'')"
-                                required>
-                            
-                        </div>
-                      
-                    </div>
-                    
-                          
-                    <!-- Additional Details Row -->
-                    <div class="row mb-3" id="casteCategoryBox">
-                        <div class="col-md-4">
-                            <label for="originalCategory" class="form-label marathi-label required-field">मूळ आरक्षण प्रवर्ग <span class="english-label">(Original)</span></label>
-                            <select class="form-select" id="originalCategory" name="originalCategory" required>                            
-                                <option value="">-- Select Original Category --</option>
-                                <?php 
-                                    foreach($casteCategories as $cc){
-                                        echo '<option value="'.$cc->code.'">'.$cc->category_name.'</option>';
-                                    }
-                                ?>
-                            </select> 
-                        </div>
-                        <div class="col-md-4">
-                            <label for="appointmentCategory" class="form-label marathi-label required-field">नियुक्तीचा आरक्षण प्रवर्ग <span class="english-label">(Appointment)</span></label>
-                            <select class="form-select" id="appointmentCategory" name="appointmentCategory" required>                   
-                                <option value="">-- Select Appointment Category --</option>
-                                <?php 
-                                    foreach($casteCategories as $cc){
-                                        echo '<option value="'.$cc->code.'">'.$cc->category_name.'</option>';
-                                    }
-                                ?>
-                            </select> 
-                        </div>
-                        <div class="col-md-4">
-                            <label for="appointmentCategory" class="form-label marathi-label required-field">समांतर आरक्षण प्रवर्ग <span class="english-label">(Horizontal)</span></label>
-                            <select class="form-select" id="horizontalCategory" name="horizontalCategory" required>                   
-                                <option value="">-- Select Horizontal Category --</option>
-                                <?php 
-                                    foreach($horizontalCategories as $hc){
-                                        echo '<option value="'.$hc->id.'">'.$hc->name.'</option>';
-                                    }
-                                ?>
-                            </select> 
-                        </div>
-                        
-                    </div>
-
-
-
-                    <div class="pdf-field">
-                        <h3 class="section-title">शैक्षणिक व व्यावसायिक अर्हता. <small style="font-size:10px;">संबंधित शिक्षकाची शैक्षणिक व व्यावसायिक अर्हता प्रमाणपत्रे • शासन निर्णय दिनांक 25.02.2019 नुसार.</small></h3>
-                        <div class="row">
-                            <div class="col-md-3 ">
-                                <label for="sscFile" class="form-label marathi-label required-field">
-                                     माध्यमिक <span class="english-label">(SSC)</span>
-                                </label>
-                                <input type="file" id="sscFile" name="sscFile" class="form-control file-upload-check" accept=".pdf" required>      
-                            </div>    
-                            <div class="col-md-3">
-                                <label for="hscFile" class="form-label marathi-label required-field">
-                                    उच्च माध्यमिक <span class="english-label">(HSC)</span>
-                                </label>
-                                <input type="file" id="hscFile" name="hscFile" class="form-control file-upload-check" accept=".pdf" required>      
-                            </div>                     
-                            <div class="col-md-3">
-                                <label for="graduateFile" class="form-label marathi-label">
-                                    पदवी <span class="english-label">(Graduate Degree)</span>
-                                </label>
-                                <input type="file" id="graduateFile" name="graduateFile" class="form-control" accept=".pdf">                      
-                            </div>
-                                <div class="col-md-3">
-                                <label for="postGraduateFile" class="form-label marathi-label">
-                                    पदव्युत्तर पदवी  <span class="english-label">(Post Graduate Degree)</span>
-                                </label>
-                                <input type="file" id="postGraduateFile" name="postGraduateFile" class="form-control" accept=".pdf">                      
-                            </div>     
-                                
-                        </div>
-                        <hr/>                        
-                    </div>   
-
-
-                    <div class="pdf-field">
-                        <h3 class="section-title">Advertisment Details.</h3>
-                        <div class="row mt-1">
-                            <div class="col-md-3 mt-2">
-                                <label for="advApprovelFile" class="form-label english-label required-field">
-                                     Advertisement Approval Letter 
-                                </label>                                
-                            </div>    
-                            <div class="col-md-3">
-                                <input type="file" id="advApprovelFile" name="advApprovelFile" class="form-control file-upload-check" accept=".pdf" required>      
-                            </div>      
-                        </div>
-                        <div class="row mt-3">
-                            <div class="col-md-3 mt-2">
-                                <label for="advertisementFile" class="form-label english-label required-field">
-                                   Advertisement
-                                </label>                                    
-                            </div>     
-                            <div class="col-md-3">
-                                <input type="file" id="advertisementFile" name="advertisementFile" class="form-control file-upload-check" accept=".pdf" required>      
-                            </div>   
-                        </div>
-                        <hr/>                        
-                    </div> 
-
-                    <div class="pdf-field">
-                        <h3 class="section-title">Selection Procedure</h3>
-                        <div class="row mt-2">
-                            <div class="col-md-2 mt-2">
-                                <label for="signatureFile" class="form-label english-label required-field">
-                                     Candidate Signature List 
-                                </label>                                
-                            </div>    
-                            <div class="col-md-3">
-                                <input type="file" id="signatureFile" name="signatureFile" class="form-control file-upload-check" accept=".pdf" required>      
-                            </div>      
-                        </div>
-                        <div class="row mt-3">
-                            <div class="col-md-2 mt-2">
-                                <label for="markingFile" class="form-label english-label required-field">
-                                  Candidate Marking
-                                </label>                                    
-                            </div>     
-                            <div class="col-md-3">
-                                <input type="file" id="markingFile" name="markingFile" class="form-control file-upload-check" accept=".pdf" required>      
-                            </div>   
-                        </div>
-                          <div class="row mt-3">
-                            <div class="col-md-2 mt-2">
-                                <label for="resolutionFile" class="form-label english-label required-field">
-                                  Sanstha Resolution
-                                </label>                                    
-                            </div>     
-                            <div class="col-md-3">
-                                <input type="file" id="resolutionFile" name="resolutionFile" class="form-control file-upload-check" accept=".pdf" required>      
-                            </div>   
-                        </div>
-
-                          <div class="row mt-3">
-                            <div class="col-md-2 mt-2">
-                                <label for="orderFile" class="form-label english-label required-field">
-                                  Order
-                                </label>                                    
-                            </div>     
-                            <div class="col-md-3">
-                                <input type="file" id="orderFile" name="orderFile" class="form-control file-upload-check" accept=".pdf" required>      
-                            </div>   
-                        </div>
-
-                        <hr/>                        
-                    </div> 
-
-                    <div class="pdf-field">
-                        <h3 class="section-title">Roster</h3>
-
-                        <div class="card">
-                        <label class="checkbox-label">
-                        <label class="checkbox-label">
-                            Is this school has single vacancy?  &rarr;
-                            </label>
-                            <label class="checkbox-label">
-                            <input type="radio" id="courtRosterYes"  name="courtRoster" value="1" onchange="hideDiv('courtRosterDiv')"> होय 
-                            </label><label class="checkbox-label">
-                            <input type="radio" id="courtRosterNo"  name="courtRoster" value="2" onchange="showDiv('courtRosterDiv')">  नाही
-                            </label>
-                        
-                        </label>
-                        
-                        <div id="courtRosterDiv" class="transfer-section">                        
-                            <div class="row mb-3">
-                                <div class="col-md-6">
-                                    <input type="file" id="courtRosterFile" name="courtRosterFile" class="form-control file-upload-check" accept=".pdf">
-                                </div>
-                            </div>                    
-                        </div>
-                    </div>
-
-                    </div>    
-                    
-                    <div class="card">
-                        <label class="checkbox-label">
-                        <label class="checkbox-label">
-                            या प्रकरणासंदर्भात कोणताही न्यायालयीन आदेश निर्गमित झाला आहे का?  &rarr;
-                            </label>
-                            <label class="checkbox-label">
-                            <input type="radio" id="courtOrderYes"  name="courtOrder" value="1" onchange="showDiv('courtOrderDiv')"> होय 
-                            </label><label class="checkbox-label">
-                            <input type="radio" id="courtOrderNo"  name="courtOrder" value="2" onchange="hideDiv('courtOrderDiv')">  नाही
-                            </label>
-                        
-                        </label>
-                        
-                        <div id="courtOrderDiv" class="transfer-section">                        
-                            <div class="row mb-3">     
-                                <div class="col-md-3">                            
-                                        <input type="text" placeholder="याचिका क्रमांक" class="form-control" id="courtOrderPetitionNumber" name="courtOrderPetitionNumber">
-                               </div>  
-                                <div class="col-md-3">                                    
-                                        <input type="date" placeholder="दिनांक" class="form-control" id="courtOrderDate" name="courtOrderDate">
-                                </div>                
-                                <div class="col-md-6">
-                                    <input type="file" id="courtOrderFile" name="courtOrderFile" class="form-control file-upload-check" accept=".pdf">
-                                </div>
-                            </div>                    
-                        </div>
-                    </div>
-                        
-                    
-                    <!-- Submit Button -->
-                    <div class="form-section">
-                        <div class="form-check mb-4">
-                            <input class="form-check-input" type="checkbox" id="declaration" required>
-                            <label class="form-check-label marathi-label" for="declaration">&nbsp;&nbsp;
-                                मी खात्रीपूर्वक सांगतो/सांगते की, वरील सर्व माहिती खरी आहे व सर्व कागदपत्रे खरी आहेत. कोणतीही चुकीची माहिती दिल्यास, माझ्यावर योग्य कायदेशीर कारवाई केली जाऊ शकते याची मला पूर्ण कल्पना / जाणीव आहे.
-                            </label>
-                        </div>
-                    </div>
-                    
-                    <!-- Submit Button -->
-                    <div class="d-flex justify-content-between mt-4">
-                        <!--<button type="button" class="btn btn-outline-secondary" id="saveDraftBtn">
-                            <i class="bi bi-save"></i> ड्राफ्ट सेव्ह करा
-                        </button>-->
-                        <button type="submit" class="btn btn-submit" id="saSubmitBtn_step6">
-                            <i class="bi bi-send-check"></i> अर्ज सबमिट करा
-                        </button>
-                                                
-
-                    </div>
-                </form>
-            </div>  
-                    
-              
-            
-        </div>
-
-    </div>
-
-    <!-- Footer -->
-    <div class="slide-footer text-end">
-         <div class="row" id="sa_footerBox">
-            <div id="sa_footerMsgBox"></div>
-            <div class="col-md-12" style="text-align: right;">
-                <button class="btn btn-danger btn-sm startApplication-close-slider">Close</button>
-            </div>
-            
-        </div>
-    </div>
-
-</div>
 
 
 <!-- Slide Panel -->
@@ -1061,219 +844,7 @@
                        
                     </div>
                                  
-                   
-                    <div class="row mb-3">
-                         <div class="col-md-3">
-                            <label for="candidateName " class="form-label english-label ">Candidate Name </label>
-                            <input type="text"
-                                class="form-control"
-                                id="candidateName_onboard"
-                                name="candidateName_onboard"
-                                readonly>
-                        </div>
-                        <div class="col-md-3">
-                            <label for="panNumber" class="form-label marathi-label ">पॅन क्रमांक <span class="english-label">(PAN)</span></label>
-                            <input type="text"
-                                class="form-control"
-                                id="panNumber_onboard"
-                                name="panNumber_onboard"
-                                style="text-transform:uppercase"
-                                readonly>
-                        </div>
-                            <!-- 1.9 आधार क्रमांक -->
-                            <div class="col-md-3">
-                            <label for="aadharNumber" class="form-label marathi-label ">आधार क्रमांक <span class="english-label">(Aadhar)</span></label>
-                            <input type="text"
-                                class="form-control"
-                                id="aadharNumber_onboard"
-                                name="aadharNumber_onboard"
-                                pattern="^[0-9]{12}$"
-                                maxlength="12"
-                                inputmode="numeric"
-                                oninput="this.value=this.value.replace(/[^0-9]/g,'')"
-                                readonly>
-                            
-                        </div>
-                      
-                    </div>                 
-                    
-
-                     <!-- Additional Details Row -->
-                    <div class="row mb-3" id="casteCategoryBox">
-                        <div class="col-md-4">
-                            <label for="originalCategory_onboard" class="form-label marathi-label">मूळ आरक्षण प्रवर्ग <span class="english-label">(Original)</span></label>
-                            <select class="form-select" id="originalCategory_onboard" name="originalCategory" disabled>                            
-                                 <?php 
-                                    foreach($casteCategories as $cc){
-                                        echo '<option value="'.$cc->code.'">'.$cc->category_name.'</option>';
-                                    }
-                                ?>
-                            </select> 
-                        </div>
-                        <div class="col-md-4">
-                            <label for="appointmentCategory_onboard" class="form-label marathi-label ">नियुक्तीचा आरक्षण प्रवर्ग <span class="english-label">(Appointment)</span></label>
-                            <select class="form-select" id="appointmentCategory_onb" name="appointmentCategory" disabled>                   
-                                <?php 
-                                    foreach($casteCategories as $cc){
-                                        echo '<option value="'.$cc->code.'">'.$cc->category_name.'</option>';
-                                    }
-                                ?>
-                            </select> 
-                        </div>
-                        <div class="col-md-4">
-                            <label for="horizontalCategory_onboard" class="form-label marathi-label">समांतर आरक्षण प्रवर्ग <span class="english-label">(Horizontal)</span></label>
-                            <select class="form-select" id="horizontalCategory_onboard" name="horizontalCategory" disabled>                   
-                                <?php 
-                                    foreach($horizontalCategories as $hc){
-                                        echo '<option value="'.$hc->id.'">'.$hc->name.'</option>';
-                                    }
-                                ?>
-                            </select> 
-                        </div>
-                        
-                    </div>
-
-
-                    
-                    <div class="pdf-field">
-                        <h3 class="section-title">शैक्षणिक व व्यावसायिक अर्हता. <small style="font-size:10px;">संबंधित शिक्षकाची शैक्षणिक व व्यावसायिक अर्हता प्रमाणपत्रे • शासन निर्णय दिनांक 25.02.2019 नुसार.</small></h3>
-                        <div class="row">
-                            <div class="col-md-3 ">
-                                <label for="sscFile" class="form-label marathi-label">
-                                     माध्यमिक <span class="english-label">(SSC)</span>
-                                </label>
-                                <div class="col-md-3" id="ssc_onboard_file">
-                                <a>View Document</a>
-                            </div>      
-                            </div>    
-                            <div class="col-md-3">
-                                <label for="hscFile" class="form-label marathi-label">
-                                    उच्च माध्यमिक <span class="english-label">(HSC)</span>
-                                </label>
-                                <div class="col-md-3" id="hsc_onboard_file">
-                                <a>View Document</a>
-                            </div>      
-                            </div>                     
-                            <div class="col-md-3">
-                                <label for="graduateFile" class="form-label marathi-label">
-                                    पदवी <span class="english-label">(Graduate Degree)</span>
-                                </label>
-                                <div class="col-md-3" id="graduate_onboard_file">
-                                <a>View Document</a>
-                            </div>      
-                            </div>
-                                <div class="col-md-3">
-                                <label for="postGraduateFile" class="form-label marathi-label">
-                                    पदव्युत्तर पदवी  <span class="english-label">(Post Graduate Degree)</span>
-                                </label>
-                               <div class="col-md-3" id="post_graduate_onboard_file">
-                                <a>View Document</a>
-                            </div>      
-                            </div>     
-                                
-                        </div>
-                        <hr/>                        
-                    </div>   
-
-
-                    <div class="pdf-field">
-                        <h3 class="section-title">Advertisment Details.</h3>
-                        <div class="row mt-1">
-                            <div class="col-md-3 mt-2">
-                                <label for="advApprovelFile" class="form-label english-label ">
-                                     Advertisement Approval Letter 
-                                </label>                                
-                            </div>    
-                            <div class="col-md-3" id="adv_approval_onboard_file">
-                               <a>View Document</a>
-                            </div>      
-                        </div>
-                        <div class="row mt-3">
-                            <div class="col-md-3 mt-2">
-                                <label for="advertisementFile" class="form-label english-label">
-                                   Advertisement
-                                </label>                                    
-                            </div>     
-                            <div class="col-md-3" id="advertisement_onboard_file">
-                                <a>View Document</a>
-                            </div>   
-                        </div>
-                        <hr/>                        
-                    </div> 
-
-                    <div class="pdf-field">
-                        <h3 class="section-title">Selection Procedure</h3>
-                        <div class="row mt-2">
-                            <div class="col-md-2 mt-2">
-                                <label for="signatureFile" class="form-label english-label">
-                                     Candidate Signature List 
-                                </label>                                
-                            </div>    
-                            <div class="col-md-3" id="signature_onboard_file">
-                                <a>View Document</a>
-                                
-                            </div>      
-                        </div>
-                        <div class="row mt-3">
-                            <div class="col-md-2 mt-2">
-                                <label for="markingFile" class="form-label english-label">
-                                  Candidate Marking
-                                </label>                                    
-                            </div>     
-                            <div class="col-md-3" id="marking_onboard_file">
-                                <a>View Document</a>
-                                
-                            </div>   
-                        </div>
-                          <div class="row mt-3">
-                            <div class="col-md-2 mt-2">
-                                <label for="resolutionFile" class="form-label english-label ">
-                                  Sanstha Resolution
-                                </label>                                    
-                            </div>     
-                            <div class="col-md-3" id="resolution_onboard_file">
-                                <a>View Document</a>
-
-                            </div>   
-                        </div>
-
-                          <div class="row mt-3">
-                            <div class="col-md-2 mt-2">
-                                <label for="orderFile" class="form-label english-label">
-                                  Order
-                                </label>                                    
-                            </div>     
-                            <div class="col-md-3" id="order_onboard_file">
-                                <a>View Document</a>
-                            </div>   
-                        </div>
-
-                        <hr/>                        
-                    </div> 
-
-                
-                    <div class="pdf-field">
-                        <h3 class="section-title">Roster</h3>
-
-                        <div class="card">
-                        <label class="checkbox-label">
-                        <label class="checkbox-label">
-                            Is this school has single vacancy?  &rarr;
-                            </label>
-                           <div id="courtRoster_onboard"></div>
-                        
-                        </label>
-                        
-                        <div id="courtRosterDiv_onbord" class="">                        
-                            <div class="row mb-3">
-                                <div class="col-md-6">
-                                    <div id="courtRoster_onboard_file">
-                                        <a>View Document</a>
-                                    </div>
-                                </div>
-                            </div>                    
-                        </div>
-                    </div>
+                   <div id="htmldiv_onboard"></div> 
 
                     <div class="card">
                         <label class="checkbox-label">
@@ -1303,7 +874,6 @@
                         </div>
                     </div>
 
-
                 </form>
             </div>  
                     
@@ -1326,446 +896,14 @@
 
 </div>
 
+<?php echo $this->element('recruit/division/forword') ?>
 
-<!-- Slide Panel for Correction Form -->
-<div id="correctionApplicationSlider" class="slide-panel" aria-hidden="true" style="border:3px solid #537895;">
-     <!-- Header -->
-    <div class="slide-header d-flex justify-content-between align-items-center">
-        <div style="width:100%;">
-            <h5 class="mb-0"><i class="fas fa-arrow-trend-up me-1"></i> Non-Grant → Aided Transfer <div class="text-muted" style="float:right;color:#fff !important;font-size:12px;margin-right:50px;">Staff Name: <span id="empName"></span></div></h5>
-            <!--<small class="text-muted">Case ID: <span id="caseId"></span></small>-->
-            
-           
-        </div>
-        <button class="btn btn-sm btn-outline-danger correctionApplication-close-slider">X</button>
-    </div>
+<?php echo $this->element('recruit/division/approved') ?>
 
-    <!-- Body -->
-    <div class="slide-body">
-        <div class="form-container">
-           
-            
-               
-               
-                    <!--
-                        <button type="submit" class="btn btn-lg btn-primary w-100">Submit</button>
-                
-                    </form><form>-->
-                    <input type="hidden" value="" name="staffId" id="staffId">
-                    <div class="section">
-                        <div class="section-title">👤 <span id="empNameDetails"></span></div>
-                        <input type="hidden" id="appointmentDate" name="appointmentDate" class="form-control">
-                        <div class="row mb-2">
-                            <div class="col-md-3">
-                                <label for="institutionCode" class="form-label marathi-label">संस्था कोड <span class="english-label">(Institution Code)</span> &rarr; <span class="txtval"><?= h($user["username"]) ?></span></label>                            
-                            </div>
-                            <div class="col-md-9">                            
-                                <label for="institutionName" class="form-label marathi-label">संस्थेचे नाव <span class="english-label">(Institution Name)</span> &rarr; <span class="txtval"></span></label> 
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row mb-2">
-                        <div class="col-md-3">
-                            <label for="udiseNumber" class="form-label marathi-label">UDISE क्रमांक 
-                                <span class="english-label">(UDISE Code)</span> &rarr; <span class="txtval" id="udiseNumber">  
-                                    </span></label> 
-                        </div>
-                    
-                        <div class="col-md-9">
-                            <label for="schoolName" class="form-label marathi-label">शाळेचे नाव 
-                                <span class="english-label">(School Name)</span> &rarr; <span class="txtval" id="schoolName"></span></label> 
-                        </div>                  
-                        
-                        <!-- 1.1 शाळेचे ठिकाण -->
-                        <div class="col-md-12">
-                            <label for="schoolLocation" class="form-label marathi-label">शाळेचे ठिकाण <span class="english-label">(School Location)</span> &rarr; <span class="txtval" id="schoolLocation"></span></label> 
-                        </div>
-                    </div>
+<?php echo $this->element('recruit/division/reject') ?>
 
+<?php echo $this->element('recruit/division/comment') ?>
 
-
-                    <form id="correctionForm" enctype="multipart/form-data"></form>
-                    
-                
-                    
-                   
-                    
-                        
-                    
-                    
-              
-          
-                    
-              
-           
-        </div>
-
-    </div>
-
-    <!-- Footer -->
-    <div class="slide-footer text-end">
-         <div class="row" id="sa_footerBox">
-            <div id="sa_footerMsgBox"></div>
-            <div class="col-md-12" style="text-align: right;">
-                <button class="btn btn-danger btn-sm correctionApplication-close-slider">Close</button>
-            </div>
-            
-        </div>
-    </div>
-
-</div>
-
-
-<!-- Return Application Slide Panel -->
-<div id="returnApplicationSlider" class="slide-panel" aria-hidden="true" style="border:3px solid #537895;">
-    <!-- Header -->
-    <div class="slide-header d-flex justify-content-between align-items-center">
-        <div style="width:100%;">
-            <h5 class="mb-0"><i class="fas fa-arrow-trend-up me-1"></i> Non-Grant → Aided Transfer </h5>
-            <!--<small class="text-muted">Case ID: <span id="caseId"></span></small>-->
-        </div>
-        <button style="font-size:27px;" class="btn btn-sm btn-outline-danger returnApplication-close-slider">X</button>
-    </div>
-
-    <!-- Body -->
-    <div class="slide-body">
-        <div class="form-container">
-            <div id="returnHtmlForm"></div>
-
-        </div>
-
-    </div>
-
-    <!-- Footer -->
-    <div class="slide-footer text-end">
-                <button class="btn btn-secondary btn-sm returnApplication-close-slider">Close</button>
-            
-    </div>
-
-</div>
-
-
-
-
-<!-- Slide Panel -->
-<div id="approveApplicationSlider"
-     class="slide-panel"
-     aria-hidden="true"
-     style="border:3px solid #537895;">
-
-    <!-- Header -->
-    <div class="slide-header d-flex justify-content-between align-items-center">
-        <div style="width:100%;">
-            <h5 class="mb-0">
-                <i class="fas fa-arrow-trend-up me-1"></i>
-                कर्मचारी निवड
-            </h5>
-        </div>
-
-        <button style="font-size:27px;"
-                class="btn btn-sm btn-outline-danger approveApplication-close-slider">
-            X
-        </button>
-    </div>
-
-    <!-- Body -->
-    <div class="slide-body">
-
-        <div class="container-fluid">
-
-            <!-- Application Information -->
-            <div class="card shadow-sm border-0 mb-1">
-              
-
-                <div class="card-body">
-
-                    <div class="row g-1">
-                        <div class="col-md-9">
-                            <div class="form-control bg-light">
-                                संस्थेचे नाव &rarr; <b id="app_sanstha_name"></b>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="form-control bg-light">
-                                अर्ज क्रमांक:- <b>MAHAEDU/STAff/TRF/<span id='app_year'></span>/<span id='app_id'></span></b>
-                            </div>
-                        </div>
-                        <div class="col-md-9">
-                            <div class="form-control bg-light">
-                                कर्मचाऱ्यांचे नाव &rarr; <b id="app_staff_name"></b>
-                            </div>
-                        </div>      
-
-                        <div class="col-md-3">
-                            <div class="form-control bg-light">
-                                अर्ज दिनांक:- <b id="app_date"></b>
-                            </div>
-                        </div>
-                        
-                        
-
-                    </div>
-
-
-                    
-
-                </div>
-            </div>
-
-            <!-- Approval Section -->
-            <div class="card shadow-sm border-0">
-
-                <div class="card-header bg-success text-white">
-                    <h6 class="mb-0">
-                        <i class="fas fa-check-circle me-2"></i>
-                        मंजुरी प्रक्रिया
-                    </h6>
-                </div>
-
-                <div class="card-body">
-
-                    <form id="approvalForm" enctype="multipart/form-data">
-
-                       
-                        <!-- Remark -->
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">
-                                शेरा / Remark
-                            </label>
-
-                            <textarea class="form-control"
-                                      name="app_remark"
-                                      id="app_remark"
-                                      rows="5"
-                                      placeholder="कृपया शेरा नमूद करा..."
-                                      required></textarea>
-                        </div>
-
-                        <!-- Supporting File -->
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">
-                                सहाय्यक कागदपत्र अपलोड करा
-                            </label>
-
-                            <input type="file"
-                                   name="app_doc"
-                                   id="app_doc"
-                                   class="form-control"
-                                   name="supporting_document"
-                                   accept=".pdf">
-
-                            <small class="text-muted">
-                                Allowed: PDF Only
-                            </small>
-                        </div>
-
-                        <!-- Officer Details
-                        <div class="row">
-
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label fw-bold">
-                                    अधिकारी नाव
-                                </label>
-
-                                <input type="text"
-                                       class="form-control"
-                                       value="Deepak Patil"
-                                       readonly>
-                            </div>
-
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label fw-bold">
-                                    दिनांक
-                                </label>
-
-                                <input type="date"
-                                       class="form-control"
-                                       value="2026-05-16">
-                            </div>
-
-                        </div> -->
-                        <button type="submit" class="btn btn-success btn-sm">
-                            <i class="fas fa-check-circle me-1"></i>
-                            मंजुरी द्या
-                        </button>
-                    </form>
-
-                </div>
-            </div>
-
-        </div>
-
-    </div>
-
-    <!-- Footer -->
-    <div class="slide-footer text-end">
-
-        <button class="btn btn-secondary btn-sm approveApplication-close-slider">
-            Close
-        </button>
-
-    </div>
-
-</div>
-
-
-
-<!-- Slide Panel -->
-<div id="rejectApplicationSlider"
-     class="slide-panel"
-     aria-hidden="true"
-     style="border:3px solid #537895;">
-
-    <!-- Header -->
-    <div class="slide-header d-flex justify-content-between align-items-center">
-        <div style="width:100%;">
-            <h5 class="mb-0">
-                <i class="fas fa-arrow-trend-up me-1"></i>
-                कर्मचारी निवड 
-            </h5>
-        </div>
-
-        <button style="font-size:27px;"
-                class="btn btn-sm btn-outline-danger rejectApplication-close-slider">
-            X
-        </button>
-    </div>
-
-    <!-- Body -->
-    <div class="slide-body">
-
-        <div class="container-fluid">
-
-            <!-- Application Information -->
-            <div class="card shadow-sm border-0 mb-1">
-              
-
-                <div class="card-body">
-
-                    <div class="row g-1">
-                        <div class="col-md-9">
-                            <div class="form-control bg-light">
-                                संस्थेचे नाव &rarr; <b id="reject_sanstha_name"></b>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="form-control bg-light">
-                                अर्ज क्रमांक:- <b>MAHAEDU/NG2G/TRF/<span id='reject_year'></span>/<span id='reject_id'></span></b>
-                            </div>
-                        </div>
-                        <div class="col-md-9">
-                            <div class="form-control bg-light">
-                                कर्मचाऱ्यांचे नाव &rarr; <b id="reject_staff_name"></b>
-                            </div>
-                        </div>      
-
-                        <div class="col-md-3">
-                            <div class="form-control bg-light">
-                                अर्ज दिनांक:- <b id="reject_date"></b>
-                            </div>
-                        </div>
-                        
-                        
-
-                    </div>
-
-                </div>
-            </div>
-
-            <!-- Approval Section -->
-            <div class="card shadow-sm border-0">
-
-                <div class="card-header bg-danger text-white">
-                    <h6 class="mb-0">
-                        <i class="fas fa-check-circle me-2"></i>
-                        नामंजुरी प्रक्रिया
-                    </h6>
-                </div>
-
-                <div class="card-body">
-
-                    <form id="rejectForm" enctype="multipart/form-data">                       
-                        <!-- Remark -->
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">
-                                शेरा / Remark
-                            </label>
-
-                            <textarea class="form-control"
-                                      name="reject_remark"
-                                      id="reject_remark"
-                                      rows="5"
-                                      placeholder="कृपया शेरा नमूद करा..."
-                                      required></textarea>
-                        </div>
-
-                        <!-- Supporting File -->
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">
-                                सहाय्यक कागदपत्र अपलोड करा
-                            </label>
-
-                            <input type="file"
-                                   name="reject_doc"
-                                   id="reject_doc"
-                                   class="form-control"
-                                   name="supporting_document"
-                                   accept=".pdf">
-
-                            <small class="text-muted">
-                                Allowed: PDF Only
-                            </small>
-                        </div>
-
-                        <!-- Officer Details
-                        <div class="row">
-
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label fw-bold">
-                                    अधिकारी नाव
-                                </label>
-
-                                <input type="text"
-                                       class="form-control"
-                                       value="Deepak Patil"
-                                       readonly>
-                            </div>
-
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label fw-bold">
-                                    दिनांक
-                                </label>
-
-                                <input type="date"
-                                       class="form-control"
-                                       value="2026-05-16">
-                            </div>
-
-                        </div> -->
-                        <button type="submit" class="btn btn-danger btn-sm">
-                            <i class="fas fa-times-circle me-1"></i>
-                            नामंजूर करा
-                        </button>
-
-                    </form>
-
-                </div>
-            </div>
-
-        </div>
-
-    </div>
-
-    <!-- Footer -->
-    <div class="slide-footer text-end">
-
-        <button class="btn btn-secondary btn-sm rejectApplication-close-slider">
-            Close
-        </button>      
-
-    </div>
-
-</div>
 
 <script>
 $(document).ready(function(){
@@ -2185,6 +1323,8 @@ function loadonBoardingDetails(caseId, staffObject) {
             }
 
             const d = response.data;
+            document.getElementById('htmldiv_onboard').innerHTML = response.htmlbody;
+           
             $('#candidateName_onboard').val(d.candidate_name || '');
             $('#appointmentDate_onboard').val(d.appointment_date || '');
             $('#panNumber_onboard').val(d.pan_number || '');
@@ -3535,13 +2675,32 @@ $(document).ready(function() {
            
         }
 
-         loadRejectTransferDetails = function(caseId,staff){
+     loadRejectTransferDetails = function(caseId,staff){
 
-           
+                $("#rejectHtmlForm").html('<div class="dots-loader"><img src="https://edustaff.maharashtra.gov.in/images/logo.png" alt="Maha Logo" class="me-2"> Loading</div>');
+            $.ajax({
+                url: '<?php echo $this->Url->build(["controller" => "GeneralUtilities", "action" => "rejectApplicationForm"]); ?>/'+caseId,
+                type: 'GET',
+                headers: {
+                    'X-CSRF-Token': $('meta[name="csrfToken"]').attr('content') 
+                },
+                    success: function (response) {
+                        
+                    if(response.success){
+                        //if(response.data.id>0){
+                            ng2g = response.data;
+                            $("#rejectHtmlForm").html(response.html);
+                           
+                        //}                       
+                    }
+                    
+                },
+                error: function () {
+                    $("#rejectHtmlForm").html('<option>Error loading data</option>');
+                }
+            });
            
             
-
-            loadSaDetails(staff.id,'reject');
         }
 
 
@@ -3747,7 +2906,727 @@ $(document).ready(function() {
         }
 
 
+         $(document).on('click', '.startApplicationHistory-open-view', function () {
+
+            const caseId = $(this).data('id');
+            let staffJson = $(this).attr('data-staffObject');   // raw JSON string
+            let staffObject   = JSON.parse(staffJson)
+            currentMode = $(this).attr('data-mode'); 
+            currentAppId = staffObject.id; 
+           
+            $('#saStep12').show();
+            $('#sa_footerBox').show();
+            $('#sa_footerMsgBox').hide();    
+
+           $(document).trigger('startApplicationHistory:openSlider', [caseId, staffObject]);
+        
+
+        });  
+
+          // Close slider
+        // Close slider
+        $(document).on('click', '.startApplicationHistory-close-slider', function () {
+            $(document).trigger('startApplicationHistory:closeSlider');
+        });
+
+        // Custom event handlers for Slider 2
+        $(document).on('startApplicationHistory:openSlider', function (e, caseId, staffObject) {
+            loadReturnHistoryDetails(caseId, staffObject);
+            $('#startApplicationHistorySlider').addClass('open').attr('aria-hidden', 'false');
+        });
+
+        $(document).on('startApplicationHistory:closeSlider', function () {
+            $('#startApplicationHistorySlider').removeClass('open').attr('aria-hidden', 'true');
+        });
+
+
+
+        loadReturnHistoryDetails = function(caseId,staffObject){
+                  
+        var staffObject = staffObject;
+        console.log(staffObject);
+         var formData = new FormData();
+         formData.append('post_id', staffObject.is_onboarding_submitted);
+
+            $.ajax({
+                url: '<?= $this->Url->build(["prefix" => "Recruit","controller" => "GeneralUtilities", "action" => "getStaffonBoardingHistory"]); ?>',
+                type: 'Post',
+                data: formData,
+                processData: false,
+                contentType: false,
+                headers: {
+                    'X-CSRF-Token': $('meta[name="csrfToken"]').attr('content') 
+                },
+                    success: function (response) {
+                    if(response.success){
+                           
+                            document.getElementById("saTimelineContainer").innerHTML = response.data.auditLogsHistory || '<div class="timeline-item left"><div class="card"><div class="card-body p-4"><h3 class="text-center">No audit history found.</h3></div></div></div>';                          
+                    }                    
+                },
+                error: function () {
+                    $("#returnHtmlForm").html('<option>Error loading data</option>');
+                }
+            });
+        }
+
+
+         $(document).on('click', '.approvedApplication-open-transfer', function () {
+            
+            const caseId = $(this).data('id');    
+            let staff = $(this).data('staffobject');
+            $(document).trigger('approvedApplication:openSlider', [caseId, staff]);
+        });
+
+        // Close slider
+        $(document).on('click', '.approvedApplication-close-slider', function () {
+            $(document).trigger('approvedApplication:closeSlider');
+        });
+
+        // Custom event handlers for Slider 2
+        $(document).on('approvedApplication:openSlider', function (e, caseId,staff) {
+            loadApprovedTransferDetails(caseId,staff);
+            $('#approvedApplicationSlider').addClass('open').attr('aria-hidden', 'false');
+        });
+
+        $(document).on('approvedApplication:closeSlider', function () {
+            $('#approvedApplicationSlider').removeClass('open').attr('aria-hidden', 'true');
+        });
+
+
+          loadApprovedTransferDetails = function(caseId,staff){                    
+           
+            loadSaDetails(staff.id,'approve');                        
+
+           
+        }
+
+
+         loadSaDetails = function(staffId,type){
+                $.ajax({
+                url: '<?= $this->Url->build(["controller" => "GeneralUtilities", "action" => "getStaffOnboardingDetails"]); ?>' + '?staff_id=' + encodeURIComponent(staffId),
+                type: 'GET',
+                dataType: 'json',
+                headers: {
+                    'X-CSRF-Token': $('meta[name="csrfToken"]').attr('content')
+                },
+                success: function(response) {
+                    if (!response.success || !response.data) {
+                        return;
+                    }
+
+                    const d = response.data;
+                    console.log("Staff Onboarding Details:", d);
+                     let dbTimestamp = d.created_at;           
+                     let date = new Date(dbTimestamp);
+                     let formattedDate =
+                        String(date.getDate()).padStart(2, '0') + '/' +
+                        String(date.getMonth() + 1).padStart(2, '0') + '/' +
+                        date.getFullYear();
+
+                    if(type == 'reject'){  
+                        $("#reject_sanstha_name").html(d.ng2g.institution_name);
+                        $("#reject_staff_name").html(d.candidate_name);
+                        $("#reject_date").html(formattedDate);
+                        $("#reject_id").html(d.id);
+                        $("#reject_year").html(date.getFullYear());
+                    }else if(type =='approve'){    
+                         $("#approved_sanstha_name").html(d.ng2g.institution_name); 
+                        $("#approved_staff_name").html(d.candidate_name); 
+                        $("#approved_date").html(formattedDate); 
+                        $("#approved_id").html(d.id); 
+                        $("#approved_year").html(date.getFullYear());
+                    }else{
+                        $("#app_sanstha_name").html(d.ng2g.institution_name); 
+                        $("#app_staff_name").html(d.candidate_name); 
+                        $("#app_date").html(formattedDate); 
+                        $("#app_id").html(d.id); 
+                        $("#app_year").html(date.getFullYear());
+                    }
+       
+
+                }
+            });
+    }
+
+
+      $('#rejectForm').on('submit', function (e) {
+
+            e.preventDefault();
+            let formData = new FormData(this);
+            let rejectId = $("#reject_id").text().trim();
+            $('#reject_form_id').val(rejectId);
+            $('#reject_form_remark').val( ($('#reject_remark').val() || '').trim());
+            formData = new FormData(this);
+            $.ajax({
+                url: '<?= $this->Url->build(["controller" => "Division", "action" => "staffOnboardReject"]); ?>',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                cache: false,
+                headers: {
+                    'X-CSRF-Token': $('meta[name="csrfToken"]').attr('content') 
+                },
+
+                beforeSend: function () {
+
+                    // Disable button
+                    $('#rejectForm button[type="submit"]')
+                        .prop('disabled', true)
+                        .html(`
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                            Processing...
+                        `);
+                },
+
+                success: function (response) {
+
+                    console.log(response);
+
+                    if(response.success == false){
+                        alert(response.message)
+                    }else{
+                        alert('Application rejected successfully.');
+                        // Optional
+                        $('#rejectForm')[0].reset();
+                        let rejectId = $("#reject_id").text().trim();
+                        $('#emp_row_' + rejectId).remove();
+                        $('#rejectApplicationSlider').removeClass('open').attr('aria-hidden', 'true');
+                        location.reload();
+                    }                    
+                },
+
+                error: function (xhr) {
+
+                    console.log(xhr);
+
+                    let errorMessage = 'Something went wrong.';
+
+                    if (xhr.responseJSON?.message) {
+                        errorMessage = xhr.responseJSON.message;
+                    }
+
+                    alert(errorMessage);
+                },
+
+                complete: function () {
+
+                    // Enable button again
+                    $('#rejectForm button[type="submit"]')
+                        .prop('disabled', false)
+                        .html(`
+                            <i class="fas fa-times-circle me-1"></i>
+                            नामंजूर करा
+                        `);
+                }
+            });
+
+        });
+
+
+
+          $('#approvalForm').on('submit', function (e) {
+
+            e.preventDefault();
+            let formData = new FormData(this);
+            let approvalId = $("#app_id").text().trim();
+            $('#approve_form_id').val(approvalId);
+            $('#approve_form_remark').val(($('#app_remark').val() || '').trim());
+            formData = new FormData(this);
+            $.ajax({
+                url: '<?= $this->Url->build(["controller" => "Division", "action" => "staffOnboardApprove"]); ?>',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                cache: false,
+                headers: {
+                    'X-CSRF-Token': $('meta[name="csrfToken"]').attr('content') 
+                },
+
+                beforeSend: function () {
+
+                    // Disable button
+                    $('#approvalForm button[type="button"]')
+                        .prop('disabled', true)
+                        .html(`
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                            Processing...
+                        `);
+                },
+
+                success: function (response) {
+
+                    console.log(response);
+
+                    if(response.success == false){
+                        alert(response.message)
+                    }else{
+                        alert('Application approved successfully.');                      
+
+                        $('#approvalForm button[type="submit"]').hide();
+
+                        $('#approvalForm')[0].reset();
+                        let approvalId = $("#app_id").text().trim();
+                        $('#emp_row_' + approvalId).remove();
+                        $('#approveApplicationSlider').removeClass('open').attr('aria-hidden', 'true');
+                       
+                        // Keep the approval result and PDF link visible.
+                    }                    
+                },
+
+                error: function (xhr) {
+
+                    console.log(xhr);
+
+                    $('#approvalForm button[type="submit"]')
+                        .prop('disabled', false)
+                        .show()
+                        .html(`
+                            <i class="fas fa-check-circle me-1"></i>
+                            पुढे करा
+                        `);
+
+                    let errorMessage = 'Something went wrong.';
+
+                    if (xhr.responseJSON?.message) {
+                        errorMessage = xhr.responseJSON.message;
+                    }
+
+                    alert(errorMessage);
+                },
+
+                complete: function () {}
+            });
+
+        });
+
+
+         submitRejectApplication =  function (){
+            const form = $('#rejectApplicationForm')[0];
+
+          
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return false;
+            }
+
+            const formData = new FormData(form);
+
+            formData.append('_csrfToken', $('meta[name="csrfToken"]').attr('content'));
+            formData.append('_Token', $('meta[name="csrfToken"]').attr('content'));
+            console.log(Object.fromEntries(formData));
+            
+           $.ajax({
+                url: '<?= $this->Url->build(["controller" => "Division", "action" => "staffOnboardReject"]); ?>',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                cache: false,
+                
+                headers: {
+                    'X-CSRF-Token': $('meta[name="csrfToken"]').attr('content'),
+                    '_Token': $('meta[name="csrfToken"]').attr('content') 
+                },
+
+                beforeSend: function () {
+
+                    // Disable button
+                    $('#approvalForm button[type="submit"]')
+                        .prop('disabled', true)
+                        .html(`
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                            Processing...
+                        `);
+                },
+
+                success: function (response) {
+
+                    console.log(response);
+
+                    if(response.success == false){
+                        alert(response.message)
+                    }else{
+                        alert('Application Reject successfully.');
+                        $('#rejectApplicationSlider').removeClass('open').attr('aria-hidden', 'true');
+                        location.reload();
+
+                    }                    
+                },
+
+                error: function (xhr) {
+
+                    console.log(xhr);
+
+                    let errorMessage = 'Something went wrong.';
+
+                    if (xhr.responseJSON?.message) {
+                        errorMessage = xhr.responseJSON.message;
+                    }
+
+                    alert(errorMessage);
+                },
+
+                complete: function () {
+
+                var ev=3;
+                }
+            });
+        }
+
+
+         $(document).on('click', '.forwardApplication-open-transfer', function () {
+            
+            const caseId = $(this).data('id');    
+            let staff = $(this).data('staffobject');
+            $(document).trigger('forwardApplication:openSlider', [caseId, staff]);
+        });
+
+        // Close slider
+        $(document).on('click', '.forwardApplication-close-slider', function () {
+            $(document).trigger('forwardApplication:closeSlider');
+        });
+
+        // Custom event handlers for Slider 2
+        $(document).on('forwardApplication:openSlider', function (e, caseId,staff) {
+            loadForwardTransferDetails(caseId,staff);
+            $('#forwardApplicationSlider').addClass('open').attr('aria-hidden', 'false');
+        });
+
+        $(document).on('forwardApplication:closeSlider', function () {
+            $('#forwardApplicationSlider').removeClass('open').attr('aria-hidden', 'true');
+        });
+
+
+         loadForwardTransferDetails = function(caseId,staff){                    
+             
+           
+            loadplDetails(staff.id,'forword');                        
+
+           
+        }
+
+
+        loadplDetails = function(staffId,type){
+                $.ajax({
+                url: '<?= $this->Url->build(["controller" => "GeneralUtilities", "action" => "getStaffOnboardingDetails"]); ?>' + '?staff_id=' + encodeURIComponent(staffId),
+                type: 'GET',
+                dataType: 'json',
+                headers: {
+                    'X-CSRF-Token': $('meta[name="csrfToken"]').attr('content')
+                },
+                success: function(response) {
+                    if (!response.success || !response.data) {
+                        return;
+                    }
+
+                    const d = response.data;
+                    console.log("Staff Onboarding Details:", d);
+                     let dbTimestamp = d.created_at;           
+                     let date = new Date(dbTimestamp);
+                     let formattedDate =
+                        String(date.getDate()).padStart(2, '0') + '/' +
+                        String(date.getMonth() + 1).padStart(2, '0') + '/' +
+                        date.getFullYear();
+
+                    if(type == 'reject'){  
+                        $("#reject_sanstha_name").html(d.ng2g.institution_name);
+                        $("#reject_staff_name").html(d.candidate_name);
+                        $("#reject_date").html(formattedDate);
+                        $("#reject_id").html(d.id);
+                        $("#reject_year").html(date.getFullYear());
+                    }else{
+                        $("#app_sanstha_name").html(d.ng2g.institution_name); 
+                        $("#app_staff_name").html(d.candidate_name); 
+                        $("#app_date").html(formattedDate); 
+                        $("#app_id").html(d.id); 
+                        $("#app_year").html(date.getFullYear());
+                    }
+       
+
+                }
+            });
+    }
+
+
+
+
+
+    $('#forwardForm').on('submit', function (e) {
+
+            e.preventDefault();
+            let formData = new FormData(this);
+            let forwardId = $("#app_id").text().trim();
+            formData.append('app_id', forwardId);
+            formData.append('action', 'forward');
+
+            formData.append('_csrfToken', $('meta[name="csrfToken"]').attr('content'));
+            $.ajax({
+                url: '<?= $this->Url->build(["controller" => "Division", "action" => "staffOnboardForward"]); ?>',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                cache: false,
+                headers: {
+                    'X-CSRF-Token': $('meta[name="csrfToken"]').attr('content') 
+                },
+
+                beforeSend: function () {
+
+                    // Disable button
+                    $('#forwardForm button[type="submit"]')
+                        .prop('disabled', true)
+                        .html(`
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                            Processing...
+                        `);
+                },
+
+                success: function (response) {
+
+                    console.log(response);
+
+                    if(response.success == false){
+                        alert(response.message)
+                    }else{
+                        alert('Application forwarded successfully.');
+                        // Optional
+                        $('#forwardForm')[0].reset();
+                        let forwardId = $("#app_id").text().trim();
+                        $('#emp_row_' + forwardId).remove();
+                        $('#forwardApplicationSlider').removeClass('open').attr('aria-hidden', 'true');
+                        location.reload();
+                    }                    
+                },
+
+                error: function (xhr) {
+
+                    console.log(xhr);
+
+                    let errorMessage = 'Something went wrong.';
+
+                    if (xhr.responseJSON?.message) {
+                        errorMessage = xhr.responseJSON.message;
+                    }
+
+                    alert(errorMessage);
+                },
+
+                complete: function () {
+
+                    // Enable button again
+                    $('#forwardForm button[type="submit"]')
+                        .prop('disabled', false)
+                        .html(`
+                            <i class="fas fa-times-circle me-1"></i>
+                            नामंजूर करा
+                        `);
+                }
+            });
+
+        });
+
+
+
+        
+
+
+});
+
+
+$(document).ready(function() {  
+
+                                 
+$('#workOrderBtn').on('click', function (e) {
+
+            e.preventDefault();
+            const form = $(this).closest('form')[0];
+
+            if (!form) {
+                console.error('Form not found');
+                return;
+            }
+
+            let formData = new FormData(form);
+            let approvalId = $("#approved_id").text().trim();
+            $('#approve_form_id').val(approvalId);
+            $('#approve_form_remark').val( ($('#approved_remark').val() || '').trim());
+            formData = new FormData(form);
+            $.ajax({
+                url: '<?= $this->Url->build(["controller" => "Division", "action" => "staffOnboardGenrateFile"]); ?>',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                cache: false,
+                headers: {
+                    'X-CSRF-Token': $('meta[name="csrfToken"]').attr('content') 
+                },
+
+                beforeSend: function () {
+
+                    // Disable button
+                    $('#approvalForm button[type="button"]')
+                        .prop('disabled', true)
+                        .html(`
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                            Processing...
+                        `);
+                },
+
+                success: function (response) {
+
+                    if(response.success == false){
+                        alert(response.message)
+                    }else{
+                      
+                        let pdfUrl = response && response.url ? response.url : '';
+                        let staffId = response && response.staffId ? response.staffId : '';
+                        if (pdfUrl) {
+                            $('#workOrderFile').html(`
+                                <div class="mt-3 p-3 border rounded bg-light">
+                                    <div class="fw-bold mb-2">Work Order PDF</div>
+                                    <a href="${pdfUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-primary">
+                                        <i class="fas fa-file-pdf me-1"></i> View PDF
+                                    </a>
+
+                                     <a href="javascript:void(0);"
+                                        class="btn btn-danger btn-sm signDocBtn"
+                                        data-staff-id="${staffId}">
+                                        <i class="fas fa-signature me-1"></i> Sign DSC
+                                    </a>
+
+                                </div>
+                            `);
+                        }
+
+                        $('#approvalForm button[type="button"]').hide();
+
+                       
+                    }                    
+                },
+
+                error: function (xhr) {
+
+                    console.log(xhr);
+
+                    $('#approvalForm button[type="button"]')
+                        .prop('disabled', false)
+                        .show()
+                        .html(`
+                            <i class="fas fa-check-circle me-1"></i>
+                            वर्क ऑर्डर तयार करा
+                        `);
+
+                    let errorMessage = 'Something went wrong.';
+
+                    if (xhr.responseJSON?.message) {
+                        errorMessage = xhr.responseJSON.message;
+                    }
+
+                    alert(errorMessage);
+                },
+
+                complete: function () {}
+            });
+
+        });
 });
 </script>
 
+<!-- SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+    
+$(document).on('click', '.signDocBtn', function (e) {
+
+    e.preventDefault();
+
+    const staffId = $(this).data('staff-id');
+
+    Swal.fire({
+        title: 'Confirm',
+        html: `
+            <p>आपली टिप्पणी व आदेश योग्य असल्याची खात्री झाल्यानंतर, “होय” बटणावर क्लिक करून DSC साठी पुढील कार्यवाही करावी.?</p>
+
+        `,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'होय',
+        cancelButtonText: 'नाही',
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#6c757d',
+        reverseButtons: true
+    }).then((result) => {
+
+        if (!result.isConfirmed) {
+            return;
+        }
+
+$('#approvedBtn').removeClass('d-none');
+       /* Swal.fire({
+            title: 'Please wait...',
+            text: 'Rejecting application',
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
+        $.ajax({
+            url: '<?php //$this->Url->build(["controller" => "Recruit", "action" => "rejectApplication"]) ?>',
+
+            type: 'POST',
+
+            data: {
+                reject_id: staffId
+            },
+
+            dataType: 'json',
+
+            success: function (response) {
+
+                if (response.success) {
+
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Rejected',
+                        text: response.message,
+                        confirmButtonText: 'OK'
+                    }).then(() => {
+                        location.reload();
+                    });
+
+                } else {
+
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: response.message
+                    });
+
+                }
+            },
+
+            error: function (xhr) {
+
+                console.log(xhr.responseText);
+
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Server Error',
+                    text: 'Something went wrong. Please try again.'
+                });
+
+            }
+        });*/
+
+    });
+
+});
+</script>
 

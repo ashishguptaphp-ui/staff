@@ -774,7 +774,7 @@ $approvedLogDocument = $approvedLogDocuments[$post->soa_id] ?? null;
 
                              if($post->status !== 'Forwarded_dyd_dadi') {
                           echo "<a href='#' style='text-decoration:none;' class='forwardApplication-open-transfer' data-staffObject='". json_encode($post, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP)."' data-mode='1'  data-id='".$post->id."'>
-                                <i class='fa-solid fa-address-card'></i>  शालार्थ सागी नस्ती वर्ग करा
+                                <i class='fa-solid fa-address-card'></i>  शालार्थ साठी नस्ती वर्ग करा
                             </a><br/>";
                              }
                                 

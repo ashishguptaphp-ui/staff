@@ -751,7 +751,23 @@
                 <?php 
                 $idx =1;
                foreach ($ng2g as $request): 
-                
+                $approvedLogDocument = $approvedLogDocuments[$request->id] ?? null;
+                   
+                $approvedLogUrl = null;
+                if (!empty($approvedLogDocument)) {
+                    $approvedLogUrl = preg_match('/^https?:\/\//i', $approvedLogDocument)
+                        ? $approvedLogDocument
+                        : $this->Url->build('/' . ltrim($approvedLogDocument, '/'));
+                }
+
+                 $rejectLogDocument = $rejectLogDocuments[$request->id] ?? null;
+                   
+                $rejectLogUrl = null;
+                if (!empty($rejectLogDocument)) {
+                    $rejectLogUrl = preg_match('/^https?:\/\//i', $rejectLogDocument)
+                        ? $rejectLogDocument
+                        : $this->Url->build('/' . ltrim($rejectLogDocument, '/'));
+                }
                 ?>
                 <tr>
                     <td> <?= h($idx) ?>.</td>
@@ -767,9 +783,18 @@
                     <td id="actionBtns111_<?= h($request->id) ?>">
                         <?php
 
-                           echo "<button class='btn btn-primary badge bg-purple text-light action-ud startApplication-open-view me-2' data-mode='2' app-step='1'  data-staffObject='". json_encode($request, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ."' data-id='".$request->id."'> <i class='fa-solid fa-address-card'></i> अर्ज पहा</button>";
-                           echo "<button class='btn btn-primary badge bg-purple text-light action-ud startApplicationHistory-open-view me-2' data-mode='2' app-step='1'  data-staffObject='". json_encode($request, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ."' data-id='".$request->id."'> <i class='fa-solid fa-history'></i> अर्ज इतिहास पहा</button>";
-                         
+                            echo "<a href='#' style='text-decoration:none;'  class='startApplication-open-view me-2' data-mode='2' app-step='1'  data-staffObject='". json_encode($request, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ."' data-id='".$request->id."'> <i class='fa-solid fa-address-card'></i> अर्ज पहा</a><br>";
+                           echo "<a href='#' style='text-decoration:none;'  class='startApplicationHistory-open-view me-2' data-mode='2' app-step='1'  data-staffObject='". json_encode($request, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ."' data-id='".$request->id."'> <i class='fa-solid fa-history'></i> टिप्पणी</a><br>";
+                           if($approvedLogUrl!=null){
+                              echo "<a href='" . h($approvedLogUrl ?? '#') . "' style='text-decoration:none;' target='_blank'" . ($approvedLogUrl ? '' : " onclick=\"return false;\"") . ">
+                                <i class='fa-solid fa-reorder'></i>  आदेश
+                            </a><br/>";
+                           }
+                           if($rejectLogUrl!=null){
+                              echo "<a href='" . h($rejectLogUrl ?? '#') . "' style='text-decoration:none;' target='_blank'" . ($rejectLogUrl ? '' : " onclick=\"return false;\"") . ">
+                                <i class='fa-solid fa-reorder'></i>  नकार आदेश
+                            </a><br/>";
+                           }
                         ?>                    
                          
                     </td>
@@ -998,6 +1023,28 @@
                                    
                 </div>
 
+                <div class="pdf-field">
+                          <div id="periodDivShow"></div>           
+                    </div>
+
+
+                       <div class="pdf-field" >
+                        <h3 class="section-title">संस्थेचा ठराव</h3>
+                        <div class="row mt-1">
+                            <div class="col-md-3 mt-2">
+                                <label for="resolutionFile" class="form-label english-label">
+                                     संस्थेचा ठराव
+                                </label>                                
+                            </div>    
+                            <div class="col-md-3" id="adv_resolution_file">
+                                <a>View Document</a>
+                            </div>      
+                        </div>   
+                         <div id="cadetailsDivShow"></div>                 
+                        <hr/>                        
+                    </div>
+
+
                     <div class="pdf-field" id="roster_section">
                         <h3 class="section-title">Roster</h3>
                         <div class="row mt-1">
@@ -1014,11 +1061,11 @@
                     </div> 
 
                     <div class="pdf-field">
-                        <h3 class="section-title">Sanch Manyata Document</h3>
+                        <h3 class="section-title">संच मान्यता दस्तऐवज</h3>
                         <div class="row mt-2">
                             <div class="col-md-2 mt-2">
                                 <label for="signatureFile" class="form-label english-label">
-                                     Sanch Manyata Document
+                                     संच मान्यता दस्तऐवज
                                 </label>                                
                             </div>    
                             <div class="col-md-3" id="adv_post_sanch_file">
@@ -1050,13 +1097,13 @@
         <!-- Action Buttons -->
         <div class="col-md-6 text-end" id="saActionButtons">
 
-            <button type="button"
+            <!--button type="button"
                     id="saForwardBtn"
                     data-post-id=""
                     class="btn btn-success btn-sm me-2">
                 <i class="fas fa-check me-1"></i>
                 Forward
-            </button>
+            </button-->
 
              <!--button type="button"
                     id="saApproveBtn"
@@ -1698,6 +1745,9 @@ $(document).ready(function(){
                             document.getElementById("saApplicationDetails").innerHTML = response.data.sansthaRecordDiv;
                             document.getElementById("saApplicationDetails_history").innerHTML = response.data.sansthaRecordDiv;
                             document.getElementById("adv_post_list").innerHTML = response.data.htmlVacancyDiv;
+                             document.getElementById("periodDivShow").innerHTML = response.data.periodDivShow;
+                            document.getElementById("cadetailsDivShow").innerHTML = response.data.cadetailsDivShow;
+
                             //document.getElementById("saAuditTableBody").innerHTML = response.audithtml; 
                             document.getElementById("saTimelineContainer").innerHTML = response.data.auditLogsHistory || '<div class="timeline-item left"><div class="card"><div class="card-body p-4"><h3 class="text-center">No audit history found.</h3></div></div></div>';                          
                                                      
@@ -1722,22 +1772,51 @@ $(document).ready(function(){
                             } else {
                                 $('#adv_post_approval_file').html('<span class="text-muted">Document not available</span>');
                             }
+
+                             if (response.data.resolutionFileUrl) {
+                                $('#adv_resolution_file').html(`
+                                    <a href="${escapeHtml(response.data.resolutionFileUrl)}" target="_blank" rel="noopener">
+                                        View Document
+                                    </a>`);
+                            } else {
+                                $('#adv_resolution_file').html('<span class="text-muted">Document not available</span>');
+                            }
+
+                            
                             let sanchManyataHtml = '';
                             const sanchManyataUrls = response.data.sanchManyataUrls || {};
+                            const smDetails = response.data.smDetails || {};
+                            const udiseCodes = new Set([
+                                ...Object.keys(sanchManyataUrls),
+                                ...Object.keys(smDetails)
+                            ]);
 
-                            Object.entries(sanchManyataUrls).forEach(function ([udiseCode, url]) {
+                            udiseCodes.forEach(function (udiseCode) {
+                                const sanchUrl = sanchManyataUrls[udiseCode];
+                                const schoolDetails = smDetails[udiseCode] || {};
+                                const staffAnswer = schoolDetails.smdetails === '1'
+                                    ? 'होय'
+                                    : schoolDetails.smdetails === '2'
+                                        ? 'नाही'
+                                        : 'माहिती उपलब्ध नाही';
+
                                 sanchManyataHtml += `
                                     <div class="mb-2">
                                         <strong>UDISE ${escapeHtml(udiseCode)}:</strong>
-                                        <a href="${escapeHtml(url)}" target="_blank" rel="noopener">
-                                            View Document
-                                        </a>
+                                        <div><strong>संच मान्यता:</strong> ${sanchUrl
+                                            ? `<a href="${escapeHtml(sanchUrl)}" target="_blank" rel="noopener">View Document</a>`
+                                            : 'कागदपत्र उपलब्ध नाही'}</div>
+                                        <div><strong>संस्थेमध्ये शिक्षकेतर अतिरिक्त कर्मचारी आहे का?</strong> ${staffAnswer}</div>
+                                        <div><strong>दस्तऐवज:</strong> ${schoolDetails.fileUrl
+                                            ? `<a href="${escapeHtml(schoolDetails.fileUrl)}" target="_blank" rel="noopener">View Document</a>`
+                                            : 'कागदपत्र उपलब्ध नाही'}</div>
                                     </div>`;
                             });
 
                             if (!sanchManyataHtml) {
                                 sanchManyataHtml = '<span class="text-muted">Document not available</span>';
                             }
+
 
                             $('#adv_post_sanch_file').html(sanchManyataHtml);
                          

@@ -1,0 +1,925 @@
+<style>
+    /* Overlay Styling */
+    .sync-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.9);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    }
+
+    /* Centered Box */
+    .sync-box {
+    text-align: center;
+    background: #f9fafc;
+    padding: 40px 60px;
+    border-radius: 16px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+    animation: fadeIn 0.5s ease-in-out;
+    }
+
+    /* Spinner */
+    .spinner {
+    border: 6px solid #e0e0e0;
+    border-top: 6px solid #007bff;
+    border-radius: 50%;
+    width: 70px;
+    height: 70px;
+    margin: 0 auto 20px auto;
+    animation: spin 1.2s linear infinite;
+    }
+
+    /* Text */
+    .sync-message {
+    font-size: 1.1rem;
+    color: #333;
+    font-weight: 500;
+    }
+
+    /* Animations */
+    @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+    }
+
+    @keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+    }
+    #syncMessage {
+      font-size: 1.2rem;
+      font-weight: 500;
+      background: #fff;
+      padding: 20px 40px;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      border-left: 4px solid #1565c0;
+      min-width: 420px;
+      text-align: center;
+    }
+
+    #okButton {
+      
+      background-color: #28a745;
+      border: none;
+      color: white;
+      padding: 10px 25px;
+      border-radius: 6px;
+      font-size: 1rem;
+      cursor: pointer;
+      margin-top: 15px;
+      transition: background 0.3s;
+    }
+
+    #okButton:hover {
+      background-color: #218838;
+    }
+    table tbody tr td{
+        font-size: 14px;
+        font-family: Roboto EMOJI;
+    }
+</style>
+    
+
+<style>
+    /* Slide Panel */
+    .slide-panel {
+        position: fixed;
+        top: 0;
+        right: -100%;
+        width: 100%;
+        height: 100%;
+        background: #ffffff;
+        box-shadow: -2px 0 10px rgba(0,0,0,0.15);
+        transition: right 0.3s ease-in-out;
+        z-index: 1050;
+        display: flex;
+        flex-direction: column;
+    }
+    /* Slide Panel */
+    .slide-panel1 {
+        position: fixed;
+        top: 10%;
+        right: -100%;
+        width: 30%;
+        height: 90%;
+        background: #ffffff;
+        box-shadow: -2px 0 10px rgba(0,0,0,0.15);
+        transition: right 0.3s ease-in-out;
+        z-index: 1050;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .slide-panel.open {
+        right: 0;
+    }
+
+    /* Mobile */
+    @media (max-width: 768px) {
+        .slide-panel .slide-panel1{
+            width: 100%;
+            right: -100%;
+        }
+    }
+
+    .slide-header,
+    .slide-footer {
+        padding: 12px 16px;
+        border-bottom: 1px solid #dee2e6;
+        background: #1c8a8b;
+        color:#fff;
+    }
+
+    .slide-footer {
+        border-top: 1px solid #dee2e6;
+        margin-top: auto;
+    }
+
+    .slide-body {
+        padding: 3px;
+        overflow-y: auto;
+    }
+</style>
+
+<style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --accent-color: #e74c3c;
+        }
+        
+        body {
+            font-family: 'Segoe UI', 'Nirmala UI', sans-serif;
+           
+        }
+        
+        .header-section {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 15px 0;
+            border-radius: 0 0 10px 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .form-container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            padding: 10px;
+            margin-bottom: 30px;
+        }
+        
+        .section-title {
+            color: var(--primary-color);
+            border-bottom: 1px solid var(--secondary-color);
+            padding-bottom: 3px;
+            margin-bottom: 3px;
+            font-weight: 600;
+            font-size:18px;
+        }
+        
+        .form-label {
+            font-weight: 600;
+            color: #444;
+            margin-bottom: 8px;
+        }
+        
+        .marathi-label {
+            color: #2c3e50;
+            font-weight: 600;
+        }
+        
+        .english-label {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+            font-style: italic;
+        }
+        
+        .required-field::after {
+            content: " *";
+            color: var(--accent-color);
+        }
+        
+        .file-upload-area {
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            padding: 5px;
+            text-decoration:none;
+            text-align: center;
+            transition: all 0.3s;
+            cursor: pointer;
+            background-color: #f9f9f9;
+        }
+        
+        .file-upload-area:hover {
+            border-color: var(--secondary-color);
+            background-color: #f0f7ff;
+        }
+        
+        .file-upload-area.dragover {
+            border-color: var(--secondary-color);
+            background-color: #e8f4fc;
+        }
+        
+        .file-list {
+            margin-top: 15px;
+        }
+        
+        .file-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 12px;
+            background-color: #f1f8ff;
+            border-radius: 5px;
+            margin-bottom: 8px;
+            border-left: 4px solid var(--secondary-color);
+        }
+        
+        .file-icon {
+            color: var(--secondary-color);
+            margin-right: 10px;
+        }
+        
+        .btn-submit {
+            background: linear-gradient(to right, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 12px 30px;
+            font-weight: 600;
+            border: none;
+            border-radius: 6px;
+            transition: all 0.3s;
+        }
+        
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .progress-section {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 300px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 3px 15px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+        
+       
+        
+        .pdf-field {
+            background:#fff;
+            padding:10px 0px;;
+            margin-bottom: 0px;
+            border-bottom: 1px solid #333;
+        }
+        
+        .form-section {
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #6d6868;
+        }
+        
+        @media (max-width: 768px) {
+            .form-container {
+                padding: 10px;
+            }
+            
+            .progress-section {
+                position: static;
+                width: 100%;
+                margin-top: 20px;
+            }
+        }
+        .txtval{
+            color: #004884;
+            padding-left: 10px;
+        }
+</style>
+
+
+
+<style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --accent-color: #e74c3c;
+        }
+        
+        body {
+            font-family: 'Segoe UI', 'Nirmala UI', sans-serif;
+           
+        }
+        
+        .header-section {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 15px 0;
+            border-radius: 0 0 10px 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .form-container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            padding: 10px;
+            margin-bottom: 30px;
+        }
+        
+        .section-title {
+            color: var(--primary-color);
+            border-bottom: 1px solid var(--secondary-color);
+            padding-bottom: 3px;
+            margin-bottom: 3px;
+            font-weight: 600;
+            font-size:18px;
+        }
+        
+        .form-label {
+            font-weight: 600;
+            color: #444;
+            margin-bottom: 8px;
+        }
+        
+        .marathi-label {
+            color: #2c3e50;
+            font-weight: 600;
+        }
+        
+        .english-label {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+            font-style: italic;
+        }
+        
+        .required-field::after {
+            content: " *";
+            color: var(--accent-color);
+        }
+        
+        .file-upload-area {
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            padding: 5px;
+            text-decoration:none;
+            text-align: center;
+            transition: all 0.3s;
+            cursor: pointer;
+            background-color: #f9f9f9;
+        }
+        
+        .file-upload-area:hover {
+            border-color: var(--secondary-color);
+            background-color: #f0f7ff;
+        }
+        
+        .file-upload-area.dragover {
+            border-color: var(--secondary-color);
+            background-color: #e8f4fc;
+        }
+        
+        .file-list {
+            margin-top: 15px;
+        }
+        
+        .file-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 12px;
+            background-color: #f1f8ff;
+            border-radius: 5px;
+            margin-bottom: 8px;
+            border-left: 4px solid var(--secondary-color);
+        }
+        
+        .file-icon {
+            color: var(--secondary-color);
+            margin-right: 10px;
+        }
+        
+        .btn-submit {
+            background: linear-gradient(to right, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 12px 30px;
+            font-weight: 600;
+            border: none;
+            border-radius: 6px;
+            transition: all 0.3s;
+        }
+        
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .progress-section {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 300px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 3px 15px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+        
+       
+        
+        .pdf-field {
+            background:#fff;
+            padding:10px 0px;;
+            margin-bottom: 0px;
+            border-bottom: 1px solid #333;
+        }
+        
+        .form-section {
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #6d6868;
+        }
+        
+        @media (max-width: 768px) {
+            .form-container {
+                padding: 10px;
+            }
+            
+            .progress-section {
+                position: static;
+                width: 100%;
+                margin-top: 20px;
+            }
+        }
+        .txtval{
+            color: #004884;
+            padding-left: 10px;
+        }
+        .section {
+                margin-top: 0px;
+        
+
+            .section-title {
+                font-size: 16px;
+                font-weight: 700;
+                color: #0b5ed7;
+                margin-bottom: 14px;
+                border-left: 4px solid #0b5ed7;
+                padding-left: 10px;
+            }
+
+            .grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+                gap: 16px;
+            }
+
+            .field {
+                background: #f9fafb;
+                border-radius: 12px;
+                padding: 14px 16px;
+            }
+
+            .label {
+                font-size: 13px;
+                color: #6b7280;
+                margin-bottom: 4px;
+            }
+
+            .value {
+                font-size: 15px;
+                font-weight: 600;
+                color: #111827;
+            }
+
+            .highlight {
+                background: #eef2ff;
+                border-left: 5px solid #6366f1;
+            }
+        }
+
+        .card {
+        background: #ffffff;
+        border-left: 6px solid #2b6cb0;
+        padding: 10px;
+        
+        border-radius: 10px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        margin-bottom: 20px;
+    }
+
+    .checkbox-label {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 17px;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    input[type="checkbox"] {
+        width: 20px;
+        height: 20px;
+        accent-color: #2b6cb0;
+        cursor: pointer;
+    }
+
+    .transfer-section {
+        display: none;
+        margin-top: 0px;
+        padding: 10px;
+        border: 1px dashed #cbd5e0;
+        border-radius: 8px;
+        background: #f8fafc;
+    }
+
+    .transfer-section h4 {
+        margin: 0 0 3px;
+        color: #2b6cb0;
+    }
+
+    .field {
+        margin-bottom: 3px;
+    }
+
+    .field label {
+        font-weight: 600;
+        display: block;
+        margin-bottom: 4px;
+    }
+
+    .field input select {
+        width: 100%;
+        padding: 8px 10px;
+        border: 1px solid #cbd5e0;
+        border-radius: 6px;
+    }
+    .viewBtn{
+        text-decoration: none;
+        padding: 3px 10px;
+        background: #f0e9e4;
+    }
+</style>
+
+    <style>
+        .hidden { display: none; }
+        .form-group { margin: 10px 0; }
+    </style>
+    
+<style>
+    .dots-loader{
+        color:purple;
+        padding:15%;
+        font-size:36px;
+    }
+        .dots-loader::after {
+            content: '';
+            animation: dots 1.5s steps(3, end) infinite;
+        }
+
+        @keyframes dots {
+            0% { content: ''; }
+            12% { content: ' .'; }
+            33% { content: ' . .'; }
+            66% { content: ' . . .'; }
+            81% { content: ' . . . .'; }
+            100% { content: ' . . . . .'; }
+        }
+        </style>
+<h5 style="margin:0px;padding:10px; color: #1a237e; border-bottom: 2px solid #1a237e;">
+       
+        🔜👨‍💼 List of Ng2G Transfer Applications
+      
+</h5>
+<!-- Bootstrap + Bootstrap Icons -->
+<div style="background: #fff; padding:10px;">      
+    
+        
+
+        <table id="staffTable" class="table table-bordered table-striped table-hover align-middle">
+            <thead class="table-light">
+            <tr>
+                <th>#</th>  
+                <th>Sanstha, School and Jurisdiction Details</th>                
+                <th>Staff Details</th>  
+                <th>Status</th>
+            </tr>
+            </thead>
+            <tbody>                        
+                <?php 
+                $idx =1;
+                //dd($staffs);
+                
+                foreach ($ng2g as $staff): 
+                    /*echo "<pre>";
+                    print_r($staff);
+                    exit;*/
+                ?>
+                <tr>
+                    <td><?= h($idx++) ?></td>
+                   
+                    <td>
+                        Sanstha:- <b><?= h($staff->institution_name) ?></b><br/>
+                        Current School:- <b><?= h($staff->school_name) ?></b><br/>
+                        Transfer School:- <b><?= h($staff->school_name_at_transfer) ?></b><br/>   
+                        District:- <b><?= h($staff->district) ?></b>, 
+                        Block:- <b><?= h($staff->block) ?></b>, 
+                        Cluster:- <b><?= h($staff->cluster) ?></b>                     
+                    </td>                    
+                    <td>
+                        <i class="fa-solid fa-user"></i> <b><?= h($staff->employee_name) ?></b><br/>
+                        <i class="fa-solid fa-id-badge"></i> <?= h($staff->staff_type_name) ?><br/>
+                        <i class="fa-solid fa-briefcase"></i> <b><?= h($staff->designation) ?></b><br/>
+                        <i class="fa-solid fa-building-columns"></i> <b><?= h($staff->aid_name) ?></b>
+                    </td>
+                    <td>
+                        <?php
+                            //echo $staff->id."--".$staff->status;
+                           
+                            if($staff->status == 'individual_order_eo_pending'){
+                                echo '<b style="color:red;">प्रलंबित: शिक्षण अधिकारी पडताळणी</b>';
+
+                                
+                            }else if($staff->status == 'individual_order_rejected_by_eo'){
+                                echo '<b style="color:red;">व्यक्तिगत मान्यता – शिक्षण अधिकारी स्तरावर नाकारली</b>';
+                            }else if($staff->status == 'individual_order_eo_pending'){
+                                echo '<b style="color:red;">व्यक्तिगत मान्यता – प्रलंबित: नगरपालिका पडताळणी</b>';
+                            }else if($staff->status == 'dy_eo_desk_pending'){
+                                    echo '<b style="color:red;">प्रलंबित: शिक्षण अधिकारी पडताळणी</b>';                            
+                                
+                            }
+                            
+                        ?>
+                       
+                         <br/>
+                        <?php
+                                echo "<button class='btn btn-primary badge bg-success text-light action-ud approveApplication-open-transfer' data-mode='1'  data-id='".$staff->id."'>
+                                        <i class='fa-solid fa-arrow-trend-up'></i>  अर्ज पहा
+                                    </button>";
+                     ?>
+                       
+                         
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+       
+</div>
+
+
+<!-- Slide Panel -->
+<div id="approveApplicationSlider" class="slide-panel" aria-hidden="true" style="border:3px solid #537895;">
+    <!-- Header -->
+    <div class="slide-header d-flex justify-content-between align-items-center">
+        <div style="width:100%;">
+            <h5 class="mb-0"><i class="fas fa-arrow-trend-up me-1"></i> Non-Grant → Aided Transfer </h5>
+            <!--<small class="text-muted">Case ID: <span id="caseId"></span></small>-->
+        </div>
+        <button style="font-size:27px;" class="btn btn-sm btn-outline-danger approveApplication-close-slider">X</button>
+    </div>
+
+    <!-- Body -->
+    <div class="slide-body">
+        <div class="form-container">
+            <div id="htmlForm"></div>
+
+        </div>
+
+    </div>
+
+    <!-- Footer -->
+    <div class="slide-footer text-end">
+                <button class="btn btn-secondary btn-sm approveApplication-close-slider">Close</button>
+            
+    </div>
+
+</div>
+
+
+
+<script>  
+    $(document).ready(function() {  
+
+       
+
+        $(document).on('click', '.approveApplication-open-transfer', function () {
+            const caseId = $(this).data('id');        
+           
+
+            /*if(currentMode == 1){
+                $('#decisionBtn').removeClass('btn-danger').addClass('btn-success').html('Approve Application');
+                //$('#footerBox').css('border-top', '5px solid #198754');
+                $('#confirmBox').show();
+                $('#confirmInfo').prop('required', true);
+            }else{
+                $('#decisionBtn').removeClass('btn-success').addClass('btn-danger').html('Reject Application');
+               // $('#footerBox').css('border-top', '5px solid #dc3545');
+                $('#confirmBox').hide();
+                $('#confirmInfo').prop('required', false);             
+            }*/
+             
+
+           $(document).trigger('approveApplication:openSlider', [caseId]);
+        });
+
+        // Close slider
+        $(document).on('click', '.approveApplication-close-slider', function () {
+            $(document).trigger('approveApplication:closeSlider');
+        });
+
+        // Custom event handlers for Slider 2
+        $(document).on('approveApplication:openSlider', function (e, caseId) {
+            loadTransferDetails(caseId);
+            $('#approveApplicationSlider').addClass('open').attr('aria-hidden', 'false');
+        });
+
+        $(document).on('approveApplication:closeSlider', function () {
+            $('#approveApplicationSlider').removeClass('open').attr('aria-hidden', 'true');
+        });
+
+         
+
+        // ------------------------------
+        // Global ESC key handler (closes both sliders)
+        // ------------------------------
+        $(document).on('keydown', function (e) {
+            if (e.key === 'Escape') {
+                $(document).trigger('im:closeSlider');
+                $(document).trigger('approveApplication:closeSlider');
+                $(document).trigger('startApplication:closeSlider');
+                
+            }
+        });
+
+        formatDate = function (dateStr) {
+            if (!dateStr) return "";
+
+            let parts = dateStr.split("-");
+            if (parts.length !== 3) return dateStr;
+
+            return parts[2] + "-" + parts[1] + "-" + parts[0];
+        }
+
+
+        loadTransferDetails = function(caseId){
+            $("#htmlForm").html('<div class="dots-loader"><img src="https://edustaff.maharashtra.gov.in/images/logo.png" alt="Maha Logo" class="me-2"> Loading</div>');
+            $.ajax({
+                url: '<?= $this->Url->build(["controller" => "Utilities", "action" => "ng2gTransferDetails"]); ?>/'+caseId,
+                type: 'GET',
+                headers: {
+                    'X-CSRF-Token': $('meta[name="csrfToken"]').attr('content') 
+                },
+                    success: function (response) {
+                        console.log("############################"+response);
+                    if(response.success){
+                        if(response.data.id>0){
+                            ng2g = response.data;
+                            
+                            $("#htmlForm").html(response.html);
+                            /*$("#aa_school_committee_outward_number").html(ng2g.school_committee_outward_number);
+                            $("#aa_school_committee_outward_date").html(formatDate(ng2g.school_committee_outward_date));
+                            $("#aa_school_committee_outward_file").attr("href", ng2g.school_committee_outward_file);
+                            $("#aa_institution_code").html(ng2g.institution_code);
+                            $("#aa_institution_name").html(ng2g.institution_name);
+                            $("#aa_udise_number").html(ng2g.udise_number);
+                            $("#aa_school_name").html(ng2g.school_name);
+                            $("#aa_emp_name").html(ng2g.employee_name);
+                            $("#aa_designation").html(ng2g.designation);
+                            $("#aa_staff_type_name").html(ng2g.staff_type_name);
+                            $("#aa_aid_name").html(ng2g.aid_name);
+                            $("#aa_medium").html(ng2g.medium);
+                            $("#aa_salary_grade").html(ng2g.salary_grade);
+                            $("#aa_teaching_subject").html(ng2g.teaching_subject);
+                            $("#aa_original_category").html(ng2g.original_category);
+                            $("#aa_appointment_category").html(ng2g.appointment_category);
+                            $("#aa_pan_number").html(ng2g.pan_number);
+                            $("#aa_aadhar_number").html(ng2g.aadhar_number);
+                            $("#aa_email").html(ng2g.email);
+                            $("#aa_mobile").html(ng2g.mobile);
+                            $("#school_committee_outward_file").attr("href", ng2g.school_committee_outward_file);*/
+                           
+                      
+    //"vacant_post_causing_transfer": "1",
+    //"vacant_post_date": "2024-10-09"
+   /*
+   // "school_location": null,
+    "school_permission_order_number": null,
+    "school_permission_order_date": null,
+    "school_permission_order_file": null,
+    "minority_cert_outward_number": null,
+    "minority_cert_outward_date": null,
+    "minority_cert_outward_file": null,
+    "school_at_transfer_file": null,
+    
+    "": "02",
+    "": "2013-03-17",
+    "school_committee_outward_file": "https://adc-ent-ecos.enlightcloud.com/7144-staff/prod/staff/7586/transfers/1776502842_school_committee_outward_file.pdf?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=1w0I0BBXzYfapDY3Gk6L%2F20260420%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260420T190440Z&X-Amz-SignedHeaders=host&X-Amz-Expires=900&X-Amz-Signature=d94dcaa01ed5e949f178b6f7c1a6637dd762b371cc3e47335825057391651f44",
+    "origin_sanstha_appointment_number": "न. वि. वा /85/2012-13",
+    "origin_sanstha_appointment_date": "2013-03-20",
+    "origin_sanstha_appointment_file": "https://adc-ent-ecos.enlightcloud.com/7144-staff/prod/staff/7586/transfers/1776502842_origin_sanstha_appointment_file.pdf?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=1w0I0BBXzYfapDY3Gk6L%2F20260420%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260420T190440Z&X-Amz-SignedHeaders=host&X-Amz-Expires=900&X-Amz-Signature=61eb537043ce05dfdd8e09534fa770a75a3851feb427a212ba19493234412d6a",
+    "personal_recognition_number": "क्रमांक /जिप/माध्यम १/८१०/२०१४",
+    "personal_recognition_date": "2014-02-26",
+    "personal_recognition_file": "https://adc-ent-ecos.enlightcloud.com/7144-staff/prod/staff/7586/transfers/1776502842_personal_recognition_file.pdf?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=1w0I0BBXzYfapDY3Gk6L%2F20260420%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260420T190440Z&X-Amz-SignedHeaders=host&X-Amz-Expires=900&X-Amz-Signature=2a8ac945d134b7fd8818a7dbde253b453cb13df0a1593d1a207017bf59219d61",
+    "service_seniority_list_number": "2025-26",
+    "service_seniority_list_date": "2026-04-10",
+    "service_seniority_list_file": "https://adc-ent-ecos.enlightcloud.com/7144-staff/prod/staff/7586/transfers/1776502842_service_seniority_list_file.pdf?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=1w0I0BBXzYfapDY3Gk6L%2F20260420%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260420T190440Z&X-Amz-SignedHeaders=host&X-Amz-Expires=900&X-Amz-Signature=1659ef805c44d12afcf7316217341d17dafa6f3d468cd3cebf1b8dab08021fa0",
+    "vacant_post_merit_list_number": "क्रमांक /आस्था/ बीसीसी/568/2025",
+    "vacant_post_merit_list_date": "2025-06-19",
+    "vacant_post_merit_list_file": "https://adc-ent-ecos.enlightcloud.com/7144-staff/prod/staff/7586/transfers/1776502842_vacant_post_merit_list_file.pdf?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=1w0I0BBXzYfapDY3Gk6L%2F20260420%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260420T190440Z&X-Amz-SignedHeaders=host&X-Amz-Expires=900&X-Amz-Signature=6b58c535439c398052650b6056d777fa9fbc16cf6bb557099a07e0dce620a879",
+    "opinion_eodd_recognition_number": null,
+    "opinion_eodd_recognition_date": null,
+    "opinion_eodd_recognition_file": null,
+    "five_years_hm_certificate_file": "https://adc-ent-ecos.enlightcloud.com/7144-staff/prod/staff/7586/transfers/1776502843_five_years_hm_certificate_file.pdf?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=1w0I0BBXzYfapDY3Gk6L%2F20260420%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260420T190440Z&X-Amz-SignedHeaders=host&X-Amz-Expires=900&X-Amz-Signature=2c25c5f7a357255d6b4bc024ba42f72e9f0e4ec560344cb1a88f80c6579b0f91",
+    "vacant_post_causing_transfer_file": "https://adc-ent-ecos.enlightcloud.com/7144-staff/prod/staff/7586/transfers/1776502843_vacant_post_causing_transfer_file.pdf?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=1w0I0BBXzYfapDY3Gk6L%2F20260420%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260420T190440Z&X-Amz-SignedHeaders=host&X-Amz-Expires=900&X-Amz-Signature=1bc7ea2d7a600a816059d2232deda5774cc7001f4ffdce443873142ba4d3d54c",
+    "mavak_checklist_date": "2025-04-10",
+    "mavak_checklist_file": "https://adc-ent-ecos.enlightcloud.com/7144-staff/prod/staff/7586/transfers/1776508514_mavak_checklist_file.pdf?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=1w0I0BBXzYfapDY3Gk6L%2F20260420%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260420T190440Z&X-Amz-SignedHeaders=host&X-Amz-Expires=900&X-Amz-Signature=9aa52ab6fc7b91a53dc31068b678c8bb575f644a1768147cda7e5379a0d4a307",
+    "recruitment_noc_outward_number": "10/04",
+    "recruitment_noc_outward_date": "2026-04-10",
+    "recruitment_noc_outward_file": "https://adc-ent-ecos.enlightcloud.com/7144-staff/prod/staff/7586/transfers/1776508514_recruitment_noc_outward_file.pdf?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=1w0I0BBXzYfapDY3Gk6L%2F20260420%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260420T190440Z&X-Amz-SignedHeaders=host&X-Amz-Expires=900&X-Amz-Signature=5dfdff183d9d9baee80a7c12c156ec8c57e8e9965c7de1b1d58a1a392e25236e",
+    "advrt_newspaper_name": "दैनिक देशोन्नती",
+    "advrt_newspaper_date": "2013-02-03",
+    "advrt_newspaper_file": "https://adc-ent-ecos.enlightcloud.com/7144-staff/prod/staff/7586/transfers/1776508514_advrt_newspaper_file.pdf?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=1w0I0BBXzYfapDY3Gk6L%2F20260420%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260420T190440Z&X-Amz-SignedHeaders=host&X-Amz-Expires=900&X-Amz-Signature=29e9550f3aa0c6791a674d317022bb3719809df169de06680e0fb4cf84c37144",
+    "interview_date": "2013-02-10",
+    "interview_file": "https://adc-ent-ecos.enlightcloud.com/7144-staff/prod/staff/7586/transfers/1776508514_interview_file.pdf?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=1w0I0BBXzYfapDY3Gk6L%2F20260420%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260420T190440Z&X-Amz-SignedHeaders=host&X-Amz-Expires=900&X-Amz-Signature=3bf41f655033e39171e8d9ba930dd9817fed75ab80f8e6ca2f9d9b5bc031a22f",
+    "report_ng_principle_date": "2013-03-21",
+    "report_ng_principle_file": "https://adc-ent-ecos.enlightcloud.com/7144-staff/prod/staff/7586/transfers/1776508514_report_ng_principle_file.pdf?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=1w0I0BBXzYfapDY3Gk6L%2F20260420%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260420T190440Z&X-Amz-SignedHeaders=host&X-Amz-Expires=900&X-Amz-Signature=d25a60ff6a709ce3d17240f8a93e5ee4ce53ee6fa44b3942bc0a1806e549a223",
+    "report_g_principle_date": "2026-04-10",
+    "report_g_principle_file": "https://adc-ent-ecos.enlightcloud.com/7144-staff/prod/staff/7586/transfers/1776508515_report_g_principle_file.pdf?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=1w0I0BBXzYfapDY3Gk6L%2F20260420%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260420T190440Z&X-Amz-SignedHeaders=host&X-Amz-Expires=900&X-Amz-Signature=16a914acaa169001afd79077285c5407842e45ec5fdcc386401103df12a1b62f",
+    "outward_number_match_certificate_date": null,
+    "outward_number_match_certificate_file": null,
+    "self_financing_certificate_outward_number": "409/2026",
+    "self_financing_certificate_date": "2026-04-10",
+    "self_financing_certificate_file": "https://adc-ent-ecos.enlightcloud.com/7144-staff/prod/staff/7586/transfers/1776508515_self_financing_certificate_file.pdf?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=1w0I0BBXzYfapDY3Gk6L%2F20260420%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260420T190440Z&X-Amz-SignedHeaders=host&X-Amz-Expires=900&X-Amz-Signature=3ec26ee0c7b50e64281c0c3112ba2f21c7a218cadf95c889ad5e2be744f35a79",
+    "salary_subsidy_guarantee_letter_file": "https://adc-ent-ecos.enlightcloud.com/7144-staff/prod/staff/7586/transfers/1776508515_salary_subsidy_guarantee_letter_file.pdf?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=1w0I0BBXzYfapDY3Gk6L%2F20260420%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260420T190440Z&X-Amz-SignedHeaders=host&X-Amz-Expires=900&X-Amz-Signature=23a7bfc56ce82e1ab2d2d67664910002876b0ef978742d383566bea85fdcc43d",
+    "itr1_file": "https://adc-ent-ecos.enlightcloud.com/7144-staff/prod/staff/7586/transfers/1776513073_itr1_file.pdf?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=1w0I0BBXzYfapDY3Gk6L%2F20260420%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260420T190440Z&X-Amz-SignedHeaders=host&X-Amz-Expires=900&X-Amz-Signature=e23cf89192ebc194736207be059aa296458ecf6d90aea96050a784519c86613a",
+    "itr2_file": "https://adc-ent-ecos.enlightcloud.com/7144-staff/prod/staff/7586/transfers/1776513073_itr2_file.pdf?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=1w0I0BBXzYfapDY3Gk6L%2F20260420%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260420T190440Z&X-Amz-SignedHeaders=host&X-Amz-Expires=900&X-Amz-Signature=d813a8e12fbacb7121d4c6d3bc23cee5fb20da5fceb1c0b1cd506cd673636436",
+    "itr3_file": "https://adc-ent-ecos.enlightcloud.com/7144-staff/prod/staff/7586/transfers/1776513074_itr3_file.pdf?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=1w0I0BBXzYfapDY3Gk6L%2F20260420%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260420T190440Z&X-Amz-SignedHeaders=host&X-Amz-Expires=900&X-Amz-Signature=54512cf3359b4c28b88c016b14b792bc102f2785e33c224dbc9696844f01f6bd",
+    "bank_statement_from_date": "2025-10-01",
+    "bank_statement_to_date": "2026-02-01",
+    "bank_statement_file": "https://adc-ent-ecos.enlightcloud.com/7144-staff/prod/staff/7586/transfers/1776513074_bank_statement_file.pdf?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=1w0I0BBXzYfapDY3Gk6L%2F20260420%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260420T190440Z&X-Amz-SignedHeaders=host&X-Amz-Expires=900&X-Amz-Signature=2f51b86133793d5896eb864ba9cbe434a4bdd3e35c5d2ce0003b6accfb799112",
+    "court_order_petition_number": "",
+    "court_order_date": null,
+    "court_order_file": null,
+    "no_benefits_certificate_details": "शासकिय लाभ न घेतल्याचे",
+    "no_benefits_certificate_file": "https://adc-ent-ecos.enlightcloud.com/7144-staff/prod/staff/7586/transfers/1776513074_no_benefits_certificate_file.pdf?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=1w0I0BBXzYfapDY3Gk6L%2F20260420%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260420T190440Z&X-Amz-SignedHeaders=host&X-Amz-Expires=900&X-Amz-Signature=b6e2696fb670f8dd16ef62bc51a0557cd270a88978ebdbc8d10d2324802bdea0",
+    "institution_guarantee_file": "https://adc-ent-ecos.enlightcloud.com/7144-staff/prod/staff/7586/transfers/1776513074_institution_guarantee_file.pdf?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=1w0I0BBXzYfapDY3Gk6L%2F20260420%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260420T190440Z&X-Amz-SignedHeaders=host&X-Amz-Expires=900&X-Amz-Signature=fe401f6e71b4efba9bb7e6ac1e4315653aec118e63cfdcd108b34ca5d99f2ad1",
+    "other_documents_file": "https://adc-ent-ecos.enlightcloud.com/7144-staff/https%3A//adc-ent-ecos.enlightcloud.com/7144-staff/prod/staff/7586/transfers/1776513075_other_documents_file.pdf%3FX-Amz-Content-Sha256%3DUNSIGNED-PAYLOAD%26X-Amz-Algorithm%3DAWS4-HMAC-SHA256%26X-Amz-Credential%3D1w0I0BBXzYfapDY3Gk6L%252F20260420%252Fus-east-1%252Fs3%252Faws4_request%26X-Amz-Date%3D20260420T190440Z%26X-Amz-SignedHeaders%3Dhost%26X-Amz-Expires%3D900%26X-Amz-Signature%3D2da33e22dfc75515ab01bceb9d132895053e19d851f89c5de6c65ba8506e6dbc?X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=1w0I0BBXzYfapDY3Gk6L%2F20260420%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260420T190440Z&X-Amz-SignedHeaders=host&X-Amz-Expires=900&X-Amz-Signature=bdfce3b7c172f5a6c6fc1f37d38003ca2b6ad5da392191c9bf445c0b898b3693",
+    "status": "dy_eo_desk_pending",
+    "remarks": null,
+    "created_at": "2026-04-17T15:13:13+00:00",
+    "updated_at": "2026-04-17T15:13:13+00:00",
+    "udise_number_at_transfer": null,
+    "school_name_at_transfer": "",
+    "school_location_at_transfer": null,
+    "transfer_not_higher_post_outward_number": "410/2026",
+    "transfer_not_higher_post_date": "2026-04-10",
+    "transfer_not_higher_post_file": "prod/staff/7586/transfers/1776508514_transfer_not_higher_post_file.pdf",
+    "post_working_id": 7586,
+    "personal_recognition_outward_number_match": false,
+    "im_outward_match_eo_np_fwd_status": null,
+    "im_outward_match_eo_status": null,
+    "im_outward_match_eo_remark": null,
+    "im_outward_match_eo_user_id": null,
+    "im_outward_match_eo_date": null,
+    "fwd_to": 2,
+    "fwd_to_target": 2705,
+    "tet_number": "2127122115",
+    "tet_year": "2021",
+    "tet_paper": "2",
+    "ctet_number": null,
+    "ctet_year": null,
+    "ctet_paper": null,
+    "is_transfer_school": null,
+    "is_minority_school": null,
+    "staff_type": 1,
+    "is_court_order": 0,
+    */
+                        }                       
+                    }
+                    
+                },
+                error: function () {
+                    $("#transferPostGraduateProfessionalDegree").html('<option>Error loading data</option>');
+                }
+            });
+        }
+
+
+
+});
+</script>
+
+

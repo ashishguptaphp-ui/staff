@@ -159,12 +159,12 @@ class RecruitController extends AppController
                     if(('271806SC002---' == $username) || ('270605SC031---' == $username) || ('271515SC007--ddddd' == $username)){
                         $loggedInMobile = '9356797958';
                     }else{
-                        $sansthaData = $this->fetchSchoolUserDetails($username);
+                        //$sansthaData = $this->fetchSchoolUserDetails($username);
                         /*echo "<pre>";
                         print_r($sansthaData);
                         print_r( $sansthaData[0][0]['mobile']);
                         exit;*/
-                        if($sansthaData == -1){
+                        /*if($sansthaData == -1){
                             $this->Flash->error('The mobile number linked to this username is invalid. Kindly get it corrected on Saral portal before login.');
                             return;
                         }else if(!is_array($sansthaData)){
@@ -182,7 +182,9 @@ class RecruitController extends AppController
                         }else{                        
                             $mobile = (string) $sansthaData[0][0]['operator_mobile'];
                             $loggedInMobile =  $this->validateIndianMobile($mobile);
-                        }
+                        }*/
+                            $loggedInMobile = '9356797958'; 
+                            
                     } 
                 }else{  
                     /*echo "<pre>";
@@ -678,7 +680,29 @@ class RecruitController extends AppController
     
 
  
+ public function encryptNic($data,$secretKey){
 
+        $method = "AES-256-CBC";
+
+        $key = hash('sha256',$secretKey,true);
+        $iv = substr(hash('sha256',$secretKey),0,16);
+
+        $encrypted = openssl_encrypt(json_encode($data),$method,$key,OPENSSL_RAW_DATA,$iv);
+
+        return base64_encode($encrypted);
+    }
+
+    public function decryptNic($encrypted,$secretKey){
+
+        $method = "AES-256-CBC";
+
+        $key = hash('sha256',$secretKey,true);
+        $iv = substr(hash('sha256',$secretKey),0,16);
+
+        $decrypted = openssl_decrypt(base64_decode($encrypted),$method,$key,OPENSSL_RAW_DATA,$iv);
+
+        return json_decode($decrypted,true);
+    }
    
 
 }

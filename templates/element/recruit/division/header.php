@@ -61,6 +61,10 @@ function isActiveMenu($controller, $action, $currentController, $currentAction, 
             <a class="nav-link <?= isActiveMenu('division', 'headerUpload', $currentController, $currentAction, $currentPrefix) ?>" href="<?= $this->Url->build(['prefix' => 'Recruit',"controller" => "division", "action" => "headerUpload"]); ?>"><i class="fas fa-chart-line me-1"></i> शीर्षक अपलोड</a>
           </li>
 
+          <li class="nav-item">
+            <a class="nav-link <?= isActiveMenu('division', 'advertisementList', $currentController, $currentAction, $currentPrefix) ?>" href="<?= $this->Url->build(['prefix' => 'Recruit',"controller" => "division", "action" => "advertisementList"]); ?>"><i class="fas fa-chart-line me-1"></i> जाहिरात मान्यता</a>
+          </li>
+
          <?php if ($hasActiveHeaderFile): ?>
           <li class="nav-item">
           <a class="nav-link <?= isActiveMenu(

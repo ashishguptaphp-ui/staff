@@ -50,14 +50,14 @@ class DeputydirectorController extends AppController
         $user = $this->request->getAttribute('identity');
         if (!$user) {
             $this->Flash->error('Please log in with your authorized credentials to continue.');
-            return $this->redirect(['controller' => 'Users', 'action' => 'login']);
+            return $this->redirect(['controller' => 'Recruit', 'action' => 'login']);
         }
         
         $sessionUser = $this->request->getSession()->read('Auth.User');
                
         if (!$sessionUser) {
             $this->Flash->error('Please log in with your authorized credentials to continue.');
-            return $this->redirect(['controller' => 'Users', 'action' => 'login']);
+            return $this->redirect(['controller' => 'Recruit', 'action' => 'login']);
         }
 
         $role = $user->getOriginalData()->role ?? null;
@@ -65,7 +65,7 @@ class DeputydirectorController extends AppController
        
         if ($role !== 'deputydirector') {
             $this->Flash->error('Access denied.');
-            return $this->redirect(['controller' => 'Users', 'action' => 'login']);
+            return $this->redirect(['controller' => 'Recruit', 'action' => 'login']);
         }
 
         $this->user_id = $this->request->getSession()->read('Auth.User.id');
@@ -1327,6 +1327,7 @@ class DeputydirectorController extends AppController
                 'category' => 'PostAdvertisementVacancies.category',
                 'post_advertisement_id' => 'PostAdvertisementVacancies.post_advertisement_id',
                 'status' => 'SOA.status',
+                'soa_id' =>'SOA.id',
                 'is_onboarding_submitted' => 'CASE
                     WHEN SOA.id IS NOT NULL THEN 1
                     ELSE 0
@@ -1342,6 +1343,7 @@ class DeputydirectorController extends AppController
             )
             ->where([
                 'PostAdvertisement.status' => 'approved',
+                 'SOA.id IS NOT' => null
                 //'PostAdvertisement.institution_code' => $this->username
             ])
             ->order([

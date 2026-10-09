@@ -1121,81 +1121,6 @@ class DivisionController extends AppController
     }
 
 
-     public function advertisementList()
-    {
-      
-        $districtTable = TableRegistry::getTableLocator()->get('Districts');
-        $districts = $districtTable->find()->all();
-        $regionTable = TableRegistry::getTableLocator()->get('Regions');
-        $regions = $regionTable->find()->all();
-        
-        $this->Authorization->skipAuthorization();
-        $this->viewBuilder()->setLayout('recruit/division');
-
-        $schoolsTable = TableRegistry::getTableLocator()->get('Schools');
-
-        $schools = $schoolsTable->find()->where(['sanstha_code' => $this->username])
-            ->all();
-
-        $casteCategoriesTable = TableRegistry::getTableLocator()->get('CasteCategories');
-        $casteCategoriesDetails = $casteCategoriesTable->find()->all();
-
-        
-        $horizontalCategoriesTable = TableRegistry::getTableLocator()->get('HorizontalCategories');
-        $horizontalCategoriesDetails = $horizontalCategoriesTable->find()->all();
-         
-        $acYear = ["2025-26","2026-27"];
-        $postWorkingTable = $this->fetchTable('PostWorking');
-
-        $postAdvertisementTable = $this->fetchTable('PostAdvertisement');
-        $ng2g = $postAdvertisementTable->getAdvertisementList();
-
-        
-       
-       
-
-        $ddovacantTable = $this->fetchTable('DdoVacantMaster');    
-        $PostAdvertisementVacanciesTable = $this->fetchTable('PostAdvertisementVacancies');
-        $usedPostIds = $PostAdvertisementVacanciesTable->find()
-                        ->select(['post_id'])
-                        ->where(['post_id IS NOT' => null]);
-                        
-        $ddovacant = $ddovacantTable->find()
-                       ->select([
-                        'DdoVacantMaster.id',
-                        'DdoVacantMaster.post_name',
-                        'DdoVacantMaster.post_id',
-                        'school_name' => 'schools.school_name',
-                        'udise_code' => 'schools.udise_code',                       
-                    ])  
-                     ->enableAutoFields(true)
-                    ->innerJoin(
-                        ['Schools' => 'schools'],
-                        'CAST(Schools.udise_code AS VARCHAR) = DdoVacantMaster.school_udise_code'
-                    ) 
-                    ->innerJoin(
-                        ['Sansthas' => 'sansthas'],
-                        'Schools.sanstha_code = Sansthas.code'
-                    )  
-                      ->where([
-                        'DdoVacantMaster.id NOT IN' => $usedPostIds,
-                    ])
-                    /* ->where([
-                        'Schools.sanstha_code' => $this->username,
-                    ])*/ 
-                    ->all();
-
-        $this->set('ddovacant', $ddovacant);               
-        $this->set('ng2g', $ng2g);
-        $this->set('schools', $schools);
-        $this->set('casteCategories', $casteCategoriesDetails); 
-        $this->set('horizontalCategories', $horizontalCategoriesDetails);        
-        $this->set('districts', $districts);
-        $this->set('regions', $regions);
-
-
-    }
-
     public function advertisementVacancyAjax()
     {
         $this->request->allowMethod(['post', 'ajax']);
@@ -2712,5 +2637,120 @@ private function findWkhtmltopdfBinary(): ?string
     }
 
 
+     public function advertisementList()
+    {
+      
+        $districtTable = TableRegistry::getTableLocator()->get('Districts');
+        $districts = $districtTable->find()->all();
+        $regionTable = TableRegistry::getTableLocator()->get('Regions');
+        $regions = $regionTable->find()->all();
+        
+        $this->Authorization->skipAuthorization();
+        $this->viewBuilder()->setLayout('recruit/division');
+
+        $schoolsTable = TableRegistry::getTableLocator()->get('Schools');
+
+        $schools = $schoolsTable->find()->where(['sanstha_code' => $this->username])
+            ->all();
+
+        $casteCategoriesTable = TableRegistry::getTableLocator()->get('CasteCategories');
+        $casteCategoriesDetails = $casteCategoriesTable->find()->all();
+
+        
+        $horizontalCategoriesTable = TableRegistry::getTableLocator()->get('HorizontalCategories');
+        $horizontalCategoriesDetails = $horizontalCategoriesTable->find()->all();
+         
+        $acYear = ["2025-26","2026-27"];
+        $postWorkingTable = $this->fetchTable('PostWorking');
+
+        $postAdvertisementTable = $this->fetchTable('PostAdvertisement');
+        $ng2g = $postAdvertisementTable->getAdvertisementList();
+
+        
+       
+       
+
+        $ddovacantTable = $this->fetchTable('DdoVacantMaster');    
+        $PostAdvertisementVacanciesTable = $this->fetchTable('PostAdvertisementVacancies');
+        $usedPostIds = $PostAdvertisementVacanciesTable->find()
+                        ->select(['post_id'])
+                        ->where(['post_id IS NOT' => null]);
+                        
+        $ddovacant = $ddovacantTable->find()
+                       ->select([
+                        'DdoVacantMaster.id',
+                        'DdoVacantMaster.post_name',
+                        'DdoVacantMaster.post_id',
+                        'school_name' => 'schools.school_name',
+                        'udise_code' => 'schools.udise_code',                       
+                    ])  
+                     ->enableAutoFields(true)
+                    ->innerJoin(
+                        ['Schools' => 'schools'],
+                        'CAST(Schools.udise_code AS VARCHAR) = DdoVacantMaster.school_udise_code'
+                    ) 
+                    ->innerJoin(
+                        ['Sansthas' => 'sansthas'],
+                        'Schools.sanstha_code = Sansthas.code'
+                    )  
+                      ->where([
+                        'DdoVacantMaster.id NOT IN' => $usedPostIds,
+                    ])
+                    /* ->where([
+                        'Schools.sanstha_code' => $this->username,
+                    ])*/ 
+                    ->all();
+
+        $approvedLogDocuments = [];
+        $rejectLogDocuments = [];
+        $applicationIds = array_map(static function ($post): int {
+            return (int)$post->id;
+        }, $ng2g->toArray());
+
+        
+        if ($applicationIds !== []) {
+            $logsTable = TableRegistry::getTableLocator()->get('PostAdvertisementAuditLogs');
+            $approvedLogs = $logsTable->find()
+                ->select(['post_advertisement_id', 'stage_doc', 'created_at'])
+                ->where([
+                    'post_advertisement_id IN' => $applicationIds,
+                    'new_status' => 'approved',
+                    'stage_doc IS NOT' => null,
+                ])
+                ->order(['created_at' => 'DESC'])
+                ->all();
+
+            foreach ($approvedLogs as $approvedLog) {
+                $approvedLogDocuments[(int)$approvedLog->post_advertisement_id] ??= $approvedLog->stage_doc;
+            }
+
+             $rejectLogs = $logsTable->find()
+                ->select(['post_advertisement_id', 'stage_doc', 'created_at'])
+                ->where([
+                    'post_advertisement_id IN' => $applicationIds,
+                    'new_status' => 'rejected',
+                    'stage_doc IS NOT' => null,
+                ])
+                ->order(['created_at' => 'DESC'])
+                ->all();
+
+            
+            foreach ($rejectLogs as $rejectLog) {
+                $rejectLogDocuments[(int)$rejectLog->post_advertisement_id] ??= $rejectLog->stage_doc;
+            }
+        }
+
+        //echo "<pre>";print_r($approvedLogDocuments);exit;
+        $this->set('ddovacant', $ddovacant);               
+        $this->set('ng2g', $ng2g);
+        $this->set('schools', $schools);
+        $this->set('casteCategories', $casteCategoriesDetails); 
+        $this->set('horizontalCategories', $horizontalCategoriesDetails);        
+        $this->set('districts', $districts);
+        $this->set('regions', $regions);
+        $this->set('approvedLogDocuments', $approvedLogDocuments);
+        $this->set('rejectLogDocuments', $rejectLogDocuments);
+
+    }
 
   }
