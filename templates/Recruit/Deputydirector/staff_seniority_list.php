@@ -720,7 +720,9 @@
                 <th>Action</th>
             </tr>
             </thead>
-            <tbody>                        
+            <tbody>     
+                
+            
                 <?php 
                 $idx =1;
                 //dd($staffs);
