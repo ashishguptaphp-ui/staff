@@ -18,13 +18,11 @@
   
         <span class="text-light me-2" style="font-size:13px;padding-bottom:5px;float:right;">
            Welcome, <strong><?= h($user['full_name']) ?></strong>
-        </span>
-            
+        </span>            
           
       </div>
   </div>
-
-  
+ 
     <?php
 $currentController = $this->getRequest()->getParam('controller');
 $currentAction = $this->getRequest()->getParam('action');
@@ -49,14 +47,11 @@ function isActiveMenu($controller, $action, $currentController, $currentAction, 
       <div class="collapse navbar-collapse" id="mainNavbar">
     <ul class="navbar-nav me-auto mb-2 mb-lg-0" style="width:99%;">
         
-
-
          <li class="nav-item">
             <a class="nav-link <?= isActiveMenu("director", "dashboard", $currentController, $currentAction, $currentPrefix) ?>"
              href="<?= $this->Url->build(['prefix' => 'Recruit',"controller" => "director", "action" => "dashboard"]); ?>">
             <i class="fas fa-chart-line me-1"></i> डॅशबोर्ड</a>
           </li>
-
        
           <li class="nav-item">
             <a class="nav-link <?= isActiveMenu('director', 'advertisementList', $currentController, $currentAction, $currentPrefix) ?>" href="<?= $this->Url->build(['prefix' => 'Recruit',"controller" => "director", "action" => "advertisementList"]); ?>"><i class="fas fa-chart-line me-1"></i> जाहिरात मान्यता</a>
@@ -72,56 +67,7 @@ function isActiveMenu($controller, $action, $currentController, $currentAction, 
               $currentPrefix
             ) ?>" href="<?= $this->Url->build(['prefix' => 'Recruit',"controller" => "director", "action" => "staffSeniorityList"]); ?>"><i class="fas fa-users me-1"></i> उमेदवार निवड मान्यता</a>
           </li>
-       
-        
-        <!--
-        <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" href="#" id="pendingApprovalsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                <i class="fas fa-hourglass-half me-1"></i> प्रलंबित मंजुरी (Pending Approvals)
-            </a>
-            <ul class="dropdown-menu" aria-labelledby="pendingApprovalsDropdown">
-                <li>
-                    <a class="dropdown-item" href="<?= $this->Url->build(["controller" => "division", "action" => "pending-individual-approval"]); ?>">
-                        <i class="fas fa-user me-2"></i> वैयक्तिक मान्यता अर्ज (Individual Approval Applications)
-                    </a>
-                </li>
-                <li><hr class="dropdown-divider"></li>
-                <li>
-                    <a class="dropdown-item" href="<?= $this->Url->build(["controller" => "division", "action" => "ng2g-transfer-pri-sec"]); ?>">
-                        <i class="fas fa-school me-2"></i> विनाअनुदानित/अंशतः अनुदानित ते अनुदानित - प्राथमिक व माध्यमिक (NG to G - Primary & Secondary)
-                    </a>
-                </li>
-                
-                <li>
-                    <a class="dropdown-item" href="<?= $this->Url->build(["controller" => "division", "action" => "ng2g-transfer"]); ?>">
-                        <i class="fas fa-graduation-cap me-2"></i> विनाअनुदानित/अंशतः अनुदानित ते अनुदानित - उच्च माध्यमिक (NG to G - Higher Secondary)
-                    </a>
-                </li>
-            </ul>
-        </li>-->
-
-        <!--li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" href="#" id="pendingApprovalsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                <i class="fas fa-hourglass-half me-1"></i> प्रलंबित मंजुरी (Pending Approvals)
-            </a>
-            <ul class="dropdown-menu" aria-labelledby="pendingApprovalsDropdown">
-                <li>
-                    <a class="dropdown-item" href="<?= $this->Url->build(["controller" => "division", "action" => "pending-individual-approval"]); ?>">
-                        <i class="fas fa-user me-2"></i> वैयक्तिक मान्यता अर्ज (Individual Approval Applications)
-                    </a>
-                </li>
-                <li><hr class="dropdown-divider"></li>             
-                <li>
-                    <a class="dropdown-item" href="<?= $this->Url->build(["controller" => "division", "action" => "ng2g-transfer"]); ?>">
-                        <i class="fas fa-graduation-cap me-2"></i> विनाअनुदानित/अंशतः अनुदानित ते अनुदानित अर्ज (NG to G Approval Applications)
-                    </a>
-                </li>
-            </ul>
-        </li-->
-         <!--li class="nav-item">
-            <a class="nav-link" href="<?= $this->Url->build(["controller" => "division", "action" => "users"]); ?>"> <i class="fas fa-sign-in-alt me-1"></i> Manage Clerk & Superintendent Logins</a>
-          </li-->
-        
+               
         <li class="nav-item ms-auto">
            <a class="nav-link text-warning" href="<?= $this->Url->build(["controller" => "Recruit", "action" => "logout"]); ?>">
                 <i class="fas fa-sign-out-alt me-1"></i> बाहेर पडा (Logout)
@@ -130,28 +76,6 @@ function isActiveMenu($controller, $action, $currentController, $currentAction, 
         
     </ul>
 </div>
-      <!--
-      <div class="collapse navbar-collapse" id="mainNavbar">
-        <ul class="navbar-nav me-auto mb-2 mb-lg-0" style="width:99%;">
-          <li class="nav-item">
-            <a class="nav-link active" href="<?= $this->Url->build(["controller" => "division", "action" => "dashboard"]); ?>"><i class="fas fa-chart-line me-1"></i> Dashboard</a>
-          </li>
-          
-          
-          <li class="nav-item">
-            <a class="nav-link" href="<?= $this->Url->build(["controller" => "division", "action" => "pending-individual-approval"]); ?>">🚀 Pending Individual Approval</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="<?= $this->Url->build(["controller" => "division", "action" => "ng2g-transfer"]); ?>"><i class="fas fa-users me-1"></i> Pending NG to G Transfers</a>
-          </li>
-          
-         
-          <li class="nav-item">            
-            <a class="nav-link text-warning" href="<?= $this->Url->build(["controller" => "users", "action" => "logout"]); ?>">
-                <i class="fas fa-sign-out-alt me-1"></i> Logout
-            </a>
-         </li>         
-        </ul>
-      </div>-->
+  
     </div>
   </nav>

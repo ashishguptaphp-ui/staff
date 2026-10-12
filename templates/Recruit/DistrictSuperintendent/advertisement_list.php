@@ -723,7 +723,7 @@
      style="padding: 5px 10px; border-bottom: 2px solid #1a237e;">
 
     <h5 style="margin:0; color:#1a237e;">
-        🔜👨‍💼 जाहिरातीींची यादी (Advertisement List)
+        🔜👨‍💼 जाहिरातींची यादी (Advertisement List)
     </h5>
 
    
