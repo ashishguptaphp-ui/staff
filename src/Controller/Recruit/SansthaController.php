@@ -1149,8 +1149,7 @@ class SansthaController extends AppController
 
         $schoolsTable = TableRegistry::getTableLocator()->get('Schools');
 
-        //$schools = $schoolsTable->find()->where(['cluster_code' => $this->username])->all();
-
+       
         $schools = $schoolsTable->find()->where(['sanstha_code' => $this->username])
             ->all();
        
@@ -1220,19 +1219,19 @@ class SansthaController extends AppController
         $acYear = ["2025-26","2026-27"];
         $postWorkingTable = $this->fetchTable('PostWorking');
 
-        $postAdvertisementTable = $this->fetchTable('PostAdvertisement');
+        $postAdvertisementTable = TableRegistry::getTableLocator()->get('PostAdvertisement');
 
         //echo "<pre>"; print_r($user); exit;
 
        // echo "<pre>"; print_r($sanstha_code); exit;
         $ng2g = $postAdvertisementTable->getAdvertisementListWithSansthaCode($sanstha_code);
                 
-        $PostAdvertisementVacanciesTable = $this->fetchTable('PostAdvertisementVacancies');
+        $PostAdvertisementVacanciesTable = TableRegistry::getTableLocator()->get('PostAdvertisementVacancies');
         $usedPostIds = $PostAdvertisementVacanciesTable->find()
                         ->select(['post_id'])
                         ->where(['post_id IS NOT' => null]);
 
-        $ddovacantTable = $this->fetchTable('DdoVacantMaster');                   
+        $ddovacantTable = TableRegistry::getTableLocator()->get('DdoVacantMaster');                   
         $ddovacant = $ddovacantTable->getAvailableVacancies($usedPostIds, $sanstha_code);
 
         //echo "<pre>"; print_r($ddovacant->toarray()); exit;

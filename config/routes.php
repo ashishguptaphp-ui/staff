@@ -58,6 +58,12 @@ return function (RouteBuilder $routes): void {
             $routes->connect('/logout', ['controller' => 'Recruit','action' => 'logout']);
 
             $routes->connect('/otp', ['controller' => 'Recruit','action' => 'otp']);
+
+            $routes->connect(
+                '/district/upload-signed-advertisement-pdf',
+                ['controller' => 'District', 'action' => 'uploadSignedAdvertisementPdf'],
+                ['_method' => 'POST']
+            );
     
             $routes->fallbacks(DashedRoute::class);
      });

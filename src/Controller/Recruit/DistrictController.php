@@ -1178,7 +1178,7 @@ class DistrictController extends AppController
         
         $horizontalCategoriesTable = TableRegistry::getTableLocator()->get('HorizontalCategories');
         $horizontalCategoriesDetails = $horizontalCategoriesTable->find()->all();
-         
+
         $acYear = ["2025-26","2026-27"];
         $postWorkingTable = $this->fetchTable('PostWorking');
 
@@ -1221,6 +1221,7 @@ class DistrictController extends AppController
                     ->all();
 
         $approvedLogDocuments = [];
+        $signedLogDocuments = [];
         $rejectLogDocuments = [];
         $applicationIds = array_map(static function ($post): int {
             return (int)$post->id;
@@ -1233,6 +1234,7 @@ class DistrictController extends AppController
                 ->select(['post_advertisement_id', 'stage_doc', 'created_at'])
                 ->where([
                     'post_advertisement_id IN' => $applicationIds,
+                    'action' => 'approve',
                     'new_status' => 'approved',
                     'stage_doc IS NOT' => null,
                 ])
@@ -1241,6 +1243,32 @@ class DistrictController extends AppController
 
             foreach ($approvedLogs as $approvedLog) {
                 $approvedLogDocuments[(int)$approvedLog->post_advertisement_id] ??= $approvedLog->stage_doc;
+            }
+
+            $signedLogs = $logsTable->find()
+                ->select(['post_advertisement_id', 'stage_doc', 'created_at'])
+                ->where([
+                    'post_advertisement_id IN' => $applicationIds,
+                    'action' => 'signed_upload',
+                    'stage_doc IS NOT' => null,
+                ])
+                ->order(['created_at' => 'DESC'])
+                ->all();
+
+            foreach ($signedLogs as $signedLog) {
+                $signedLogDocuments[(int)$signedLog->post_advertisement_id] ??= $signedLog->stage_doc;
+            }
+
+            if ($signedLogDocuments !== []) {
+                try {
+                    $storage = new EsdlStorageService();
+                    foreach ($signedLogDocuments as $postId => $storageKey) {
+                        $signedLogDocuments[$postId] = $storage->signedUrl($storageKey);
+                    }
+                } catch (\Throwable $exception) {
+                    error_log('Unable to create signed advertisement PDF links: ' . $exception->getMessage());
+                    $signedLogDocuments = [];
+                }
             }
 
              $rejectLogs = $logsTable->find()
@@ -1268,6 +1296,7 @@ class DistrictController extends AppController
         $this->set('districts', $districts);
         $this->set('regions', $regions);
         $this->set('approvedLogDocuments', $approvedLogDocuments);
+        $this->set('signedLogDocuments', $signedLogDocuments);
         $this->set('rejectLogDocuments', $rejectLogDocuments);
 
     }
@@ -1637,6 +1666,119 @@ class DistrictController extends AppController
 
     }
 
+    public function uploadSignedAdvertisementPdf()
+    {
+        $this->request->allowMethod(['post']);
+
+        $postAdvertisementId = filter_var(
+            $this->request->getData('post_id'),
+            FILTER_VALIDATE_INT
+        );
+        $file = $this->request->getData('signed_pdf');
+
+        if (
+            !$postAdvertisementId
+            || !$file instanceof \Psr\Http\Message\UploadedFileInterface
+            || $file->getError() !== UPLOAD_ERR_OK
+        ) {
+            $this->Flash->error('Choose a valid signed PDF to upload.');
+            return $this->redirect(['action' => 'advertisementList']);
+        }
+
+        $postAdvertisement = $this->fetchTable('PostAdvertisement')->find()
+            ->where([
+                'id' => $postAdvertisementId,
+                'status' => 'approved',
+            ])
+            ->first();
+
+        $approvalLog = $this->fetchTable('PostAdvertisementAuditLogs')->find()
+            ->where([
+                'post_advertisement_id' => $postAdvertisementId,
+                'action' => 'approve',
+                'stage_doc IS NOT' => null,
+            ])
+            ->order(['created_at' => 'DESC'])
+            ->first();
+
+        if (!$postAdvertisement || !$approvalLog) {
+            $this->Flash->error('An approved advertisement order is required before uploading its signed copy.');
+            return $this->redirect(['action' => 'advertisementList']);
+        }
+
+        $maxFileSize = 10 * 1024 * 1024;
+        if ($file->getSize() > $maxFileSize) {
+            $this->Flash->error('The signed PDF must be 10 MB or smaller.');
+            return $this->redirect(['action' => 'advertisementList']);
+        }
+
+        $temporaryPath = $file->getStream()->getMetadata('uri');
+        $fileInfo = new \finfo(FILEINFO_MIME_TYPE);
+        if (
+            $fileInfo->file($temporaryPath) !== 'application/pdf'
+            || file_get_contents($temporaryPath, false, null, 0, 5) !== '%PDF-'
+        ) {
+            $this->Flash->error('The uploaded file is not a valid PDF.');
+            return $this->redirect(['action' => 'advertisementList']);
+        }
+
+        $fileName = sprintf(
+            'advt_order_%d_signed_%s_%s.pdf',
+            $postAdvertisementId,
+            date('YmdHis'),
+            bin2hex(random_bytes(4))
+        );
+        $storageKey = null;
+
+        try {
+            $safeUpload = new UploadedFile(
+                $temporaryPath,
+                $file->getSize(),
+                $file->getError(),
+                $fileName,
+                'application/pdf'
+            );
+            $storage = new EsdlStorageService();
+            $storageKey = $storage->upload(
+                $safeUpload,
+                'prod/staffonboarding/advtapprove/signed'
+            );
+
+            $identity = $this->request->getAttribute('identity');
+            $userId = $identity ? (int)$identity->getIdentifier() : null;
+            $saved = $this->createAdvertisementAudit(
+                (int)$postAdvertisementId,
+                $userId,
+                'signed_upload',
+                'approved',
+                'approved',
+                'Signed PDF uploaded after external DSC signing',
+                2,
+                $storageKey
+            );
+
+            if (!$saved) {
+                $storage->delete($storageKey);
+                $this->Flash->error('Unable to record the signed PDF in the approval history.');
+                return $this->redirect(['action' => 'advertisementList']);
+            }
+        } catch (\Throwable $exception) {
+            if ($storageKey !== null && isset($storage)) {
+                try {
+                    $storage->delete($storageKey);
+                } catch (\Throwable $cleanupException) {
+                    error_log('Unable to remove unrecorded signed PDF: ' . $cleanupException->getMessage());
+                }
+            }
+            error_log('uploadSignedAdvertisementPdf failed: ' . $exception->getMessage());
+            $this->Flash->error('Unable to save the signed PDF.');
+            return $this->redirect(['action' => 'advertisementList']);
+        }
+
+        $this->Flash->success('Signed PDF uploaded and recorded in the approval history.');
+        return $this->redirect(['action' => 'advertisementList']);
+    }
+
 
 
 private function generateAdvertisementRejectPdf($appId, $rejectReason): ?string
@@ -1794,7 +1936,7 @@ private function generateAdvertisementRejectPdf($appId, $rejectReason): ?string
                         }
                         .header-img {
                             display: block;
-                            width: 180px;
+                            width: 100%;
                             height: auto;
                             margin: 0 auto 8px auto;
                         }
@@ -2128,7 +2270,7 @@ private function generateAdvertisementRejectPdf($appId, $rejectReason): ?string
                         }
                         .header-img {
                             display: block;
-                            width: 180px;
+                            width: 100%;
                             height: auto;
                             margin: 0 auto 8px auto;
                         }
@@ -2472,73 +2614,71 @@ private function generateAdvertisementRejectPdf($appId, $rejectReason): ?string
             
             $bucketPath = $config['mode'].'/staff/onboarding/'.$onboard->id;        
 
-            if (!empty($data['app_doc']) && $data['app_doc']->getError() === UPLOAD_ERR_OK) {
-
-                $file = $data['app_doc'];
-                
-                if ($file->getClientMediaType() !== 'application/pdf') {
-                    $connection->rollback();
-                    return $this->response
-                        ->withType('application/json')
-                        ->withStringBody(json_encode([
-                            'success' => false,
-                            'message' => 'Must be a PDF File'
-                        ]));
-                }
-
-                if ($file->getSize() > (2 * 1024 * 1024)) {
-                    $connection->rollback();
-                    return $this->response
-                        ->withType('application/json')
-                        ->withStringBody(json_encode([
-                            'success' => false,
-                            'message' => 'Exceeds 2MB limit File'
-                        ]));
-                }
-
-                if (!$file || $file->getError() !== UPLOAD_ERR_OK) {
-                    $connection->rollback();
-                    return $this->response
-                        ->withType('application/json')
-                        ->withStringBody(json_encode([
-                            'success' => false,
-                            'message' => 'Invalid File'
-                        ]));
-                    //$this->Flash->error('Invalid file');
-                }
-
-
-                // Get temp path safely
-                $tmpPath = $file->getStream()->getMetadata('uri');
-
-
-                // Extract extension (safe)
-                $extension = pathinfo($file->getClientFilename(), PATHINFO_EXTENSION);
-
-                // New filename
-                $newFileName = 'approved_file.' . $extension;
-
-                // Create NEW UploadedFile object
-                $renamedFile = new UploadedFile(
-                    $tmpPath,
-                    $file->getSize(),
-                    $file->getError(),
-                    $newFileName,
-                    $file->getClientMediaType()
-                );
-
-                $storage = new EsdlStorageService();
-                $fileName = $storage->upload($renamedFile, $bucketPath);
-
-               
-            } 
-
-            if (empty($fileName)) {
-                $generatedDocument = 'uploads/staffonboarding/approve/staff_order_' . $onboard->id . '.pdf';
-                if (is_file(WWW_ROOT . $generatedDocument)) {
-                    $fileName = $generatedDocument;
-                }
+            $generatedDocument = WWW_ROOT . 'uploads' . DS . 'staffonboarding' . DS
+                . 'approve' . DS . 'staff_order_' . $onboard->id . '.pdf';
+            if (!is_file($generatedDocument)) {
+                $connection->rollback();
+                return $this->response
+                    ->withStatus(400)
+                    ->withType('application/json')
+                    ->withStringBody(json_encode([
+                        'success' => false,
+                        'message' => 'Generate the work order before uploading its signed copy.'
+                    ]));
             }
+
+            $file = $data['app_doc'] ?? null;
+            if (
+                !$file instanceof \Psr\Http\Message\UploadedFileInterface
+                || $file->getError() !== UPLOAD_ERR_OK
+            ) {
+                $connection->rollback();
+                return $this->response
+                    ->withStatus(400)
+                    ->withType('application/json')
+                    ->withStringBody(json_encode([
+                        'success' => false,
+                        'message' => 'Upload the PDF signed with your DSC before approving.'
+                    ]));
+            }
+
+            $tmpPath = $file->getStream()->getMetadata('uri');
+            $fileSize = $file->getSize() ?? filesize($tmpPath);
+            if (!is_int($fileSize) || $fileSize < 5 || $fileSize > (10 * 1024 * 1024)) {
+                $connection->rollback();
+                return $this->response
+                    ->withStatus(400)
+                    ->withType('application/json')
+                    ->withStringBody(json_encode([
+                        'success' => false,
+                        'message' => 'The signed PDF must be smaller than 10 MB.'
+                    ]));
+            }
+
+            $fileInfo = new \finfo(FILEINFO_MIME_TYPE);
+            if (
+                $fileInfo->file($tmpPath) !== 'application/pdf'
+                || file_get_contents($tmpPath, false, null, 0, 5) !== '%PDF-'
+            ) {
+                $connection->rollback();
+                return $this->response
+                    ->withStatus(400)
+                    ->withType('application/json')
+                    ->withStringBody(json_encode([
+                        'success' => false,
+                        'message' => 'The signed document must be a valid PDF.'
+                    ]));
+            }
+
+            $renamedFile = new UploadedFile(
+                $tmpPath,
+                $fileSize,
+                $file->getError(),
+                'approved_file.pdf',
+                'application/pdf'
+            );
+            $storage = new EsdlStorageService();
+            $fileName = $storage->upload($renamedFile, $bucketPath);
     
             
             $onboard = $StaffOnboardingAppointmentsTable->patchEntity($onboard, $staffData);
@@ -2910,6 +3050,10 @@ private function generateAdvertisementRejectPdf($appId, $rejectReason): ?string
             ->where(['id' => (int)$appId])
             ->first();
 
+            if (!$appointment) {
+                throw new \RuntimeException('Staff onboarding application not found.');
+            }
+
             $casteCategoriesTable = TableRegistry::getTableLocator()->get('CasteCategories');
 
         // Get Original Category
@@ -2946,16 +3090,29 @@ $postAdvertisementVacancy = $postAdvertisementVacanciesTable->find()
                             ->where(['id' => $appointment->staff_id])
                             ->first();
 
-            $staffName = 'श्री. अमोल रमेश पाटील';
-            $orderDate = '24-08-2026';
-            $post = 'सहाय्यक शिक्षक';
-            $proposalNumber = sprintf('NG2G-TRFR-%s-%06d', date('Y'), $appId);
-            $proposalDate = '15-08-2026';
+            if (!$postAdvertisementVacancy) {
+                throw new \RuntimeException('Staff vacancy details not found.');
+            }
 
-            $sansthaCode = '';
-            $sansthaName = '';
-            $schoolCode = '';
-            $sansthaName = 'श्री शिवाजी हायस्कूल व कनिष्ठ महाविद्यालय, कोल्हापूर';
+            $postAdvertisement = TableRegistry::getTableLocator()
+                ->get('PostAdvertisement')
+                ->find()
+                ->where(['id' => $postAdvertisementVacancy->post_advertisement_id])
+                ->first();
+
+            $staffName = (string)$appointment->candidate_name;
+            $orderDate = date('d-m-Y');
+            $post = (string)$postAdvertisementVacancy->post_name;
+            $proposalNumber = sprintf('NG2G-TRFR-%s-%06d', date('Y'), $appId);
+            $createdAt = $appointment->created_at ?? null;
+            $proposalDate = $createdAt instanceof \DateTimeInterface
+                ? $createdAt->format('d-m-Y')
+                : date('d-m-Y');
+
+            $sansthaCode = (string)($postAdvertisement->institution_code ?? '');
+            $sansthaName = (string)($postAdvertisement->institution_name ?? '');
+            $schoolCode = (string)($postAdvertisementVacancy->school_udise_code ?? '');
+            $schoolName = (string)($postAdvertisementVacancy->school_name ?? $sansthaName);
 
             $sourceAided = 'विना अनुदानित';
             $targetAided = 'अंशतः अनुदानित (२० टक्के)';
@@ -2978,7 +3135,7 @@ $postAdvertisementVacancy = $postAdvertisementVacanciesTable->find()
                 'sanstha_code' => $sansthaCode,
                 'sanstha_name' => $sansthaName,
                 'school_code' => $schoolCode,
-                'school_name' => $sansthaName,
+                'school_name' => $schoolName,
                 'source_aided' => $sourceAided,
                 'target_aided' => $targetAided,
                 'unaided_time_frame' => $unaidedTimeFrame,
@@ -3148,7 +3305,7 @@ $postAdvertisementVacancy = $postAdvertisementVacanciesTable->find()
                         }
                         .header-img {
                             display: block;
-                            width: 180px;
+                            width: 100%;
                             height: auto;
                             margin: 0 auto 8px auto;
                         }

@@ -23,7 +23,7 @@ class SecurityHeadersMiddleware implements MiddlewareInterface
             ->withHeader('Referrer-Policy', 'strict-origin-when-cross-origin')
             ->withHeader(
                 'Content-Security-Policy',
-                "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: blob: https:; font-src 'self' data: https:; connect-src 'self' https:; frame-ancestors 'self'; base-uri 'self'; form-action 'self'"
+                "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: blob: https:; font-src 'self' data: https:; connect-src 'self' https: http://localhost:8019 http://127.0.0.1:8019 http://localhost:8080 http://127.0.0.1:8080 https://localhost:8020 https://127.0.0.1:8020; frame-ancestors 'self'; base-uri 'self'; form-action 'self'"
             );
     }
 }

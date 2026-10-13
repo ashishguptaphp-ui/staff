@@ -3549,7 +3549,7 @@ $(document).ready(function() {
                 beforeSend: function () {
 
                     // Disable button
-                    $('#approvalForm button[type="button"]')
+                    $('#workOrderBtn')
                         .prop('disabled', true)
                         .html(`
                             <span class="spinner-border spinner-border-sm me-1"></span>
@@ -3566,24 +3566,32 @@ $(document).ready(function() {
                         let pdfUrl = response && response.url ? response.url : '';
                         let staffId = response && response.staffId ? response.staffId : '';
                         if (pdfUrl) {
-                            $('#workOrderFile').html(`
-                                <div class="mt-3 p-3 border rounded bg-light">
-                                    <div class="fw-bold mb-2">Work Order PDF</div>
-                                    <a href="${pdfUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-primary">
-                                        <i class="fas fa-file-pdf me-1"></i> View PDF
-                                    </a>
-
-                                     <a href="javascript:void(0);"
-                                        class="btn btn-danger btn-sm signDocBtn"
-                                        data-staff-id="${staffId}">
-                                        <i class="fas fa-signature me-1"></i> Sign DSC
-                                    </a>
-
-                                </div>
-                            `);
+                            const $orderContainer = $('<div>', {
+                                class: 'mt-3 p-3 border rounded bg-light'
+                            });
+                            $orderContainer.append($('<div>', {
+                                class: 'fw-bold mb-2',
+                                text: 'Work Order PDF'
+                            }));
+                            $orderContainer.append($('<a>', {
+                                href: pdfUrl,
+                                target: '_blank',
+                                rel: 'noopener noreferrer',
+                                class: 'btn btn-sm btn-primary',
+                                text: 'Download order for NICDsign'
+                            }).attr('download', `staff_order_${staffId}.pdf`));
+                            $orderContainer.append($('<button>', {
+                                type: 'button',
+                                class: 'btn btn-danger btn-sm signDocBtn ms-2',
+                                text: 'Sign DSC'
+                            }).attr({
+                                'data-staff-id': staffId,
+                                'data-pdf-url': pdfUrl
+                            }));
+                            $('#workOrderFile').empty().append($orderContainer);
                         }
 
-                        $('#approvalForm button[type="button"]').hide();
+                        $('#workOrderBtn').hide();
 
                        
                     }                    
@@ -3593,7 +3601,7 @@ $(document).ready(function() {
 
                     console.log(xhr);
 
-                    $('#approvalForm button[type="button"]')
+                    $('#workOrderBtn')
                         .prop('disabled', false)
                         .show()
                         .html(`
@@ -3797,97 +3805,162 @@ $(document).ready(function() {
 </script>
 <!-- SweetAlert2 -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<?= $this->Html->script(['dscapi-conf', 'dsc-signer']) ?>
+
+<div id="panel" style="display:none;"></div>
+<input type="hidden" id="signingReason" value="Staff onboarding work order approval">
+<input type="hidden" id="signingLocation" value="District Office">
+<input type="hidden" id="tsaURL" value="">
+<input type="hidden" id="timeServerURL" value="">
 
 <script>
-    
-$(document).on('click', '.signDocBtn', function (e) {
+function pdfArrayBufferToBase64(buffer) {
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    const chunkSize = 0x8000;
 
+    for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+        binary += String.fromCharCode(...bytes.subarray(offset, offset + chunkSize));
+    }
+
+    return btoa(binary);
+}
+
+function base64ToPdfFile(base64Pdf, fileName) {
+    if (typeof base64Pdf !== 'string' || base64Pdf.trim() === '') {
+        throw new Error('NICDSign did not return signed PDF data. Check that the mToken driver initialized and signing completed.');
+    }
+
+    const cleanBase64 = base64Pdf.replace(/^data:application\/pdf;base64,/i, '');
+    const binary = atob(cleanBase64);
+    const bytes = new Uint8Array(binary.length);
+
+    for (let index = 0; index < binary.length; index++) {
+        bytes[index] = binary.charCodeAt(index);
+    }
+
+    if (bytes.length < 5 || String.fromCharCode(...bytes.subarray(0, 5)) !== '%PDF-') {
+        throw new Error('NICDSign returned an invalid PDF.');
+    }
+
+    if (bytes.length > 10 * 1024 * 1024) {
+        throw new Error('The signed PDF exceeds the 10 MB upload limit.');
+    }
+
+    return new File([bytes], fileName, { type: 'application/pdf' });
+}
+
+function acceptNicdSignedPdf(alias, signedPdf, token) {
+    try {
+        const staffId = $('#workOrderFile .signDocBtn').data('staff-id');
+        const signedFile = base64ToPdfFile(signedPdf, `staff_order_${staffId}_signed.pdf`);
+        const fileInput = document.getElementById('signedOrderPdf');
+
+
+           console.log('NICDSign post-sign callback invoked');
+            console.log('Certificate alias:', alias);
+            console.log('Signed PDF type:', typeof signedPdf);
+            console.log(
+                'Signed PDF length:',
+                typeof signedPdf === 'string' ? signedPdf.length : null
+            );
+            console.log(
+                'Third argument type:',
+                typeof token
+            );
+
+
+        if (!fileInput || typeof DataTransfer === 'undefined') {
+            throw new Error('This browser cannot attach the signed PDF to the approval form.');
+        }
+
+        const transfer = new DataTransfer();
+        transfer.items.add(signedFile);
+        fileInput.files = transfer.files;
+
+        $('#signedOrderStatus')
+            .removeClass('text-danger')
+            .addClass('text-success')
+            .text(`PDF signed with ${alias}. Review the signed file, then continue.`);
+        $('#approvedBtn').prop('disabled', false).removeClass('d-none');
+    } catch (error) {
+        $('#signedOrderStatus').addClass('text-danger').text(error.message);
+        alert(error.message);
+    }
+}
+
+$(document).on('click', '.signDocBtn', function (e) {
     e.preventDefault();
 
     const staffId = $(this).data('staff-id');
+    const pdfUrl = $(this).attr('data-pdf-url');
+    const $button = $(this);
 
-    Swal.fire({
-        title: 'Confirm',
-        html: `
-            <p>आपली टिप्पणी व आदेश योग्य असल्याची खात्री झाल्यानंतर, “होय” बटणावर क्लिक करून DSC साठी पुढील कार्यवाही करावी.?</p>
+    if (!window.dscSigner || typeof window.dscSigner.configure !== 'function') {
+        alert('NICDSign integration could not be loaded. Refresh the page and try again.');
+        return;
+    }
 
-        `,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'होय',
-        cancelButtonText: 'नाही',
-        confirmButtonColor: '#d33',
-        cancelButtonColor: '#6c757d',
-        reverseButtons: true
-    }).then((result) => {
+    if (!pdfUrl || $button.prop('disabled')) {
+        return;
+    }
 
-        if (!result.isConfirmed) {
-            return;
-        }
+    $button.prop('disabled', true).text('Connecting to NICDSign...');
+    $('#approvedBtn').prop('disabled', true).addClass('d-none');
+    $('#workOrderFile .signed-order-upload').remove();
 
-        $('#approvedBtn').removeClass('d-none');
-        
-       /* Swal.fire({
-            title: 'Please wait...',
-            text: 'Rejecting application',
-            allowOutsideClick: false,
-            allowEscapeKey: false,
-            didOpen: () => {
-                Swal.showLoading();
+    fetch(pdfUrl, { credentials: 'same-origin' })
+        .then((response) => {
+            if (!response.ok) {
+                throw new Error('Unable to retrieve the generated work order.');
             }
+            return response.arrayBuffer();
+        })
+        .then((pdfBuffer) => {
+            const pdfBytes = new Uint8Array(pdfBuffer);
+            if (String.fromCharCode(...pdfBytes.subarray(0, 5)) !== '%PDF-') {
+                throw new Error('The generated work order is not a valid PDF.');
+            }
+
+            const uploadField = $('<div>', { class: 'signed-order-upload mt-3' });
+            uploadField.append($('<input>', {
+                id: 'signedOrderPdf',
+                name: 'app_doc',
+                type: 'file',
+                accept: 'application/pdf,.pdf',
+                required: true,
+                class: 'form-control d-none'
+            }));
+            uploadField.append($('<div>', {
+                id: 'signedOrderStatus',
+                class: 'small mt-2',
+                text: 'Select your DSC certificate in the NICDSign window.'
+            }));
+            $('#workOrderFile').append(uploadField);
+
+            dscSigner.configure({
+                signType: 'pdf',
+                mode: 'nostamping',
+                preSignCallback: function () {
+                    return true;
+                },
+                errorCallback: function (message) {
+                    $('#signedOrderStatus').addClass('text-danger').text(message);
+                    alert(message);
+                },
+                postSignCallback: acceptNicdSignedPdf
+            });
+            dscSigner.sign(pdfArrayBufferToBase64(pdfBuffer));
+            $button.prop('disabled', false).text('Sign DSC');
+        })
+        .catch((error) => {
+            $button.prop('disabled', false).text('Sign DSC');
+            $('#workOrderFile .signed-order-upload').remove();
+            alert(error.message || 'Unable to start NICDSign.');
         });
 
-        $.ajax({
-            url: '<?php //$this->Url->build(["controller" => "Recruit", "action" => "rejectApplication"]) ?>',
-
-            type: 'POST',
-
-            data: {
-                reject_id: staffId
-            },
-
-            dataType: 'json',
-
-            success: function (response) {
-
-                if (response.success) {
-
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Rejected',
-                        text: response.message,
-                        confirmButtonText: 'OK'
-                    }).then(() => {
-                        location.reload();
-                    });
-
-                } else {
-
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: response.message
-                    });
-
-                }
-            },
-
-            error: function (xhr) {
-
-                console.log(xhr.responseText);
-
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Server Error',
-                    text: 'Something went wrong. Please try again.'
-                });
-
-            }
-        });*/
-
-    });
-
 });
+
 </script>
 
 

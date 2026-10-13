@@ -5,5 +5,4 @@
  * with your NICDSign installation.
  */
 
-var DSC_SERVER_URL =
-    "http://localhost/dscapi";
+var dscapibaseurl = "http://localhost:8080/dscapi"
