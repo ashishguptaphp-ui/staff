@@ -837,33 +837,11 @@
                            echo "<a href='#' style='text-decoration:none;'  class='startApplicationHistory-open-view me-2' data-mode='2' app-step='1'  data-staffObject='". json_encode($request, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ."' data-id='".$request->id."'> <i class='fa-solid fa-history'></i> टिप्पणी</a><br>";
                            if($approvedLogUrl!=null){
                                                             echo "<a href='" . h($approvedLogUrl ?? '#') . "' style='text-decoration:none;' download" . ($approvedLogUrl ? '' : " onclick=\"return false;\"") . ">
-                                                                <i class='fa-solid fa-reorder'></i>  Download order for DSC signing
+                                                                <i class='fa-solid fa-reorder'></i>  आदेश
                             </a><br/>";
                            }
-                           if($signedLogUrl !== null){
-                              echo "<a href='" . h($signedLogUrl) . "' style='text-decoration:none;' target='_blank' rel='noopener'>
-                                <i class='fa-solid fa-file-signature'></i>  DSC signed order
-                            </a><br/>";
-                           }
-                           if (strtolower((string)$request->status) === 'approved' && $approvedLogUrl !== null) {
-                               echo $this->Form->create(null, [
-                                   'url' => ['prefix' => 'Recruit', 'controller' => 'District', 'action' => 'uploadSignedAdvertisementPdf'],
-                                   'type' => 'file',
-                                   'class' => 'mt-2',
-                               ]);
-                               echo $this->Form->hidden('post_id', ['value' => $request->id]);
-                               echo $this->Form->control('signed_pdf', [
-                                   'type' => 'file',
-                                   'label' => false,
-                                   'accept' => 'application/pdf,.pdf',
-                                   'required' => true,
-                                   'class' => 'form-control form-control-sm',
-                               ]);
-                               echo $this->Form->button('Upload signed PDF', [
-                                   'class' => 'btn btn-sm btn-outline-primary mt-1',
-                               ]);
-                               echo $this->Form->end();
-                           }
+                       
+                           
                            if($rejectLogUrl!=null){
                               echo "<a href='" . h($rejectLogUrl ?? '#') . "' style='text-decoration:none;' target='_blank'" . ($rejectLogUrl ? '' : " onclick=\"return false;\"") . ">
                                 <i class='fa-solid fa-reorder'></i>  नकार आदेश
