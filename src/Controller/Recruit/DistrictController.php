@@ -55,9 +55,11 @@ class DistrictController extends AppController
             'advertisementPostApprovel',
             'addApplicationLog',
             'staffOnboardGenrateFile',
+            'advertisementGenrateFile',
             'staffOnboardReject',
             'headerUpload',
-            'headerDelete'
+            'headerDelete',
+            'advertisementPostApprovelEO'
         ]);
 
 
@@ -2674,7 +2676,7 @@ private function generateAdvertisementRejectPdf($appId, $rejectReason): ?string
                 $tmpPath,
                 $fileSize,
                 $file->getError(),
-                'approved_file.pdf',
+                'staff_order_' . $onboard->id . '_signed.pdf',
                 'application/pdf'
             );
             $storage = new EsdlStorageService();
@@ -4299,5 +4301,169 @@ $postAdvertisementVacancy = $postAdvertisementVacanciesTable->find()
 
         return $this->redirect(['action' => 'headerUpload']);
     }
+
+
+     public function advertisementGenrateFile()
+    {
+        $this->Authorization->skipAuthorization();
+        $this->request->allowMethod(['post', 'ajax']);
+        $data = $this->request->getData();
+        $appId = (int)($data['app_id'] ?? 0);
+
+        if ($appId <= 0) {
+            return $this->response
+                ->withStatus(400)
+                ->withType('application/json')
+                ->withStringBody(json_encode([
+                    'success' => false,
+                    'message' => 'Application ID is required',
+                ]));
+        }
+
+        $fileName = $this->generateAdvertisementApprovalPdf($appId);
+        if ($fileName === null) {
+            return $this->response
+                ->withStatus(500)
+                ->withType('application/json')
+                ->withStringBody(json_encode([
+                    'success' => false,
+                    'message' => 'Unable to generate the approval document',
+                ]));
+        }
+
+        $basePath = $this->request->getAttribute('base') ?? '';
+        $pdfUrl = $this->request->scheme() . '://' . $this->request->host()
+            . $basePath . '/' . ltrim($fileName, '/');
+
+        return $this->response
+            ->withType('application/json')
+            ->withStringBody(json_encode([
+                'success' => true,
+                'url' => $pdfUrl,
+                'staffId' => $appId,
+            ]));
+    }
+
+    
+    public function advertisementPostApprovelEO(){
+
+         $this->request->allowMethod(['post', 'ajax']);
+        $data = $this->request->getData();
+        $postAdvertisementId = $data['post_id'];
+        $action = strtolower(trim($data['action'] ?? ''));
+        $rejectReason = trim($data['reject_reason'] ?? '');
+        $forwardReason = trim($data['remark'] ?? '');
+        $signed_pdf_data = $data['signed_pdf_data'] ?? null;
+       
+
+          // Validate post_id
+        if (empty($postAdvertisementId)) {
+            return $this->response
+                ->withType('application/json')
+                ->withStatus(400)
+                ->withStringBody(json_encode([
+                    'success' => false,
+                    'message' => 'Post ID is required'
+                ]));
+        }
+
+        // Convert action to database status
+        $statusMap = [
+            'approve'       => 'approved',
+            'reject'        => 'rejected',
+            //'correction'    => 'send_back_correction',
+            //'clarification' => 'request_clarification'
+        ];
+
+        // Validate action
+        if (!isset($statusMap[$action])) {
+            return $this->response
+                ->withType('application/json')
+                ->withStatus(400)
+                ->withStringBody(json_encode([
+                    'success' => false,
+                    'message' => 'Invalid action'
+                ]));
+        }
+
+            $newStatus = $statusMap[$action];
+
+        // Find advertisement
+         $postAdvertisementTable = $this->fetchTable('PostAdvertisement');
+
+        $postAdvertisement = $postAdvertisementTable->find()
+            ->where([
+                'id' => $postAdvertisementId
+            ])
+            ->first();
+
+        // Check record exists
+        if (!$postAdvertisement) {
+            return $this->response
+                ->withType('application/json')
+                ->withStatus(404)
+                ->withStringBody(json_encode([
+                    'success' => false,
+                    'message' => 'Advertisement not found'
+                ]));
+        }
+
+        $previousStatus = $postAdvertisement->status;
+
+        $identity = $this->request->getAttribute('identity');
+
+        $userId = $identity
+            ? $identity->getIdentifier()
+            : null;
+        $postAdvertisement->status = $newStatus;
+
+        // Save
+        if ($postAdvertisementTable->save($postAdvertisement)) {
+
+            $messages = [
+                'approved' => 'Application Approved successfully',
+                'rejected' => 'Application Rejected successfully',
+                //'send_back_correction' => 'Application sent back for correction successfully',
+                //'request_clarification' => 'Clarification requested successfully'
+            ];
+
+            $this->createAdvertisementAudit(
+                    $postAdvertisementId,
+                    $userId,
+                    $action,
+                    $previousStatus,
+                    $newStatus,
+                    $forwardReason,
+                    1,
+                    $signed_pdf_data
+                );
+
+            return $this->response
+                ->withType('application/json')
+                ->withStringBody(json_encode([
+                    'success' => true,
+                    'data' => [
+                        'post_id' => $postAdvertisementId,
+                        'action' => $action,
+                        'status' => $newStatus
+                    ],
+                    'message' => $messages[$newStatus]
+                ]));
+        }
+
+        // Save failed
+        return $this->response
+            ->withType('application/json')
+            ->withStatus(500)
+            ->withStringBody(json_encode([
+                'success' => false,
+                'message' => 'Failed to update application status',
+                'errors' => $postAdvertisement->getErrors()
+            ]));
+        
+   
+
+    }
+
     
   }

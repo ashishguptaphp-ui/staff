@@ -1133,7 +1133,7 @@ class DistrictSuperintendentController extends AppController
         // Convert action to database status
         $statusMap = [
             'approve'       => 'approved',
-            'forward'       => 'under_review',
+            'forward'       => 'forward_superintendent',
             'reject'        => 'rejected',
             'correction'    => 'send_back_correction',
             'clarification' => 'request_clarification'
@@ -1208,7 +1208,7 @@ class DistrictSuperintendentController extends AppController
 
             $messages = [
                 'approved' => 'Application Approved successfully',
-                'under_review' => 'Application Under Review successfully',
+                'forward_superintendent' => 'Application Under Review successfully',
                 'rejected' => 'Application Rejected successfully',
                 'send_back_correction' => 'Application sent back for correction successfully',
                 'request_clarification' => 'Clarification requested successfully'

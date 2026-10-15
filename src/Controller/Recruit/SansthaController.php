@@ -2211,7 +2211,7 @@ class SansthaController extends AppController
                         : null,
                     'period' => $data['period'] ?? null,
                     'period2324' => $data['period2324'] ?? null,
-                    'status' => 'draft',
+                    'status' => 'submitted',
                     'roster' => $roster,
                     'court_order' => $courtOrder,
                     'court_order_petition_number' => $data['courtOrderPetitionNumber'] ?? null,

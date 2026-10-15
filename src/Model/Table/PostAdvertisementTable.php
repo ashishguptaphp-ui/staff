@@ -32,6 +32,7 @@ class PostAdvertisementTable extends Table
         return $this->find()
             ->select([
                 'PostAdvertisement.id',
+                'PostAdvertisement.institution_name',
                 'PostAdvertisement.institution_code',
                 'PostAdvertisement.created_at',
                 'PostAdvertisement.status',

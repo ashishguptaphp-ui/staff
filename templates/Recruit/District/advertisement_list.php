@@ -581,6 +581,9 @@
 #saApproveReasonModal {
     z-index: 10001 !important;
 }
+#approvedOrderPdfModal {
+    z-index: 10002 !important;
+}
 .modal-backdrop {
     z-index: 10000 !important;
 }
@@ -835,15 +838,23 @@
 
                            echo "<a href='#' style='text-decoration:none;'  class='startApplication-open-view me-2' data-mode='2' app-step='1'  data-staffObject='". json_encode($request, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ."' data-id='".$request->id."'> <i class='fa-solid fa-address-card'></i> अर्ज पहा</a><br>";
                            echo "<a href='#' style='text-decoration:none;'  class='startApplicationHistory-open-view me-2' data-mode='2' app-step='1'  data-staffObject='". json_encode($request, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ."' data-id='".$request->id."'> <i class='fa-solid fa-history'></i> टिप्पणी</a><br>";
+                            if($request->status === 'forward_superintendent') { 
+                            echo "<a href='#' style='text-decoration:none;color:green;' class='approvedApplication-open-transfer' data-staffObject='". json_encode($request, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP)."' data-id='".$request->id."' >
+                                    <i class='fa-solid fa-arrow-trend-up'></i>  मंजूर करा
+                                </a><br/>";
+                            echo "<a href='#' style='text-decoration:none;color:red;' class='rejectBtn'  data-post-id='".$request->id."' >
+                                    <i class='fa-solid fa-arrow-trend-down'></i>  नामंजूर करा
+                                </a><br/>";
+                            }
                            if($approvedLogUrl!=null){
-                                                            echo "<a href='" . h($approvedLogUrl ?? '#') . "' style='text-decoration:none;' download" . ($approvedLogUrl ? '' : " onclick=\"return false;\"") . ">
-                                                                <i class='fa-solid fa-reorder'></i>  आदेश
-                            </a><br/>";
+                               echo "<a href='" . h($approvedLogUrl) . "' style='text-decoration:none;' class='approved-order-pdf' data-pdf-title='आदेश'>
+                                    <i class='fa-solid fa-reorder'></i>  आदेश
+                                </a><br/>";
                            }
                        
                            
                            if($rejectLogUrl!=null){
-                              echo "<a href='" . h($rejectLogUrl ?? '#') . "' style='text-decoration:none;' target='_blank'" . ($rejectLogUrl ? '' : " onclick=\"return false;\"") . ">
+                                        echo "<a href='" . h($rejectLogUrl) . "' style='text-decoration:none;' class='approved-order-pdf' data-pdf-title='नकार आदेश'>
                                 <i class='fa-solid fa-reorder'></i>  नकार आदेश
                             </a><br/>";
                            }
@@ -858,6 +869,19 @@
        
 </div>
 
+<div class="modal fade" id="approvedOrderPdfModal" tabindex="-1" aria-labelledby="approvedOrderPdfModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered" style="max-width: 92vw;">
+        <div class="modal-content" style="height: 90vh;">
+            <div class="modal-header">
+                <h5 class="modal-title" id="approvedOrderPdfModalLabel">आदेश</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0">
+                <iframe id="approvedOrderPdfFrame" title="आदेश PDF" src="about:blank" style="width: 100%; height: 100%; border: 0;"></iframe>
+            </div>
+        </div>
+    </div>
+</div>
 
 
 
@@ -1054,7 +1078,7 @@
 
 </div>
 
-
+<?php echo $this->element('recruit/district/approved') ?>
 
 <!-- Slide Panel -->
 <div id="startApplicationViewSlider" class="slide-panel" aria-hidden="true" style="border:3px solid #537895;">
@@ -1180,37 +1204,23 @@
         <!-- Action Buttons -->
         <div class="col-md-6 text-end" id="saActionButtons">
 
-            <button type="button"
+            <!--button type="button"
                     id="saApproveBtn"
                     data-post-id=""
                     class="btn btn-success btn-sm me-2">
                 <i class="fas fa-check me-1"></i>
                 Approve
-            </button>
+            </button-->
 
-            <button type="button"
+            <!--button type="button"
                     id="saRejectBtn"
                     data-post-id=""
                     class="btn btn-danger btn-sm me-2">
                 <i class="fas fa-times me-1"></i>
                 Reject
-            </button>
-
-            <!--button type="button"
-                    id="saSendBackCorrectionBtn"
-                    data-post-id=""
-                    class="btn btn-warning btn-sm me-2">
-                <i class="fas fa-arrow-left me-1"></i>
-                Send Back for Correction
-            </button>
-
-            <button type="button"
-                    id="saClarificationBtn"
-                    data-post-id=""
-                    class="btn btn-info btn-sm">
-                <i class="fas fa-question-circle me-1"></i>
-                Request Clarification
             </button-->
+
+         
 
         </div>
 
@@ -1962,7 +1972,7 @@ $(document).ready(function(){
                             $('#saActionButtons').hide();
 
                             // Show only when status is pending
-                            if (status && status.toLowerCase() === 'under_review') {
+                            if (status && status.toLowerCase() === 'forward_superintendent') {
                                 $('#saActionButtons').show();
                             }
                             if (response.data.approvalLetterUrl) {
@@ -3257,7 +3267,7 @@ $(document).on('click', '#saApproveBtn', function () {
     //loadApprovedPost(postId,action);
 });
 
-$(document).on('click', '#saRejectBtn', function () {
+$(document).on('click', '#saRejectBtn, .rejectBtn', function () {
     let postId = $(this).data('post-id');
     let action ='reject';                            
     console.log('Reject Post ID:', postId);
@@ -3365,6 +3375,18 @@ $(document).on('click', '#saClarificationBtn', function () {
     loadApprovedPost(postId,action);
 });
 
+$(document).on('click', '.approved-order-pdf', function (event) {
+    event.preventDefault();
+    const pdfTitle = this.dataset.pdfTitle || 'आदेश';
+    $('#approvedOrderPdfModalLabel').text(pdfTitle);
+    $('#approvedOrderPdfFrame').attr('title', pdfTitle + ' PDF');
+    $('#approvedOrderPdfFrame').attr('src', this.href);
+    $('#approvedOrderPdfModal').modal('show');
+});
+
+$('#approvedOrderPdfModal').on('hidden.bs.modal', function () {
+    $('#approvedOrderPdfFrame').attr('src', 'about:blank');
+});
 
 loadApprovedPost = function(PostId,action,reason=''){
                   
@@ -3409,5 +3431,332 @@ loadApprovedPost = function(PostId,action,reason=''){
         }
 
 </script>
+<script src="<?= h($this->Url->build('/js/dscapi-conf.js')) ?>?v=<?= (int)filemtime(WWW_ROOT . 'js' . DS . 'dscapi-conf.js') ?>"></script>
+<script src="<?= h($this->Url->build('/js/dsc-signer.js')) ?>?v=<?= (int)filemtime(WWW_ROOT . 'js' . DS . 'dsc-signer.js') ?>"></script>
+
+<div id="panel" style="display:none;"></div>
+<input type="hidden" id="signingReason" value="Staff onboarding work order approval">
+<input type="hidden" id="signingLocation" value="District Office">
+<input type="hidden" id="tsaURL" value="">
+<input type="hidden" id="timeServerURL" value="">
+
+<script>
+    $(document).on('click', '.approvedApplication-open-transfer', function () {
+            
+            const caseId = $(this).data('id');    
+            let staff = $(this).data('staffobject');
+                        $('#approvalForm')[0].reset();
+                        $('#workOrderFile').empty();
+                        $('#workOrderBtn').prop('disabled', false).show().html('<i class="fas fa-check-circle me-1"></i> वर्क ऑर्डर तयार करा');
+                        $('#approvedBtn').prop('disabled', true).addClass('d-none');
+            $(document).trigger('approvedApplication:openSlider', [caseId, staff]);
+        });
+
+        // Close slider
+        $(document).on('click', '.approvedApplication-close-slider', function () {
+            $(document).trigger('approvedApplication:closeSlider');
+        });
+
+        // Custom event handlers for Slider 2
+        $(document).on('approvedApplication:openSlider', function (e, caseId,staff) {
+            console.log('Approved Application Case ID:', caseId);
+            console.log('Approved Application Staff:', staff);
+            //loadApprovedTransferDetails(caseId,staff);
+             $("#app_sanstha_name").html(staff.institution_name);
+             $("#app_sanstha_code").html(staff.institution_code);
+             $("#approve_form_id").val(caseId);
+            $('#approvedApplicationSlider').addClass('open').attr('aria-hidden', 'false');
+        });
+
+        $(document).on('approvedApplication:closeSlider', function () {
+            $('#approvedApplicationSlider').removeClass('open').attr('aria-hidden', 'true');
+        });
 
 
+
+    $('#workOrderBtn').on('click', function (e) {
+
+            e.preventDefault();
+            const form = $(this).closest('form')[0];
+
+            if (!form) {
+                console.error('Form not found');
+                return;
+            }
+
+            let formData = new FormData(form);
+            let approvalId = $("#approve_form_id").text().trim();
+            //$('#approve_form_id').val(approvalId);
+            $('#approve_form_remark').val($('#app_remark').val().trim());
+            formData = new FormData(form);
+            $.ajax({
+                url: '<?= $this->Url->build(["controller" => "District", "action" => "advertisementGenrateFile"]); ?>',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                cache: false,
+                headers: {
+                    'X-CSRF-Token': $('meta[name="csrfToken"]').attr('content') 
+                },
+
+                beforeSend: function () {
+
+                    // Disable button
+                    $('#workOrderBtn')
+                        .prop('disabled', true)
+                        .html(`
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                            Processing...
+                        `);
+                },
+
+                success: function (response) {
+
+                    if(response.success == false){
+                        alert(response.message)
+                    }else{
+                      
+                        let pdfUrl = response && response.url ? response.url : '';
+                        let staffId = response && response.staffId ? response.staffId : '';
+
+                    pdfUrlToBase64(
+                        pdfUrl
+                    ).then(base64 => {
+                        $("#pdfData").val(base64);
+                        console.log(base64);
+                    }).catch(console.error);
+
+                        if (pdfUrl) {
+                            const $orderContainer = $('<div>', {
+                                class: 'mt-3 p-3 border rounded bg-light'
+                            });
+                            $orderContainer.append($('<div>', {
+                                class: 'fw-bold mb-2',
+                                text: 'Work Order PDF'
+                            }));
+                            $orderContainer.append($('<a>', {
+                                href: pdfUrl,
+                                target: '_blank',
+                                rel: 'noopener noreferrer',
+                                class: 'btn btn-sm btn-primary',
+                                id: 'ViewPDFBtn',
+                                text: 'View PDF'
+                            }).attr('download', `advt_order_${staffId}.pdf`));
+                            $orderContainer.append($('<button>', {
+                                type: 'button',
+                                class: 'btn btn-danger btn-sm signDocBtn ms-2',
+                                id: 'signDocBtn',
+                                text: 'Sign DSC'
+                            }).attr({
+                                'data-staff-id': staffId,
+                                'data-pdf-url': pdfUrl
+                            }));
+                            $('#workOrderFile').empty().append($orderContainer);
+                        }
+
+                        $('#workOrderBtn').hide();
+
+                       
+                    }                    
+                },
+
+                error: function (xhr) {
+
+                    console.log(xhr);
+
+                    $('#workOrderBtn')
+                        .prop('disabled', false)
+                        .show()
+                        .html(`
+                            <i class="fas fa-check-circle me-1"></i>
+                            वर्क ऑर्डर तयार करा
+                        `);
+
+                    let errorMessage = 'Something went wrong.';
+
+                    if (xhr.responseJSON?.message) {
+                        errorMessage = xhr.responseJSON.message;
+                    }
+
+                    alert(errorMessage);
+                },
+
+                complete: function () {}
+            });
+
+        });  
+        
+       
+ async function pdfUrlToBase64(url) {
+    const response = await fetch(url);
+
+    if (!response.ok) {
+        throw new Error("Unable to fetch PDF");
+    }
+
+    const blob = await response.blob();
+
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+
+        reader.onload = () => {
+            resolve(reader.result.split(",")[1]);
+        };
+
+        reader.onerror = reject;
+
+        reader.readAsDataURL(blob);
+    });
+} 
+    </script>
+
+
+
+<script>
+
+ $(document).ready(function() {
+    
+var initConfig = {
+        "preSignCallback" : function() {
+            // do something 
+            // based on the return sign will be invoked
+            return true;
+        },
+        "postSignCallback" : function(alias, sign, key) {
+            $('#signedPdfData').val(sign);
+            $('#lblEncryptedKey').val(key);
+            // Implement signed pdf upload and pdf Download here
+            var requestData = {
+                action : "DECRYPT",
+                en_sig : sign,
+                ek : key
+            };
+            console.log('Request Data for Decryption:', requestData);
+            $
+                    .ajax(
+                            {
+                                url : dscapibaseurl + "/pdfsignature",
+                                type : "post",
+                                dataType : "json",
+                                contentType : 'application/json',
+                                data : JSON.stringify(requestData),
+                                async : false
+                            })
+                    .done(
+                            function(data) {
+                                console.log('Decryption Response:', data);
+                                if (data.status_cd == 1) {
+                                    //get data.data -> decode base64 -> get json->check status == SUCCESS
+                                    //get data.data.sig -> add pdf header and append to link
+                                    var jsonData = JSON.parse(atob(data.data));
+                                    if (jsonData.status === "SUCCESS") {
+                                        
+                                        //Set Class to download link
+                                        $('#downloadDiv').addClass('btn btn-info');
+                                        //get pdf data
+                                        var pdfData = jsonData.sig;
+                                        var dlnk = document.getElementById('downloadDiv');
+                                        dlnk.href = 'data:application/pdf;base64,'+ pdfData;
+                                        $("#downloadDiv").text("Download Signed PDF File");
+                                        $('#approvedBtn').prop('disabled', false).removeClass('d-none');
+                                        $('#ViewPDFBtn').prop('disabled', true).addClass('d-none');
+                                        $('#signDocBtn').prop('disabled', true).addClass('d-none');
+           
+
+                                    } else {
+                                        alert(jsonData.message || "The PDF decryption service did not return SUCCESS.");
+                                    }
+
+                                } else {
+                                    var apiError = data.error || {};
+                                    var errorMessage = apiError.message || data.message
+                                        || "Decryption failed (status code: " + data.status_cd
+                                        + ", error code: " + (apiError.error_cd || "unknown") + ").";
+                                    alert(errorMessage);
+                                    return false;
+
+                                }
+                            }).fail(
+                            function(jqXHR, textStatus,
+                                    errorThrown) {
+                                alert(textStatus);
+                            });
+        },
+        signType : 'pdf',
+        mode : 'nostampingv2'
+    //"certificateSno" : 13705892,
+    };
+
+    dscSigner.configure(initConfig);
+
+    $(document).on('click', '#signDocBtn', function (e) {
+    e.preventDefault();
+        var data = $("#pdfData").val();
+        console.log('PDF Data Length:', data ? data.length : 0);
+        if (data != null || data != '') {
+            //dscSigner.sign(data);
+
+            $('#downloadDiv').addClass('btn btn-info');
+            var pdfData = 'test';
+            var dlnk = document.getElementById('downloadDiv');
+            dlnk.href = 'data:application/pdf;base64,'+ pdfData;
+            $("#downloadDiv").text("Download Signed PDF File");
+            $('#approvedBtn').prop('disabled', false).removeClass('d-none');
+            $('#ViewPDFBtn').prop('disabled', true).addClass('d-none');
+            $('#signDocBtn').prop('disabled', true).addClass('d-none');
+           
+        }
+    });
+
+
+$('#approvalForm').on('submit', function (e) {
+
+        e.preventDefault();
+        let formData = new FormData(this);
+        let PostId = $("#approve_form_id").val();
+        let action ='approve';    
+        let reason = $.trim($('#app_remark').val());
+        let signedPdfData = $('#signedPdfData').val();                        
+        formData.append('post_id', PostId); 
+        formData.append('action', action); 
+        formData.append('remark', reason);
+        formData.append('signed_pdf_data', signedPdfData);
+
+           console.log('Approve Post ID:', PostId);
+            $.ajax({
+                url: '<?= $this->Url->build(['prefix' => 'Recruit',"controller" => "District", "action" => "advertisementPostApprovelEO"]); ?>',
+                type: 'Post',
+                data: formData,
+                processData: false,
+                contentType: false,
+                headers: {
+                    'X-CSRF-Token': $('meta[name="csrfToken"]').attr('content') 
+                },
+                  beforeSend: function () {
+                    $('#approvedBtn')
+                                .prop('disabled', true)
+                                .html(
+                                    '<i class="fas fa-spinner fa-spin me-1"></i> Processing...'
+                                );
+                        },
+                    success: function (response) {
+                    if(response.success){
+                         location.reload();
+                                                 
+                    }
+                    
+                },
+                error: function () {
+                    $("#returnHtmlForm").html('<option>Error loading data</option>');
+                }
+            });
+
+
+   });
+
+    });
+
+
+
+</script>

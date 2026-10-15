@@ -514,37 +514,14 @@ var dscSigner = (function($) {
 				})
 				.done(
 						function(data) {
-
-                             console.log('NICDSign signing response status:', data?.status);
-                             console.log('NICDSign response field names:', Object.keys(data || {}));
-
 							logout();
 							if (data.status === 'success') {
 								$('#panel').hide();
-								var signedPdf = data.signedPdf || data.base64Data
-									|| data.pdfdocument || data.data;
-								if (typeof signedPdf !== 'string' || signedPdf.trim() === '') {
-									var message = data.errorMessage || data.message
-										|| 'NICDSign returned success without PDF data. Response fields: '
-										+ Object.keys(data).join(', ');
-									if (config.errorCallback) {
-										config.errorCallback(message);
-									} else {
-										alert(message);
-									}
-									return;
-								}
-								if (config.postSignCallback) {
-									config.postSignCallback(aliasName, signedPdf, data.token);
-								}
+								if (config.postSignCallback)
+									config.postSignCallback(aliasName,
+											data.signedPdf, data.token);
 							} else {
-								var message = data.errorMessage || data.message
-									|| 'NICDSign could not sign the PDF.';
-								if (config.errorCallback) {
-									config.errorCallback(message);
-								} else {
-									alert(message);
-								}
+								alert(data.errorMessage);
 							}
 						})
 				.fail(
@@ -610,8 +587,8 @@ var dscSigner = (function($) {
 	function PDFNoStampingBatchV2(signData) {
 
 		var StampingObject = new Object();
-		StampingObject.stampingX = $('#stampingX').val();
-		StampingObject.stampingY = $('#stampingY').val();
+		StampingObject.stampingX = 200;//$('#stampingX').val();
+		StampingObject.stampingY = 200;//$('#stampingY').val();
 		var data = {
 			base64PdfData : signData,
 			alias : aliasName,
@@ -656,15 +633,15 @@ var dscSigner = (function($) {
 
 	function PDFNoStampingV2(signData) {
 		var StampingObject = new Object();
-		StampingObject.stampingX = $('#stampingX').val();
-		StampingObject.stampingY = $('#stampingY').val();
+		StampingObject.stampingX = 200;//$('#stampingX').val();
+		StampingObject.stampingY = 200;//$('#stampingY').val();
 		var data = {
 			base64PdfData : signData,
 			alias : aliasName,
-			reason : $('#signingReason').val(),
-			location : $('#signingLocation').val(),
-			tsaURL : $('#tsaURL').val(),
-			timeServerURL : $('#timeServerURL').val(),
+			reason : 'approved',//$('#signingReason').val(),
+			location : 'pune',//$('#signingLocation').val(),
+			tsaURL : '',//$('#tsaURL').val(),
+			timeServerURL : 'http://localhost:8080/dscapi/getServerTime',//$('#timeServerURL').val(),
 			stampingData : StampingObject
 		};
 		$
@@ -678,14 +655,31 @@ var dscSigner = (function($) {
 				})
 				.done(
 						function(data) {
+							console.log('NICDSign signing response status:', data && data.status);
+							console.log('NICDSign signing response fields:', Object.keys(data || {}));
 							logout();
 							if (data.status === 'success') {
 								$('#panel').hide();
-								if (config.postSignCallback)
-									config.postSignCallback(aliasName,
-											data.signedPdf, data.token);
+								var signedPdf = data.signedPdf || data.sign || data.data;
+								var encryptionKey = data.token || data.key || data.encryptedKey;
+								if (typeof signedPdf !== 'string' || !signedPdf.trim()
+										|| typeof encryptionKey !== 'string' || !encryptionKey.trim()) {
+									var message = 'NICDSign reported success but did not return the signed PDF and encryption key. Response fields: '
+										+ Object.keys(data || {}).join(', ');
+									if (config.errorCallback) {
+										config.errorCallback(message);
+									} else {
+										alert(message);
+									}
+									return;
+								}
+								if (config.postSignCallback) {
+									config.postSignCallback(aliasName, signedPdf, encryptionKey);
+								} else {
+									alert('No callback is configured to receive the signed PDF.');
+								}
 							} else {
-								alert(data.errorMessage);
+								alert(data.errorMessage || data.message || 'NICDSign could not sign the PDF.');
 							}
 						})
 				.fail(
@@ -697,8 +691,8 @@ var dscSigner = (function($) {
 	
 	function PDFNoStampingV3(signData) {
 		var StampingObject = new Object();
-		StampingObject.stampingX = $('#stampingX').val();
-		StampingObject.stampingY = $('#stampingY').val();
+		StampingObject.stampingX = 200;//$('#stampingX').val();
+		StampingObject.stampingY = 200;//$('#stampingY').val();
 		var data = {
 			base64PdfData : signData,
 			alias : aliasName,
@@ -747,8 +741,8 @@ var dscSigner = (function($) {
 		} else {
 			StampingObject.mode = "L";
 		}
-		StampingObject.stampingX = $('#stampingX').val();
-		StampingObject.stampingY = $('#stampingY').val();
+		StampingObject.stampingX = 200;//$('#stampingX').val();
+		StampingObject.stampingY = 200;//$('#stampingY').val();
 		StampingObject.scale = $('#scale').val();
 		StampingObject.stampingImageData = $('#imageData').val();
 		var data = {

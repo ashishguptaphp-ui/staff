@@ -695,6 +695,28 @@
     display: none !important;
 }
 
+
+
+.result {
+	color: red;
+	font-size: small;
+}
+
+#panel {
+	position: fixed;
+	padding-top: 8%;
+	padding-bottom: 0;
+	padding-left: 0;
+	padding-right: 0;
+	margin: 0;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background: rgba(255, 255, 255, 0.9);
+	display: none;
+	text-align: center;
+}
 </style>
 
 
@@ -1481,11 +1503,18 @@
                                 वर्क ऑर्डर तयार करा
                             </button>
 
+                            <a id="downloadDiv" href='#' type="application/pdf" download="SignedPdf.pdf"></a>
+
                             <button type="submit" class="btn btn-success btn-sm mt-2 d-none" id="approvedBtn" style="margin-left: auto !important;">
                                 <i class="fas fa-check-circle me-1"></i>
                                 पुढे करा
                             </button>
-
+<br>
+<br>
+                            <input type="hidden"  id="pdfData" >
+                             <input type="hidden" id="signedPdfData" >
+				            <input type="hidden" id="lblEncryptedKey" >
+				       
                         </div>
                     <?php
                         $this->Form->unlockField('action');
@@ -3347,6 +3376,10 @@ $(document).ready(function() {
             
             const caseId = $(this).data('id');    
             let staff = $(this).data('staffobject');
+                        $('#approvalForm')[0].reset();
+                        $('#workOrderFile').empty();
+                        $('#workOrderBtn').prop('disabled', false).show().html('<i class="fas fa-check-circle me-1"></i> वर्क ऑर्डर तयार करा');
+                        $('#approvedBtn').prop('disabled', true).addClass('d-none');
             $(document).trigger('approvedApplication:openSlider', [caseId, staff]);
         });
 
@@ -3565,6 +3598,14 @@ $(document).ready(function() {
                       
                         let pdfUrl = response && response.url ? response.url : '';
                         let staffId = response && response.staffId ? response.staffId : '';
+
+     pdfUrlToBase64(
+                        pdfUrl
+                    ).then(base64 => {
+                        $("#pdfData").val(base64);
+                        console.log(base64);
+                    }).catch(console.error);
+
                         if (pdfUrl) {
                             const $orderContainer = $('<div>', {
                                 class: 'mt-3 p-3 border rounded bg-light'
@@ -3578,11 +3619,12 @@ $(document).ready(function() {
                                 target: '_blank',
                                 rel: 'noopener noreferrer',
                                 class: 'btn btn-sm btn-primary',
-                                text: 'Download order for NICDsign'
+                                text: 'View PDF'
                             }).attr('download', `staff_order_${staffId}.pdf`));
                             $orderContainer.append($('<button>', {
                                 type: 'button',
                                 class: 'btn btn-danger btn-sm signDocBtn ms-2',
+                                id: 'signDocBtn',
                                 text: 'Sign DSC'
                             }).attr({
                                 'data-staff-id': staffId,
@@ -3622,6 +3664,29 @@ $(document).ready(function() {
             });
 
         });
+
+
+ async function pdfUrlToBase64(url) {
+    const response = await fetch(url);
+
+    if (!response.ok) {
+        throw new Error("Unable to fetch PDF");
+    }
+
+    const blob = await response.blob();
+
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+
+        reader.onload = () => {
+            resolve(reader.result.split(",")[1]);
+        };
+
+        reader.onerror = reject;
+
+        reader.readAsDataURL(blob);
+    });
+}
 
 
          $('#approvalForm').on('submit', function (e) {
@@ -3805,7 +3870,8 @@ $(document).ready(function() {
 </script>
 <!-- SweetAlert2 -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<?= $this->Html->script(['dscapi-conf', 'dsc-signer']) ?>
+<script src="<?= h($this->Url->build('/js/dscapi-conf.js')) ?>?v=<?= (int)filemtime(WWW_ROOT . 'js' . DS . 'dscapi-conf.js') ?>"></script>
+<script src="<?= h($this->Url->build('/js/dsc-signer.js')) ?>?v=<?= (int)filemtime(WWW_ROOT . 'js' . DS . 'dsc-signer.js') ?>"></script>
 
 <div id="panel" style="display:none;"></div>
 <input type="hidden" id="signingReason" value="Staff onboarding work order approval">
@@ -3850,120 +3916,195 @@ function base64ToPdfFile(base64Pdf, fileName) {
     return new File([bytes], fileName, { type: 'application/pdf' });
 }
 
-function acceptNicdSignedPdf(alias, signedPdf, token) {
-    try {
-        const staffId = $('#workOrderFile .signDocBtn').data('staff-id');
-        const signedFile = base64ToPdfFile(signedPdf, `staff_order_${staffId}_signed.pdf`);
-        const fileInput = document.getElementById('signedOrderPdf');
-
-
-           console.log('NICDSign post-sign callback invoked');
-            console.log('Certificate alias:', alias);
-            console.log('Signed PDF type:', typeof signedPdf);
-            console.log(
-                'Signed PDF length:',
-                typeof signedPdf === 'string' ? signedPdf.length : null
-            );
-            console.log(
-                'Third argument type:',
-                typeof token
-            );
-
-
-        if (!fileInput || typeof DataTransfer === 'undefined') {
-            throw new Error('This browser cannot attach the signed PDF to the approval form.');
-        }
-
-        const transfer = new DataTransfer();
-        transfer.items.add(signedFile);
-        fileInput.files = transfer.files;
-
-        $('#signedOrderStatus')
-            .removeClass('text-danger')
-            .addClass('text-success')
-            .text(`PDF signed with ${alias}. Review the signed file, then continue.`);
-        $('#approvedBtn').prop('disabled', false).removeClass('d-none');
-    } catch (error) {
-        $('#signedOrderStatus').addClass('text-danger').text(error.message);
-        alert(error.message);
+function acceptNicdSignedPdf(alias, signedPdf, encryptedKey) {
+    
+console.log('acceptNicdSignedPdf called with alias:', alias, 'signedPdf length:', signedPdf?.length, 'encryptedKey length:', encryptedKey?.length);
+    if (typeof signedPdf !== 'string' || !signedPdf
+        || typeof encryptedKey !== 'string' || !encryptedKey) {
+        const message = 'NICDSign did not return the signed PDF and encryption key.';
+        $('#signedOrderStatus').addClass('text-danger').text(message);
+        $('#panel .dsc-confirm-sign').prop('disabled', false).text('Retry Signing');
+        alert(message);
+        return;
     }
+
+    $('#signedPdfData').val(signedPdf);
+    $('#lblEncryptedKey').val(encryptedKey);
+    $('#signedOrderStatus')
+        .removeClass('text-danger text-success')
+        .text('Decrypting the signed PDF...');
+
+    $.ajax({
+        url: dscapibaseurl + '/pdfsignature',
+        type: 'POST',
+        dataType: 'json',
+        contentType: 'application/json',
+        data: JSON.stringify({
+            action: 'DECRYPT',
+            en_sig: signedPdf,
+            ek: encryptedKey
+        })
+    }).done(function (response) {
+        try {
+            if (Number(response.status_cd) !== 1 || !response.data) {
+                throw new Error(response.error?.message || 'Unable to decrypt the signed PDF.');
+            }
+
+            const decryptedData = JSON.parse(atob(response.data));
+            if (decryptedData.status !== 'SUCCESS') {
+                throw new Error('NICDSign did not return a successfully decrypted PDF.');
+            }
+
+            const staffId = $('#workOrderFile .signDocBtn').data('staff-id');
+            const signedFile = base64ToPdfFile(
+                decryptedData.sig,
+                `staff_order_${staffId}_signed.pdf`
+            );
+            const fileInput = document.getElementById('signedOrderPdf');
+
+            if (!fileInput || typeof DataTransfer === 'undefined') {
+                throw new Error('This browser cannot attach the signed PDF to the approval form.');
+            }
+
+            const transfer = new DataTransfer();
+            transfer.items.add(signedFile);
+            fileInput.files = transfer.files;
+
+            $('#panel').hide();
+            $('#signedOrderDownload')
+                .attr('href', URL.createObjectURL(signedFile))
+                .attr('download', signedFile.name)
+                .removeClass('d-none');
+            $('#verifyPdfBtn').prop('disabled', false).removeClass('d-none');
+            $('#signedOrderStatus')
+                .removeClass('text-danger')
+                .addClass('text-success')
+                .text(`PDF signed with ${alias} and decrypted. Verify it before forwarding.`);
+        } catch (error) {
+            $('#signedOrderStatus').addClass('text-danger').text(error.message);
+            $('#panel .dsc-confirm-sign').prop('disabled', false).text('Retry Signing');
+            alert(error.message);
+        }
+    }).fail(function (xhr, textStatus) {
+        const message = xhr.responseJSON?.error?.message || `PDF decryption failed: ${textStatus}`;
+        $('#signedOrderStatus').addClass('text-danger').text(message);
+        $('#panel .dsc-confirm-sign').prop('disabled', false).text('Retry Signing');
+        alert(message);
+    });
 }
 
-$(document).on('click', '.signDocBtn', function (e) {
-    e.preventDefault();
 
-    const staffId = $(this).data('staff-id');
-    const pdfUrl = $(this).attr('data-pdf-url');
-    const $button = $(this);
-
-    if (!window.dscSigner || typeof window.dscSigner.configure !== 'function') {
-        alert('NICDSign integration could not be loaded. Refresh the page and try again.');
-        return;
-    }
-
-    if (!pdfUrl || $button.prop('disabled')) {
-        return;
-    }
-
-    $button.prop('disabled', true).text('Connecting to NICDSign...');
-    $('#approvedBtn').prop('disabled', true).addClass('d-none');
-    $('#workOrderFile .signed-order-upload').remove();
-
-    fetch(pdfUrl, { credentials: 'same-origin' })
-        .then((response) => {
-            if (!response.ok) {
-                throw new Error('Unable to retrieve the generated work order.');
-            }
-            return response.arrayBuffer();
-        })
-        .then((pdfBuffer) => {
-            const pdfBytes = new Uint8Array(pdfBuffer);
-            if (String.fromCharCode(...pdfBytes.subarray(0, 5)) !== '%PDF-') {
-                throw new Error('The generated work order is not a valid PDF.');
-            }
-
-            const uploadField = $('<div>', { class: 'signed-order-upload mt-3' });
-            uploadField.append($('<input>', {
-                id: 'signedOrderPdf',
-                name: 'app_doc',
-                type: 'file',
-                accept: 'application/pdf,.pdf',
-                required: true,
-                class: 'form-control d-none'
-            }));
-            uploadField.append($('<div>', {
-                id: 'signedOrderStatus',
-                class: 'small mt-2',
-                text: 'Select your DSC certificate in the NICDSign window.'
-            }));
-            $('#workOrderFile').append(uploadField);
-
-            dscSigner.configure({
-                signType: 'pdf',
-                mode: 'nostamping',
-                preSignCallback: function () {
-                    return true;
-                },
-                errorCallback: function (message) {
-                    $('#signedOrderStatus').addClass('text-danger').text(message);
-                    alert(message);
-                },
-                postSignCallback: acceptNicdSignedPdf
-            });
-            dscSigner.sign(pdfArrayBufferToBase64(pdfBuffer));
-            $button.prop('disabled', false).text('Sign DSC');
-        })
-        .catch((error) => {
-            $button.prop('disabled', false).text('Sign DSC');
-            $('#workOrderFile .signed-order-upload').remove();
-            alert(error.message || 'Unable to start NICDSign.');
-        });
-
-});
 
 </script>
 
+<script>
 
+ $(document).ready(function() {
+    
+var initConfig = {
+        "preSignCallback" : function() {
+            // do something 
+            // based on the return sign will be invoked
+            return true;
+        },
+        "postSignCallback" : function(alias, sign, key) {
+            $('#signedPdfData').val(sign);
+            $('#lblEncryptedKey').val(key);
+            // Implement signed pdf upload and pdf Download here
+            var requestData = {
+                action : "DECRYPT",
+                en_sig : sign,
+                ek : key
+            };
+            console.log('Request Data for Decryption:', requestData);
+            $
+                    .ajax(
+                            {
+                                url : dscapibaseurl + "/pdfsignature",
+                                type : "post",
+                                dataType : "json",
+                                contentType : 'application/json',
+                                data : JSON.stringify(requestData),
+                                async : false
+                            })
+                    .done(
+                            function(data) {
+                                console.log('Decryption Response:', data);
+                                if (data.status_cd == 1) {
+                                    //get data.data -> decode base64 -> get json->check status == SUCCESS
+                                    //get data.data.sig -> add pdf header and append to link
+                                    var jsonData = JSON.parse(atob(data.data));
+                                    if (jsonData.status === "SUCCESS") {
+                                        
+                                        //Set Class to download link
+                                        $('#downloadDiv').addClass('btn btn-info');
+                                        //get pdf data
+                                        var pdfData = jsonData.sig;
+                                        var dlnk = document.getElementById('downloadDiv');
+                                        dlnk.href = 'data:application/pdf;base64,'+ pdfData;
+                                        $("#downloadDiv").text("Download Signed PDF File");
+
+                                    } else {
+                                        alert(jsonData.message || "The PDF decryption service did not return SUCCESS.");
+                                    }
+
+                                } else {
+                                    var apiError = data.error || {};
+                                    var errorMessage = apiError.message || data.message
+                                        || "Decryption failed (status code: " + data.status_cd
+                                        + ", error code: " + (apiError.error_cd || "unknown") + ").";
+                                    alert(errorMessage);
+                                    return false;
+
+                                }
+                            }).fail(
+                            function(jqXHR, textStatus,
+                                    errorThrown) {
+                                alert(textStatus);
+                            });
+        },
+        signType : 'pdf',
+        mode : 'nostampingv2'
+    //"certificateSno" : 13705892,
+    };
+
+    dscSigner.configure(initConfig);
+
+    $(document).on('click', '#signDocBtn', function (e) {
+    e.preventDefault();
+        var data = $("#pdfData").val();
+        console.log('PDF Data Length:', data ? data.length : 0);
+        if (data != null || data != '') {
+            dscSigner.sign(data);
+        }
+    });
+
+
+
+    function readURL(input) {
+								if (input.files && input.files[0]) {
+									var reader = new FileReader();
+
+									reader.onload = function(e) {
+										var data = e.target.result;
+										var base64 = data
+												.replace(/^[^,]*,/, '');
+										$("#pdfData").val(base64);
+									}
+
+									reader.readAsDataURL(input.files[0]);
+								}
+							}
+
+							$("#pdfFile").change(function() {
+								readURL(this);
+							});
+
+    });
+
+
+
+</script>
 
 <script>
 
