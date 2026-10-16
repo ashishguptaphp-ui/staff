@@ -3619,6 +3619,7 @@ $(document).ready(function() {
                                 target: '_blank',
                                 rel: 'noopener noreferrer',
                                 class: 'btn btn-sm btn-primary',
+                                id: 'ViewPDFBtn',
                                 text: 'View PDF'
                             }).attr('download', `staff_order_${staffId}.pdf`));
                             $orderContainer.append($('<button>', {
@@ -3878,6 +3879,8 @@ $(document).ready(function() {
 <input type="hidden" id="signingLocation" value="District Office">
 <input type="hidden" id="tsaURL" value="">
 <input type="hidden" id="timeServerURL" value="">
+<input type="hidden" id="stampingX" value="250">
+<input type="hidden" id="stampingY" value="50">
 
 <script>
 function pdfArrayBufferToBase64(buffer) {
@@ -4043,6 +4046,10 @@ var initConfig = {
                                         var dlnk = document.getElementById('downloadDiv');
                                         dlnk.href = 'data:application/pdf;base64,'+ pdfData;
                                         $("#downloadDiv").text("Download Signed PDF File");
+                                        $('#approvedBtn').prop('disabled', false).removeClass('d-none');
+                                        $('#ViewPDFBtn').prop('disabled', true).addClass('d-none');
+                                        $('#signDocBtn').prop('disabled', true).addClass('d-none');
+           
 
                                     } else {
                                         alert(jsonData.message || "The PDF decryption service did not return SUCCESS.");
@@ -4076,6 +4083,16 @@ var initConfig = {
         console.log('PDF Data Length:', data ? data.length : 0);
         if (data != null || data != '') {
             dscSigner.sign(data);
+
+           /* $('#downloadDiv').addClass('btn btn-info');
+            var pdfData = 'test';
+            var dlnk = document.getElementById('downloadDiv');
+            dlnk.href = 'data:application/pdf;base64,'+ pdfData;
+            $("#downloadDiv").text("Download Signed PDF File");
+            $('#approvedBtn').prop('disabled', false).removeClass('d-none');
+            $('#ViewPDFBtn').prop('disabled', true).addClass('d-none');
+            $('#signDocBtn').prop('disabled', true).addClass('d-none');
+            */
         }
     });
 

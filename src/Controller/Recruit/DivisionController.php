@@ -1406,7 +1406,9 @@ class DivisionController extends AppController
         try {
             $StaffOnboardingAppointmentsTable = TableRegistry::getTableLocator()->get('StaffOnboardingAppointments');            
             if (!empty($data['app_id'])) {
-                $onboard = $StaffOnboardingAppointmentsTable->get($data['app_id']);
+                $onboard = $StaffOnboardingAppointmentsTable->find()
+                            ->where(['staff_id' => $data['app_id']])
+                            ->first();
             }else{
                 return $this->response
                             ->withType('application/json')

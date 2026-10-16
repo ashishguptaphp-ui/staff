@@ -105,12 +105,20 @@
                                 <i class="fas fa-check-circle me-1"></i>
                                 वर्क ऑर्डर तयार करा
                             </button>
+ <a id="downloadDiv" href='#' type="application/pdf" download="SignedPdf.pdf"></a>
 
                             <button type="submit" class="btn btn-success btn-sm mt-2 d-none" id="approvedBtn" style="margin-left: auto !important;">
                                 <i class="fas fa-check-circle me-1"></i>
                                 पुढे करा
                             </button>
 
+
+                            <input type="hidden"  id="pdfData" >
+                             <input type="hidden" id="signedPdfData" >
+				            <input type="hidden" id="lblEncryptedKey" >
+				       
+
+                            
                         </div>
                     <?php
                         $this->Form->unlockField('action');

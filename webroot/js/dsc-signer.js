@@ -633,8 +633,8 @@ var dscSigner = (function($) {
 
 	function PDFNoStampingV2(signData) {
 		var StampingObject = new Object();
-		StampingObject.stampingX = 200;//$('#stampingX').val();
-		StampingObject.stampingY = 200;//$('#stampingY').val();
+		StampingObject.stampingX = $('#stampingX').val();
+		StampingObject.stampingY = $('#stampingY').val();
 		var data = {
 			base64PdfData : signData,
 			alias : aliasName,

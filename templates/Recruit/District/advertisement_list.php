@@ -582,7 +582,7 @@
     z-index: 10001 !important;
 }
 #approvedOrderPdfModal {
-    z-index: 10002 !important;
+    z-index: 10010 !important;
 }
 .modal-backdrop {
     z-index: 10000 !important;
@@ -734,6 +734,29 @@
     margin: 0 !important;
 }
 
+
+
+.result {
+	color: red;
+	font-size: small;
+}
+
+#panel {
+	position: fixed;
+	padding-top: 8%;
+	padding-bottom: 0;
+	padding-left: 0;
+	padding-right: 0;
+	margin: 0;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+    z-index: 10020;
+	background: rgba(255, 255, 255, 0.9);
+	display: none;
+	text-align: center;
+}
 </style>
 
     <style>
@@ -850,6 +873,13 @@
                                echo "<a href='" . h($approvedLogUrl) . "' style='text-decoration:none;' class='approved-order-pdf' data-pdf-title='आदेश'>
                                     <i class='fa-solid fa-reorder'></i>  आदेश
                                 </a><br/>";
+
+                                echo "<a href='" . h($approvedLogUrl) . "' style='text-decoration:none;' class='approved-order-pdf' data-pdf-title='आदेश'>
+                                    <i class='fa-solid fa-reorder'></i>  आदेश 2
+                                </a><br/>";
+
+                                
+         
                            }
                        
                            
@@ -3439,6 +3469,8 @@ loadApprovedPost = function(PostId,action,reason=''){
 <input type="hidden" id="signingLocation" value="District Office">
 <input type="hidden" id="tsaURL" value="">
 <input type="hidden" id="timeServerURL" value="">
+<input type="hidden" id="stampingX" value="200">
+<input type="hidden" id="stampingY" value="50">
 
 <script>
     $(document).on('click', '.approvedApplication-open-transfer', function () {
@@ -3624,7 +3656,6 @@ var initConfig = {
             return true;
         },
         "postSignCallback" : function(alias, sign, key) {
-            $('#signedPdfData').val(sign);
             $('#lblEncryptedKey').val(key);
             // Implement signed pdf upload and pdf Download here
             var requestData = {
@@ -3652,10 +3683,9 @@ var initConfig = {
                                     var jsonData = JSON.parse(atob(data.data));
                                     if (jsonData.status === "SUCCESS") {
                                         
-                                        //Set Class to download link
                                         $('#downloadDiv').addClass('btn btn-info');
-                                        //get pdf data
                                         var pdfData = jsonData.sig;
+                                        $('#signedPdfData').val(pdfData);
                                         var dlnk = document.getElementById('downloadDiv');
                                         dlnk.href = 'data:application/pdf;base64,'+ pdfData;
                                         $("#downloadDiv").text("Download Signed PDF File");
@@ -3695,9 +3725,9 @@ var initConfig = {
         var data = $("#pdfData").val();
         console.log('PDF Data Length:', data ? data.length : 0);
         if (data != null || data != '') {
-            //dscSigner.sign(data);
+            dscSigner.sign(data);
 
-            $('#downloadDiv').addClass('btn btn-info');
+           /* $('#downloadDiv').addClass('btn btn-info');
             var pdfData = 'test';
             var dlnk = document.getElementById('downloadDiv');
             dlnk.href = 'data:application/pdf;base64,'+ pdfData;
@@ -3705,7 +3735,8 @@ var initConfig = {
             $('#approvedBtn').prop('disabled', false).removeClass('d-none');
             $('#ViewPDFBtn').prop('disabled', true).addClass('d-none');
             $('#signDocBtn').prop('disabled', true).addClass('d-none');
-           
+           */
+
         }
     });
 

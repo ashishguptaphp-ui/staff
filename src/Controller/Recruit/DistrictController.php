@@ -2618,7 +2618,7 @@ private function generateAdvertisementRejectPdf($appId, $rejectReason): ?string
 
             $generatedDocument = WWW_ROOT . 'uploads' . DS . 'staffonboarding' . DS
                 . 'approve' . DS . 'staff_order_' . $onboard->id . '.pdf';
-            if (!is_file($generatedDocument)) {
+            /*if (!is_file($generatedDocument)) {
                 $connection->rollback();
                 return $this->response
                     ->withStatus(400)
@@ -2627,10 +2627,10 @@ private function generateAdvertisementRejectPdf($appId, $rejectReason): ?string
                         'success' => false,
                         'message' => 'Generate the work order before uploading its signed copy.'
                     ]));
-            }
+            }*/
 
             $file = $data['app_doc'] ?? null;
-            if (
+            /*if (
                 !$file instanceof \Psr\Http\Message\UploadedFileInterface
                 || $file->getError() !== UPLOAD_ERR_OK
             ) {
@@ -2682,7 +2682,7 @@ private function generateAdvertisementRejectPdf($appId, $rejectReason): ?string
             $storage = new EsdlStorageService();
             $fileName = $storage->upload($renamedFile, $bucketPath);
     
-            
+            */
             $onboard = $StaffOnboardingAppointmentsTable->patchEntity($onboard, $staffData);
 
             if ($onboard->hasErrors()) {
@@ -4408,6 +4408,63 @@ $postAdvertisementVacancy = $postAdvertisementVacanciesTable->find()
                 ]));
         }
 
+        $signedPdfPath = null;
+        if ($action === 'approve') {
+            if (!is_string($signed_pdf_data) || trim($signed_pdf_data) === '') {
+                return $this->response
+                    ->withType('application/json')
+                    ->withStatus(400)
+                    ->withStringBody(json_encode([
+                        'success' => false,
+                        'message' => 'Signed PDF data is required',
+                    ]));
+            }
+
+            $base64Pdf = preg_replace(
+                '/^data:application\/pdf;base64,/i',
+                '',
+                trim($signed_pdf_data)
+            );
+            $pdfBytes = base64_decode($base64Pdf, true);
+            if (
+                $pdfBytes === false
+                || strlen($pdfBytes) > 20 * 1024 * 1024
+                || substr($pdfBytes, 0, 5) !== '%PDF-'
+            ) {
+                return $this->response
+                    ->withType('application/json')
+                    ->withStatus(400)
+                    ->withStringBody(json_encode([
+                        'success' => false,
+                        'message' => 'Signed PDF data is invalid or exceeds 20 MB',
+                    ]));
+            }
+
+            $signedPdfDirectory = WWW_ROOT . 'uploads' . DS . 'staffonboarding' . DS . 'advtapprove' . DS;
+            if (!is_dir($signedPdfDirectory) && !mkdir($signedPdfDirectory, 0775, true) && !is_dir($signedPdfDirectory)) {
+                return $this->response
+                    ->withType('application/json')
+                    ->withStatus(500)
+                    ->withStringBody(json_encode([
+                        'success' => false,
+                        'message' => 'Unable to create signed PDF directory',
+                    ]));
+            }
+
+            $signedPdfFileName = 'advt_order_sign_' . (int)$postAdvertisementId . '.pdf';
+            $signedPdfPath = 'uploads/staffonboarding/advtapprove/' . $signedPdfFileName;
+            $bytesWritten = file_put_contents($signedPdfDirectory . $signedPdfFileName, $pdfBytes, LOCK_EX);
+            if ($bytesWritten !== strlen($pdfBytes)) {
+                return $this->response
+                    ->withType('application/json')
+                    ->withStatus(500)
+                    ->withStringBody(json_encode([
+                        'success' => false,
+                        'message' => 'Unable to save signed PDF',
+                    ]));
+            }
+        }
+
         $previousStatus = $postAdvertisement->status;
 
         $identity = $this->request->getAttribute('identity');
@@ -4435,7 +4492,7 @@ $postAdvertisementVacancy = $postAdvertisementVacanciesTable->find()
                     $newStatus,
                     $forwardReason,
                     1,
-                    $signed_pdf_data
+                    $signedPdfPath
                 );
 
             return $this->response

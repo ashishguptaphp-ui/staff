@@ -2832,13 +2832,14 @@ $(document).ready(function() {
 
             e.preventDefault();
             let formData = new FormData(this);
-            let approvalId = $("#app_id").text().trim();
+            let approvalId = $("#approved_id").text().trim();
             formData.append('app_id', approvalId);
             formData.append('action', 'approve');
 
             formData.append('_csrfToken', $('meta[name="csrfToken"]').attr('content'));
+            console.log(formData);
             $.ajax({
-                url: '<?= $this->Url->build(["controller" => "DistrictClerk", "action" => "staffOnboardApprove"]); ?>',
+                url: '<?= $this->Url->build(["controller" => "Division", "action" => "staffOnboardApprove"]); ?>',
                 type: 'POST',
                 data: formData,
                 processData: false,
@@ -3132,81 +3133,7 @@ $(document).ready(function() {
 
 
 
-          $('#approvalForm').on('submit', function (e) {
-
-            e.preventDefault();
-            let formData = new FormData(this);
-            let approvalId = $("#app_id").text().trim();
-            $('#approve_form_id').val(approvalId);
-            $('#approve_form_remark').val(($('#app_remark').val() || '').trim());
-            formData = new FormData(this);
-            $.ajax({
-                url: '<?= $this->Url->build(["controller" => "Division", "action" => "staffOnboardApprove"]); ?>',
-                type: 'POST',
-                data: formData,
-                processData: false,
-                contentType: false,
-                cache: false,
-                headers: {
-                    'X-CSRF-Token': $('meta[name="csrfToken"]').attr('content') 
-                },
-
-                beforeSend: function () {
-
-                    // Disable button
-                    $('#approvalForm button[type="button"]')
-                        .prop('disabled', true)
-                        .html(`
-                            <span class="spinner-border spinner-border-sm me-1"></span>
-                            Processing...
-                        `);
-                },
-
-                success: function (response) {
-
-                    console.log(response);
-
-                    if(response.success == false){
-                        alert(response.message)
-                    }else{
-                        alert('Application approved successfully.');                      
-
-                        $('#approvalForm button[type="submit"]').hide();
-
-                        $('#approvalForm')[0].reset();
-                        let approvalId = $("#app_id").text().trim();
-                        $('#emp_row_' + approvalId).remove();
-                        $('#approveApplicationSlider').removeClass('open').attr('aria-hidden', 'true');
-                       
-                        // Keep the approval result and PDF link visible.
-                    }                    
-                },
-
-                error: function (xhr) {
-
-                    console.log(xhr);
-
-                    $('#approvalForm button[type="submit"]')
-                        .prop('disabled', false)
-                        .show()
-                        .html(`
-                            <i class="fas fa-check-circle me-1"></i>
-                            पुढे करा
-                        `);
-
-                    let errorMessage = 'Something went wrong.';
-
-                    if (xhr.responseJSON?.message) {
-                        errorMessage = xhr.responseJSON.message;
-                    }
-
-                    alert(errorMessage);
-                },
-
-                complete: function () {}
-            });
-
-        });
+        
 
 
          submitRejectApplication =  function (){
@@ -3474,8 +3401,7 @@ $('#workOrderBtn').on('click', function (e) {
 
                 beforeSend: function () {
 
-                    // Disable button
-                    $('#approvalForm button[type="button"]')
+                  $('#workOrderBtn')
                         .prop('disabled', true)
                         .html(`
                             <span class="spinner-border spinner-border-sm me-1"></span>
@@ -3491,25 +3417,45 @@ $('#workOrderBtn').on('click', function (e) {
                       
                         let pdfUrl = response && response.url ? response.url : '';
                         let staffId = response && response.staffId ? response.staffId : '';
-                        if (pdfUrl) {
-                            $('#workOrderFile').html(`
-                                <div class="mt-3 p-3 border rounded bg-light">
-                                    <div class="fw-bold mb-2">Work Order PDF</div>
-                                    <a href="${pdfUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-primary">
-                                        <i class="fas fa-file-pdf me-1"></i> View PDF
-                                    </a>
+                       
+                         pdfUrlToBase64(
+                                pdfUrl
+                            ).then(base64 => {
+                                $("#pdfData").val(base64);
+                                console.log(base64);
+                            }).catch(console.error);
 
-                                     <a href="javascript:void(0);"
-                                        class="btn btn-danger btn-sm signDocBtn"
-                                        data-staff-id="${staffId}">
-                                        <i class="fas fa-signature me-1"></i> Sign DSC
-                                    </a>
-
-                                </div>
-                            `);
+                       if (pdfUrl) {
+                            const $orderContainer = $('<div>', {
+                                class: 'mt-3 p-3 border rounded bg-light'
+                            });
+                            $orderContainer.append($('<div>', {
+                                class: 'fw-bold mb-2',
+                                text: 'Work Order PDF'
+                            }));
+                            $orderContainer.append($('<a>', {
+                                href: pdfUrl,
+                                target: '_blank',
+                                rel: 'noopener noreferrer',
+                                class: 'btn btn-sm btn-primary',
+                                id: 'ViewPDFBtn',
+                                text: 'View PDF'
+                            }).attr('download', `staff_order_${staffId}.pdf`));
+                            $orderContainer.append($('<button>', {
+                                type: 'button',
+                                class: 'btn btn-danger btn-sm signDocBtn ms-2',
+                                id: 'signDocBtn',
+                                text: 'Sign DSC'
+                            }).attr({
+                                'data-staff-id': staffId,
+                                'data-pdf-url': pdfUrl
+                            }));
+                            $('#workOrderFile').empty().append($orderContainer);
                         }
 
-                        $('#approvalForm button[type="button"]').hide();
+                        $('#workOrderBtn').hide();
+
+                        
 
                        
                     }                    
@@ -3517,9 +3463,10 @@ $('#workOrderBtn').on('click', function (e) {
 
                 error: function (xhr) {
 
+                    
                     console.log(xhr);
 
-                    $('#approvalForm button[type="button"]')
+                    $('#workOrderBtn')
                         .prop('disabled', false)
                         .show()
                         .html(`
@@ -3540,100 +3487,147 @@ $('#workOrderBtn').on('click', function (e) {
             });
 
         });
+
+        
+ async function pdfUrlToBase64(url) {
+    const response = await fetch(url);
+
+    if (!response.ok) {
+        throw new Error("Unable to fetch PDF");
+    }
+
+    const blob = await response.blob();
+
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+
+        reader.onload = () => {
+            resolve(reader.result.split(",")[1]);
+        };
+
+        reader.onerror = reject;
+
+        reader.readAsDataURL(blob);
+    });
+}
+
+
 });
 </script>
 
-<!-- SweetAlert2 -->
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="<?= h($this->Url->build('/js/dscapi-conf.js')) ?>?v=<?= (int)filemtime(WWW_ROOT . 'js' . DS . 'dscapi-conf.js') ?>"></script>
+<script src="<?= h($this->Url->build('/js/dsc-signer.js')) ?>?v=<?= (int)filemtime(WWW_ROOT . 'js' . DS . 'dsc-signer.js') ?>"></script>
 
+<div id="panel" style="display:none;"></div>
+<input type="hidden" id="signingReason" value="Staff onboarding work order approval">
+<input type="hidden" id="signingLocation" value="District Office">
+<input type="hidden" id="tsaURL" value="">
+<input type="hidden" id="timeServerURL" value="">
+<input type="hidden" id="stampingX" value="300">
+<input type="hidden" id="stampingY" value="50">
 <script>
+
+ $(document).ready(function() {
     
-$(document).on('click', '.signDocBtn', function (e) {
+var initConfig = {
+        "preSignCallback" : function() {
+            // do something 
+            // based on the return sign will be invoked
+            return true;
+        },
+        "postSignCallback" : function(alias, sign, key) {
+            $('#signedPdfData').val(sign);
+            $('#lblEncryptedKey').val(key);
+            // Implement signed pdf upload and pdf Download here
+            var requestData = {
+                action : "DECRYPT",
+                en_sig : sign,
+                ek : key
+            };
+            console.log('Request Data for Decryption:', requestData);
+            $
+                    .ajax(
+                            {
+                                url : dscapibaseurl + "/pdfsignature",
+                                type : "post",
+                                dataType : "json",
+                                contentType : 'application/json',
+                                data : JSON.stringify(requestData),
+                                async : false
+                            })
+                    .done(
+                            function(data) {
+                                console.log('Decryption Response:', data);
+                                if (data.status_cd == 1) {
+                                    //get data.data -> decode base64 -> get json->check status == SUCCESS
+                                    //get data.data.sig -> add pdf header and append to link
+                                    var jsonData = JSON.parse(atob(data.data));
+                                    if (jsonData.status === "SUCCESS") {
+                                        
+                                        //Set Class to download link
+                                        $('#downloadDiv').addClass('btn btn-info');
+                                        //get pdf data
+                                        var pdfData = jsonData.sig;
+                                        var dlnk = document.getElementById('downloadDiv');
+                                        dlnk.href = 'data:application/pdf;base64,'+ pdfData;
+                                        $("#downloadDiv").text("Download Signed PDF File");
+                                        $('#approvedBtn').prop('disabled', false).removeClass('d-none');
+                                        $('#ViewPDFBtn').prop('disabled', true).addClass('d-none');
+                                        $('#signDocBtn').prop('disabled', true).addClass('d-none');
+           
 
+                                    } else {
+                                        alert(jsonData.message || "The PDF decryption service did not return SUCCESS.");
+                                    }
+
+                                } else {
+                                    var apiError = data.error || {};
+                                    var errorMessage = apiError.message || data.message
+                                        || "Decryption failed (status code: " + data.status_cd
+                                        + ", error code: " + (apiError.error_cd || "unknown") + ").";
+                                    alert(errorMessage);
+                                    return false;
+
+                                }
+                            }).fail(
+                            function(jqXHR, textStatus,
+                                    errorThrown) {
+                                alert(textStatus);
+                            });
+        },
+        signType : 'pdf',
+        mode : 'nostampingv2'
+    //"certificateSno" : 13705892,
+    };
+
+    dscSigner.configure(initConfig);
+
+    $(document).on('click', '#signDocBtn', function (e) {
     e.preventDefault();
+        var data = $("#pdfData").val();
+        console.log('PDF Data Length:', data ? data.length : 0);
+        if (data != null || data != '') {
+            dscSigner.sign(data);
 
-    const staffId = $(this).data('staff-id');
-
-    Swal.fire({
-        title: 'Confirm',
-        html: `
-            <p>आपली टिप्पणी व आदेश योग्य असल्याची खात्री झाल्यानंतर, “होय” बटणावर क्लिक करून DSC साठी पुढील कार्यवाही करावी.?</p>
-
-        `,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'होय',
-        cancelButtonText: 'नाही',
-        confirmButtonColor: '#d33',
-        cancelButtonColor: '#6c757d',
-        reverseButtons: true
-    }).then((result) => {
-
-        if (!result.isConfirmed) {
-            return;
+           /* $('#downloadDiv').addClass('btn btn-info');
+            var pdfData = 'test';
+            var dlnk = document.getElementById('downloadDiv');
+            dlnk.href = 'data:application/pdf;base64,'+ pdfData;
+            $("#downloadDiv").text("Download Signed PDF File");
+            $('#approvedBtn').prop('disabled', false).removeClass('d-none');
+            $('#ViewPDFBtn').prop('disabled', true).addClass('d-none');
+            $('#signDocBtn').prop('disabled', true).addClass('d-none');
+            */
         }
-
-$('#approvedBtn').removeClass('d-none');
-       /* Swal.fire({
-            title: 'Please wait...',
-            text: 'Rejecting application',
-            allowOutsideClick: false,
-            allowEscapeKey: false,
-            didOpen: () => {
-                Swal.showLoading();
-            }
-        });
-
-        $.ajax({
-            url: '<?php //$this->Url->build(["controller" => "Recruit", "action" => "rejectApplication"]) ?>',
-
-            type: 'POST',
-
-            data: {
-                reject_id: staffId
-            },
-
-            dataType: 'json',
-
-            success: function (response) {
-
-                if (response.success) {
-
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Rejected',
-                        text: response.message,
-                        confirmButtonText: 'OK'
-                    }).then(() => {
-                        location.reload();
-                    });
-
-                } else {
-
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: response.message
-                    });
-
-                }
-            },
-
-            error: function (xhr) {
-
-                console.log(xhr.responseText);
-
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Server Error',
-                    text: 'Something went wrong. Please try again.'
-                });
-
-            }
-        });*/
-
     });
 
-});
+
+ 
+
+							
+    });
+
+
+
 </script>
 
