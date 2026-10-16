@@ -1468,6 +1468,7 @@ class SansthaController extends AppController
         $smDetailsChoices = $data['smdetails'] ?? [];
         $smDetailsFiles = $data['smDetailsFile'] ?? [];
         $minority_sanstha = (int)($data['minority_sanstha'] ?? 0);
+        $schoolLevel = $data['school_level'] ?? null;
 
         if (!$postAdvertisementId) {
 
@@ -1490,6 +1491,16 @@ class SansthaController extends AppController
                         'message' => 'Please select at least one vacancy'
                     ]));
             }
+
+        if (!in_array($schoolLevel, ['primary', 'secondary', 'higher_secondary'], true)) {
+            return $this->response
+                ->withType('application/json')
+                ->withStatus(400)
+                ->withStringBody(json_encode([
+                    'success' => false,
+                    'message' => 'Select a valid school level.'
+                ]));
+        }
             
 
          
@@ -1498,7 +1509,10 @@ class SansthaController extends AppController
                 'institution_name'    => $user->Sanstha->name,
                 'status'    =>'pending',
                 'created_by'   => $this->user_id,
-                'created_at'   => $stTime
+                'created_at'   => $stTime,
+                'is_primary' => $schoolLevel === 'primary',
+                'secondary' => $schoolLevel === 'secondary',
+                'higher_secondary' => $schoolLevel === 'higher_secondary'
             ];
 
          $PostAdvertisementTable = TableRegistry::getTableLocator()->get('PostAdvertisement'); 
@@ -1908,6 +1922,7 @@ class SansthaController extends AppController
                                     'post_id'   => $vacancyId,
                                     'post_code'   => $existingEntity->post_id,
                                     'post_name'   => $existingEntity->post_name,
+                                    'highest_class' => $schools->highest_class ?? null,
                                     'pay_scale'   => $existingEntity->pay_scale,
                                     'category'   => $vacancy['category']
                                 ];
@@ -2914,6 +2929,7 @@ class SansthaController extends AppController
 
         $vacancies =
             $data['vacancies'] ?? [];
+        $schoolLevel = $data['school_level'] ?? null;
             
         if (!$postAdvertisementId) {
 
@@ -2936,6 +2952,16 @@ class SansthaController extends AppController
                         'message' => 'Please select at least one vacancy'
                     ]));
             }
+
+        if (!in_array($schoolLevel, ['primary', 'secondary', 'higher_secondary'], true)) {
+            return $this->response
+                ->withType('application/json')
+                ->withStatus(400)
+                ->withStringBody(json_encode([
+                    'success' => false,
+                    'message' => 'Select a valid school level.'
+                ]));
+        }
             
 
          
@@ -2946,7 +2972,10 @@ class SansthaController extends AppController
                 'created_by'   => $this->user_id,
                 'created_at'   => $stTime,
                 'remarks' => $data['remarks'] ?? null,
-                'is_direct_approved' => 1
+                'is_direct_approved' => 1,
+                'is_primary' => $schoolLevel === 'primary',
+                'secondary' => $schoolLevel === 'secondary',
+                'higher_secondary' => $schoolLevel === 'higher_secondary'
             ];
 
          $PostAdvertisementTable = TableRegistry::getTableLocator()->get('PostAdvertisement'); 
@@ -3001,6 +3030,7 @@ class SansthaController extends AppController
                                     'post_id'   => $vacancyId,
                                     'post_code'   => $existingEntity->post_id,
                                     'post_name'   => $existingEntity->post_name,
+                                    'highest_class' => $schools->highest_class ?? null,
                                     'category'   => $vacancy['category']
                                 ];
                             $PostAdvertisementVacanciesTable = TableRegistry::getTableLocator()->get('PostAdvertisementVacancies'); 

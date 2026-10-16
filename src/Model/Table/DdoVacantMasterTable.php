@@ -27,6 +27,7 @@ class DdoVacantMasterTable extends Table
                 'DdoVacantMaster.post_id',
                 'school_name' => 'Schools.school_name',
                 'udise_code' => 'Schools.udise_code',
+                'highest_class' => 'Schools.highest_class',
             ])
            ->distinct([
             'DdoVacantMaster.id',
@@ -34,6 +35,7 @@ class DdoVacantMasterTable extends Table
             'DdoVacantMaster.post_id',
             'Schools.school_name',
             'Schools.udise_code',
+            'Schools.highest_class'
              ])
             
             ->innerJoin(
@@ -56,6 +58,9 @@ class DdoVacantMasterTable extends Table
             ]);
         }
 
+        $query->where([
+                'Schools.school_close' => 'NO',
+            ]);
         return $query->all();
     }
 

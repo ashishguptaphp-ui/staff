@@ -696,6 +696,28 @@
 
 
 
+<?php
+$vacanciesBySchoolLevel = [
+    'primary' => [],
+    'secondary' => [],
+    'higher_secondary' => [],
+];
+
+foreach ($ddovacant as $vacant) {
+    $highestClass = (int)($vacant->highest_class ?? 0);
+    $schoolLevel = $highestClass <= 8
+        ? 'primary'
+        : ($highestClass <= 10 ? 'secondary' : 'higher_secondary');
+    $vacanciesBySchoolLevel[$schoolLevel][] = $vacant;
+}
+
+$schoolLevelLabels = [
+    'primary' => 'प्राथमिक शाळा',
+    'secondary' => 'माध्यमिक शाळा',
+    'higher_secondary' => 'उच्च माध्यमिक शाळा',
+];
+?>
+
 <!-- Slide Panel -->
 <div id="startApplicationSlider" class="slide-panel" aria-hidden="true" style="border:3px solid #537895;">
      <!-- Header -->
@@ -729,13 +751,23 @@
                         </tr>
                         </thead>
                         <tbody>                        
-                            <?php 
-                            $idx =1;                            
-                            foreach ($ddovacant as $vacant): 
+                            <?php
+                            $idx = 1;
+                            foreach ($vacanciesBySchoolLevel as $schoolLevel => $levelVacancies):
                             ?>
+                            <tr class="table-secondary">
+                                <th colspan="4"><?= h($schoolLevelLabels[$schoolLevel]) ?></th>
+                            </tr>
+                            <?php if (empty($levelVacancies)): ?>
+                            <tr>
+                                <td colspan="4" class="text-center text-muted">No record found.</td>
+                            </tr>
+                            <?php else: ?>
+                            <?php foreach ($levelVacancies as $vacant): ?>
                             <tr>
                                 <td> <input type="checkbox"  name="post_ids[]" class="row-select"
                                     value="<?= h($vacant->id) ?>"
+                                    data-school-level="<?= h($schoolLevel) ?>"
                                     data-school-name="<?= h($vacant->school_name) ?>"
                                     data-udise-code="<?= h($vacant->udise_code) ?>"
                                     data-post-name="<?= h($vacant->post_name) ?>"
@@ -744,6 +776,8 @@
                                 <td><?= h($vacant->udise_code) ?></td>                                    
                                 <td><?= h($vacant->post_name) ?></td>                                   
                             </tr>
+                            <?php $idx++; endforeach; ?>
+                            <?php endif; ?>
                             <?php endforeach; ?>
                         </tbody>
                     </table>
@@ -1054,21 +1088,34 @@
                         </tr>
                         </thead>
                         <tbody>                        
-                            <?php 
-                            $idx =1;                            
-                            foreach ($ddovacant as $vacant): 
+                            <?php
+                            $idx = 1;
+                            foreach ($vacanciesBySchoolLevel as $schoolLevel => $levelVacancies):
                             ?>
+                            <tr class="table-secondary">
+                                <th colspan="4"><?= h($schoolLevelLabels[$schoolLevel]) ?></th>
+                            </tr>
+                            <?php if (empty($levelVacancies)): ?>
+                            <tr>
+                                <td colspan="4" class="text-center text-muted">No record found.</td>
+                            </tr>
+                            <?php else: ?>
+                            <?php foreach ($levelVacancies as $vacant): ?>
                             <tr>
                                 <td> <input type="checkbox"  name="pl_post_ids[]" class="row-select"
                                     value="<?= h($vacant->id) ?>"
+                                    data-school-level="<?= h($schoolLevel) ?>"
                                     data-school-name="<?= h($vacant->school_name) ?>"
                                     data-udise-code="<?= h($vacant->udise_code) ?>"
                                     data-post-name="<?= h($vacant->post_name) ?>"
+                                    data-highest-class="<?= h($vacant->highest_class) ?>"
                                     ></td>
                                 <td><?= h($vacant->school_name) ?></td>
                                 <td><?= h($vacant->udise_code) ?></td>                                    
                                 <td><?= h($vacant->post_name) ?></td>                                   
                             </tr>
+                            <?php $idx++; endforeach; ?>
+                            <?php endif; ?>
                             <?php endforeach; ?>
                         </tbody>
                     </table>
@@ -1545,6 +1592,27 @@ $('#approvedOrderPdfModal').on('hidden.bs.modal', function () {
 
      
 
+        function updateVacancyLevelAvailability(form) {
+            const selectedVacancy = form.querySelector('.row-select:checked');
+            const selectedLevel = selectedVacancy ? selectedVacancy.dataset.schoolLevel : null;
+
+            form.querySelectorAll('.row-select').forEach(function (checkbox) {
+                checkbox.disabled = Boolean(
+                    selectedLevel
+                    && checkbox.dataset.schoolLevel !== selectedLevel
+                    && !checkbox.checked
+                );
+            });
+        }
+
+        $(document).on(
+            'change',
+            '#saFormStep1 .row-select, #plFormStep1 .row-select',
+            function () {
+                updateVacancyLevelAvailability(this.form);
+            }
+        );
+
         $('#saFormStep1').on('submit', function(e) {
 
                 e.preventDefault();
@@ -1555,6 +1623,7 @@ $('#approvedOrderPdfModal').on('hidden.bs.modal', function () {
 
                         selectedVacancies.push({
                             id: $(this).val(),
+                            school_level: $(this).data('school-level'),
                             school_name: $(this).data('school-name'),
                             udise_code: $(this).data('udise-code'),
                             post_name: $(this).data('post-name')
@@ -1888,6 +1957,10 @@ $('#approvedOrderPdfModal').on('hidden.bs.modal', function () {
                         'post_advertisement_id',
                         $('#sa_basic_data').val()
                     );
+                        formData.append(
+                            'school_level',
+                            $('#saFormStep1 .row-select:checked').first().data('school-level')
+                        );
 
 
                     selectedData.forEach(function (item, index) {
@@ -2116,6 +2189,7 @@ $('#approvedOrderPdfModal').on('hidden.bs.modal', function () {
 
                         selectedVacancies.push({
                             id: $(this).val(),
+                            school_level: $(this).data('school-level'),
                             school_name: $(this).data('school-name'),
                             udise_code: $(this).data('udise-code'),
                             post_name: $(this).data('post-name')
@@ -2159,7 +2233,8 @@ $('#approvedOrderPdfModal').on('hidden.bs.modal', function () {
                              <td>
                                 <select
                                     class="form-select vacancy-published"
-                                    data-vacancy-id="${vacancy.id}">
+                                    data-vacancy-id="${vacancy.id}"
+                                    data-school-level="${vacancy.school_level}">
 
                                     <option value="">श्रेणी निवडा </option>
                                     <option value="SC">SC</option>
@@ -2210,7 +2285,8 @@ $('#approvedOrderPdfModal').on('hidden.bs.modal', function () {
                         selectedData.push({
                             vacancy_id: vacancyId,
                             udise_code: udiseCode,
-                            category: category
+                            category: category,
+                            school_level: $(this).data('school-level')
                             });           
 
                     
@@ -2237,6 +2313,7 @@ $('#approvedOrderPdfModal').on('hidden.bs.modal', function () {
                 let formData = new FormData();
 
                     formData.append('post_advertisement_id',$('#pl_basic_data').val());
+                    formData.append('school_level', selectedData[0].school_level);
 
                     selectedData.forEach(function (item, index) {
                         formData.append(
