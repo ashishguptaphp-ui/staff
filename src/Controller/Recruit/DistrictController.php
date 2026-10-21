@@ -1921,7 +1921,7 @@ private function generateAdvertisementRejectPdf($appId, $rejectReason): ?string
                             margin: 12mm;
                         }
                         body {
-                            font-family: "DejaVu Sans", "Nirmala UI", "Mangal", "Arial Unicode MS", sans-serif;
+                            font-family: "Nirmala UI", "Mangal", "DejaVu Sans", "Arial Unicode MS", sans-serif;
                             font-size: 17px;
                             line-height: 1.7;
                             margin: 0;
@@ -2042,8 +2042,7 @@ private function generateAdvertisementRejectPdf($appId, $rejectReason): ?string
                 <body>
                 <div class="letter-page">
                     ' . (!empty($base64Image) ? '<div class="header-wrap"><img class="header-img" src="' . $base64Image . '"></div>' : '') . '
-                    <div class="letter-title">शासन आदेश</div>
-
+               
                     <div>
                         आदेश :-
                     </div>
@@ -2376,8 +2375,7 @@ private function generateAdvertisementRejectPdf($appId, $rejectReason): ?string
                 <body>
                 <div class="letter-page">
                     ' . (!empty($base64Image) ? '<div class="header-wrap"><img class="header-img" src="' . $base64Image . '"></div>' : '') . '
-                    <div class="letter-title">शासन आदेश</div>
-
+            
                     <div>
                         आदेश :-
                     </div>
@@ -2442,7 +2440,7 @@ private function generateAdvertisementRejectPdf($appId, $rejectReason): ?string
                             स्वाक्षरी/-
                         </p>
 
-                  
+                
                        
                     </div>
 
@@ -3183,7 +3181,7 @@ $postAdvertisementVacancy = $postAdvertisementVacanciesTable->find()
             $letterData['targetQRPath'] = $qrcodeDir . 'staff_order_' . $appId . '.png';
 
             //$this->generateQRCode($fullUrl, $appId);
-            $html = $this->renderApprovalLetterViewContent($letterData);
+            $html = $this->normalizeMarathiText($this->renderApprovalLetterViewContent($letterData));
 
             $writeResult = file_put_contents($tempHtmlPath, $html);
             if ($writeResult === false) {
@@ -3196,7 +3194,7 @@ $postAdvertisementVacancy = $postAdvertisementVacanciesTable->find()
             }
 
             $cmd = sprintf(
-                '%s --enable-local-file-access --encoding UTF-8 --page-size A4 --orientation Portrait --margin-top 12mm --margin-right 12mm --margin-bottom 12mm --margin-left 12mm %s %s',
+               '%s --enable-local-file-access --encoding UTF-8 --page-size A4 --orientation Portrait --margin-top 12mm --margin-right 12mm --margin-bottom 12mm --margin-left 12mm %s %s',
                 escapeshellarg($wkhtmltopdfBinary),
                 escapeshellarg($tempHtmlPath),
                 escapeshellarg($outputPath)
@@ -3411,8 +3409,7 @@ $postAdvertisementVacancy = $postAdvertisementVacanciesTable->find()
                 <body>
                 <div class="letter-page">
                     ' . (!empty($base64Image) ? '<div class="header-wrap"><img class="header-img" src="' . $base64Image . '"></div>' : '') . '
-                    <div class="letter-title">शासन आदेश</div>
-
+                    
                     <div>
                         आदेश :-
                     </div>
@@ -3477,7 +3474,7 @@ $postAdvertisementVacancy = $postAdvertisementVacanciesTable->find()
 
         
 
-                <div>
+                <div class="content">
                         <p class="right" style="text-align:right; margin:0;">
                             स्वाक्षरी/-
                         </p>
@@ -3488,18 +3485,9 @@ $postAdvertisementVacancy = $postAdvertisementVacanciesTable->find()
                         <p style="margin:0;">
                             प्रत -
                         </p>
-
-                        <p>
-                            १. अधिक्षक वेतन पथक भविष्‍य निर्वाह निधी (माध्‍यमिक)--------- यांना माहितीसाठी व पुढील कार्यवाहीसाठी.
-                        </p>
-
-                        <p>
-                            २. मुख्‍याध्‍यापक संबंधित शाळा यांना माहितीसाठी व पुढील कार्यवाहीसाठी.
-                        </p>
-
-                        <p>
-                            ३. संबंधित कर्मचारी यांना मुख्‍याध्‍यापकामार्फत.
-                        </p>
+                        <p>१. अधिक्षक वेतन पथक भविष्‍य निर्वाह निधी (माध्‍यमिक)--------- यांना माहितीसाठी व पुढील कार्यवाहीसाठी.</p>
+                        <p>२. मुख्‍याध्‍यापक संबंधित शाळा यांना माहितीसाठी व पुढील कार्यवाहीसाठी. </p>
+                        <p>३. संबंधित कर्मचारी यांना मुख्‍याध्‍यापकामार्फत.</p>
                     </div>
 
 
@@ -4522,5 +4510,16 @@ $postAdvertisementVacancy = $postAdvertisementVacanciesTable->find()
 
     }
 
+     private function normalizeMarathiText(string $text): string
+    {
+        if (class_exists(\Normalizer::class)) {
+            $normalized = \Normalizer::normalize($text, \Normalizer::FORM_C);
+            if (is_string($normalized)) {
+                $text = $normalized;
+            }
+        }
+
+        return str_replace("्‍य", "्य", $text);
+    }
     
   }

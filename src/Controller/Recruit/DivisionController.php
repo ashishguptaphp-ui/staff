@@ -2490,9 +2490,12 @@ private function findWkhtmltopdfBinary(): ?string
                 <body>
                 <div class="letter-page">
                     ' . (!empty($base64Image) ? '<div class="header-wrap"><img class="header-img" src="' . $base64Image . '"></div>' : '') . '
-                    <div class="letter-title">शासन आदेश</div>
+                    
+                    <div>
+                        आदेश :-
+                    </div>
 
-            
+                <br>
 
                 प्रति,
                 <div>

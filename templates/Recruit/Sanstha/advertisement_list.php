@@ -698,21 +698,19 @@
 
 <?php
 $vacanciesBySchoolLevel = [
-    'primary' => [],
+    //'primary' => [],
     'secondary' => [],
     'higher_secondary' => [],
 ];
 
 foreach ($ddovacant as $vacant) {
     $highestClass = (int)($vacant->highest_class ?? 0);
-    $schoolLevel = $highestClass <= 8
-        ? 'primary'
-        : ($highestClass <= 10 ? 'secondary' : 'higher_secondary');
+    $schoolLevel =  ($highestClass <= 10 ? 'secondary' : 'higher_secondary');
     $vacanciesBySchoolLevel[$schoolLevel][] = $vacant;
 }
 
 $schoolLevelLabels = [
-    'primary' => 'प्राथमिक शाळा',
+    //'primary' => 'प्राथमिक शाळा',
     'secondary' => 'माध्यमिक शाळा',
     'higher_secondary' => 'उच्च माध्यमिक शाळा',
 ];
@@ -837,6 +835,7 @@ $schoolLevelLabels = [
                                     id="periodYes"
                                     name="period"
                                     value="1"
+                                    required
                                     onchange="hideDiv('periodDiv');showDiv('periodFileDiv');hideDiv('period2324Div');showBtn('saSubmitBtn_step6')"
                                 >
                                 <label class="form-check-label ms-2" for="periodYes">
@@ -1011,6 +1010,7 @@ $schoolLevelLabels = [
                    
 
                        <!-- Submit Button -->
+                    <div id="saUploadProgress" class="mb-3" aria-live="polite"></div>
                     <div class="form-section">
                         <div class="form-check mb-4">
                             <input class="form-check-input" type="checkbox" id="declaration" required>
@@ -1490,6 +1490,46 @@ $('#approvedOrderPdfModal').on('hidden.bs.modal', function () {
 
 
 
+    let saAdvertisementUploadCache = new Map();
+    let saAdvertisementSubmissionKey = null;
+    const saAdvertisementDraftStorageKey = 'sanstha-advertisement-upload-draft';
+
+    function createAdvertisementUuid() {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(character) {
+            const randomByte = window.crypto && window.crypto.getRandomValues
+                ? window.crypto.getRandomValues(new Uint8Array(1))[0]
+                : Math.floor(Math.random() * 256);
+            const value = character === 'x' ? randomByte & 0x0f : (randomByte & 0x03) | 0x08;
+            return value.toString(16);
+        });
+    }
+
+    function persistAdvertisementDraft() {
+        sessionStorage.setItem(saAdvertisementDraftStorageKey, JSON.stringify({
+            submissionKey: saAdvertisementSubmissionKey,
+            uploads: Array.from(saAdvertisementUploadCache.entries())
+        }));
+    }
+
+    function restoreAdvertisementDraft() {
+        const savedDraft = sessionStorage.getItem(saAdvertisementDraftStorageKey);
+        if (savedDraft) {
+            try {
+                const draft = JSON.parse(savedDraft);
+                if (draft.submissionKey && Array.isArray(draft.uploads)) {
+                    saAdvertisementSubmissionKey = draft.submissionKey;
+                    saAdvertisementUploadCache = new Map(draft.uploads);
+                    return;
+                }
+            } catch (error) {
+                sessionStorage.removeItem(saAdvertisementDraftStorageKey);
+            }
+        }
+        saAdvertisementSubmissionKey = createAdvertisementUuid();
+        saAdvertisementUploadCache = new Map();
+        persistAdvertisementDraft();
+    }
+
     function activateStep(step) {
 
         console.log('Activating Step:', step);
@@ -1506,6 +1546,8 @@ $('#approvedOrderPdfModal').on('hidden.bs.modal', function () {
 
    $(document).on('click', '.startApplication-open-transfer', function () {       
 
+            restoreAdvertisementDraft();
+            $('#saUploadProgress').empty();
        
             const caseId = $(this).data('id');
             let staffJson = $(this).attr('data-staffObject');   // raw JSON string
@@ -1884,200 +1926,253 @@ $('#approvedOrderPdfModal').on('hidden.bs.modal', function () {
               });
 
 
-              function submitVacancyCategories(selectedData)
-                {
-                    
-                    // ------------------------------------
-                // 2. Validate Roster File
-                // ------------------------------------
-                let minority_sanstha = $('#minority_sanstha').val();
-                let rosterInput = $('#saFormStep2 input[name="advApprovelFile"]')[0];
-                let resolutionInput = $('#saFormStep2 input[name="resolutionFile"]')[0];
-                let rosterFile = rosterInput ? rosterInput.files[0] : null;
-                let resolutionFile = resolutionInput ? resolutionInput.files[0] : null;
-                
-                let periodInput = $('#saFormStep2 input[name="period"]:checked').val();
-               
-                let cadetailsInput = $('#saFormStep2 input[name="cadetails"]:checked').val();
-               
-                let periodFileInput = null;
-                let period2324FileInput = null;
-                let period2324Input = null;
-                let periodFile = null;
-                let period2324File = null;
-                let CADetailsFileInput = null;
-                let CADetailsFile = null;
+             async function submitVacancyCategories(selectedData)
+             {
+                const button = $('#saSubmitBtn_step6');
+                const baseButtonHtml = '<i class="bi bi-send-check"></i> अर्ज सबमिट करा';
+                const progress = $('#saUploadProgress').empty();
+                const period = $('#saFormStep2 input[name="period"]:checked').val();
+                const period2324 = $('#saFormStep2 input[name="period2324"]:checked').val() || '';
+                const caDetails = $('#saFormStep2 input[name="cadetails"]:checked').val();
+                const schoolLevel = $('#saFormStep1 .row-select:checked').first().data('school-level');
+                const schoolDetails = {};
+                const descriptors = [];
 
-                CADetailsFileInput = $('#saFormStep2 input[name="CADetailsFile"]')[0];
-                CADetailsFile = CADetailsFileInput ? CADetailsFileInput.files[0] : null;
-
-                if (periodInput === '1') {
-                    periodFileInput = $('#saFormStep2 input[name="periodFile"]')[0];
-                    periodFile = periodFileInput ? periodFileInput.files[0] : null;
-                } else if (periodInput === '2') {
-                    period2324Input = $('#saFormStep2 input[name="period2324"]:checked').val();
-                    if(period2324Input === '1') {
-                        period2324FileInput = $('#saFormStep2 input[name="period2324File"]')[0];
-                         period2324File = period2324FileInput ? period2324FileInput.files[0] : null;
+                $('#saFormStep2 input[name^="smdetails["]:checked').each(function() {
+                    const udiseCode = this.name.match(/^smdetails\[([^\]]+)\]$/)?.[1];
+                    if (udiseCode) {
+                        schoolDetails[udiseCode] = this.value;
                     }
-                    
-                } else {
-                    alert('Please select a valid period.');
-                    return false;
+                });
+
+                function addDescriptor(input, documentType, udiseCode = '') {
+                    const file = input && input.files ? input.files[0] : null;
+                    if (!file) {
+                        throw new Error('Please choose the required PDF for ' + documentType + (udiseCode ? ' (' + udiseCode + ')' : '') + '.');
+                    }
+                    if (file.size < 1 || file.size > 2 * 1024 * 1024) {
+                        throw new Error(file.name + ' must be between 1 byte and 2 MB.');
+                    }
+                    if (file.type && file.type !== 'application/pdf') {
+                        throw new Error(file.name + ' is not a PDF.');
+                    }
+                    const key = documentType + ':' + udiseCode;
+                    const fileSignature = [file.name, file.size, file.lastModified].join('|');
+                    let state = saAdvertisementUploadCache.get(key);
+                    if (!state || state.fileSignature !== fileSignature) {
+                        state = {clientUploadId: createAdvertisementUuid(), fileSignature, token: null};
+                        saAdvertisementUploadCache.set(key, state);
+                        persistAdvertisementDraft();
+                    }
+                    const descriptor = {key, documentType, udiseCode, file, state};
+                    descriptors.push(descriptor);
                 }
 
-                /*if (!periodFileInput || !periodFileInput.files || periodFileInput.files.length === 0) {
-                    alert('Please upload the file for the selected period.');
-                    return false;
-                }*/
+                try {
+                    if (!schoolLevel) {
+                        throw new Error('Select a school level.');
+                    }
+                    if (!['1', '2'].includes(String(caDetails))) {
+                        throw new Error('Select the compassionate appointment answer.');
+                    }
+                    if (period === '1') {
+                        addDescriptor($('#saFormStep2 input[name="periodFile"]')[0], 'periodFile');
+                    } else if (period === '2') {
+                        if (!['1', '2'].includes(String(period2324))) {
+                            throw new Error('Select the 2023-24 approval answer.');
+                        }
+                        if (period2324 === '1') {
+                            addDescriptor($('#saFormStep2 input[name="period2324File"]')[0], 'period2324File');
+                        }
+                    } else {
+                        throw new Error('Please select a valid period.');
+                    }
 
-                /*if (period2324FileInput && (!period2324FileInput.files || period2324FileInput.files.length === 0)) {
-                    alert('Please upload the file for the selected period.');
-                    return false;
-                }*/
+                    addDescriptor($('#saFormStep2 input[name="advApprovelFile"]')[0], 'advApprovelFile');
+                    addDescriptor($('#saFormStep2 input[name="resolutionFile"]')[0], 'resolutionFile');
+                    addDescriptor($('#saFormStep2 input[name="CADetailsFile"]')[0], 'CADetailsFile');
 
-
-                if (!rosterFile) {
-                    alert('Please upload Roster PDF.');
-                    $(rosterInput).focus();
-                    return false;
+                    const schoolCodes = [...new Set($('#saFormStep2 .sanch-manyata-file').map(function() {
+                        return String($(this).data('udise-code') || '').trim();
+                    }).get().filter(Boolean))];
+                    for (const udiseCode of schoolCodes) {
+                        if (!schoolDetails[udiseCode]) {
+                            throw new Error('Select an answer for school ' + udiseCode + '.');
+                        }
+                        const sanchInput = $('#saFormStep2 .sanch-manyata-file').filter(function() {
+                            return String($(this).data('udise-code')) === udiseCode;
+                        })[0];
+                        addDescriptor(sanchInput, 'sanch_manyata', udiseCode);
+                        if (schoolDetails[udiseCode] === '2') {
+                            const smInput = $('#saFormStep2 input[name^="smDetailsFile["]').filter(function() {
+                                return String($(this).data('udise-code')) === udiseCode;
+                            })[0];
+                            addDescriptor(smInput, 'smDetailsFile', udiseCode);
+                        }
+                    }
+                } catch (error) {
+                    alert(error.message);
+                    return;
                 }
 
-                // PDF validation
-                if (rosterFile && rosterFile.type !== 'application/pdf') {
-                    alert('Only PDF files are allowed for Roster.');
-                    $(rosterInput).val('');
-                    return false;
+                const csrfToken = $('meta[name="csrfToken"]').attr('content');
+                if (!csrfToken) {
+                    alert('The security token is missing. Refresh the page and try again.');
+                    return;
                 }
-               
+                if (!saAdvertisementSubmissionKey) {
+                    saAdvertisementSubmissionKey = createAdvertisementUuid();
+                    persistAdvertisementDraft();
+                }
 
-                let formData = new FormData();
+                const progressRows = descriptors.map(function(descriptor, index) {
+                    const label = descriptor.documentType + (descriptor.udiseCode ? ' - ' + descriptor.udiseCode : '');
+                    const row = $('<div class="small mb-1"></div>').attr('id', 'sa-upload-progress-' + index);
+                    row.text(label + ': Waiting');
+                    progress.append(row);
+                    return row;
+                });
+                const buttonText = button.html();
+                button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Uploading...');
+                $('#saFormStep2 .file-upload-check').prop('disabled', true);
 
-                    formData.append(
-                        'post_advertisement_id',
-                        $('#sa_basic_data').val()
-                    );
-                        formData.append(
-                            'school_level',
-                            $('#saFormStep1 .row-select:checked').first().data('school-level')
-                        );
-
-
-                    selectedData.forEach(function (item, index) {
-
-                        formData.append(
-                            `vacancies[${index}][vacancy_id]`,
-                            item.vacancy_id
-                        );
-
-                        formData.append(
-                            `vacancies[${index}][category]`,
-                            item.category
-                        );
-
-                    });
-
-                    formData.append('period',periodInput);
-                    formData.append('cadetails',cadetailsInput);
-                    formData.append('period2324',period2324Input);
-                    formData.append('minority_sanstha',minority_sanstha);
-                    if (periodFile) {
-                        formData.append('periodFile', periodFile);
+                function uploadOne(descriptor, row) {
+                    if (descriptor.state.token) {
+                        row.text(descriptor.file.name + ': Uploaded');
+                        return Promise.resolve();
                     }
-                     if (period2324File) {
-                        formData.append('period2324File', period2324File);
-                    }
-                    if (CADetailsFile) {
-                        formData.append('CADetailsFile', CADetailsFile);
-                    }
+                    row.text(descriptor.file.name + ': 0%');
+                    const formData = new FormData();
+                    formData.append('file', descriptor.file, descriptor.file.name);
+                    formData.append('document_type', descriptor.documentType);
+                    formData.append('udise_code', descriptor.udiseCode);
+                    formData.append('client_upload_id', descriptor.state.clientUploadId);
 
-                    $('input[name^="smdetails["]:checked').each(function() {
-                        let udiseCode = this.name.match(/^smdetails\[([^\]]+)\]$/)?.[1];
-                        if (udiseCode) {
-                            formData.append(`smdetails[${udiseCode}]`, this.value);
-                        }
-                    });
-
-                    $('#saFormStep2 input[name^="smDetailsFile["]').each(function() {
-                        let udiseCode = $(this).data('udise-code');
-                        if (udiseCode && this.files.length > 0) {
-                            formData.append(`smDetailsFile[${udiseCode}]`, this.files[0]);
-                        }
-                    });
-
-                    if (rosterFile) {
-                        formData.append('advApprovelFile', rosterFile);
-                    }
-                    if (resolutionFile) {
-                        formData.append('resolutionFile', resolutionFile);
-                    }
-
-                       $('.sanch-manyata-file').each(function() {
-                            let udiseCode = $(this).data('udise-code');
-                            if (this.files.length > 0) {
-                                formData.append(
-                                    `sanch_manyata[${udiseCode}]`,
-                                    this.files[0]
-                                );
-                            }
-
-                        });
-
-
-                        // Debug
-                        for (let pair of formData.entries()) {
-                            console.log(pair[0], pair[1]);
-                        }
-
-
-                    $.ajax({
-                        url: '<?= $this->Url->build(['prefix' => 'Recruit',"controller" => "Sanstha", "action" => "processVacacyRequest"]); ?>',
-                        type: 'POST',
-                        data: formData,
-                        processData: false,
-                        contentType: false,
-                        headers: {
-                            'X-CSRF-Token': $('meta[name="csrfToken"]').attr('content') 
-                        },
-                        beforeSend: function () {
-                            $('#saSubmitBtn_step6')
-                                .prop('disabled', true)
-                                .html(
-                                    '<i class="fas fa-spinner fa-spin"></i> Saving...'
-                                );
-
-                        },
-                        success: function(response) {
-                            console.log(response);
-                            //alert(response.message);
-                            if(response.success){
-                                ng2g_id = response.id;
-                                alert(response.message);
-                                if(response.success){
-                                    location.reload();
+                    return new Promise(function(resolve, reject) {
+                        $.ajax({
+                            url: '<?= $this->Url->build(['prefix' => 'Recruit', 'controller' => 'Sanstha', 'action' => 'uploadAdvertisementDocument']); ?>',
+                            type: 'POST',
+                            data: formData,
+                            processData: false,
+                            contentType: false,
+                            dataType: 'json',
+                            headers: {'X-CSRF-Token': csrfToken},
+                            xhr: function() {
+                                const xhr = $.ajaxSettings.xhr();
+                                if (xhr.upload) {
+                                    xhr.upload.addEventListener('progress', function(event) {
+                                        if (event.lengthComputable) {
+                                            row.text(descriptor.file.name + ': ' + Math.round(event.loaded / event.total * 100) + '%');
+                                        }
+                                    });
                                 }
+                                return xhr;
+                            },
+                            success: function(response) {
+                                if (!response.success || !response.upload_token) {
+                                    reject(new Error(response.message || 'Upload failed.'));
+                                    return;
+                                }
+                                descriptor.state.token = response.upload_token;
+                                persistAdvertisementDraft();
+                                row.text(descriptor.file.name + ': Uploaded');
+                                resolve();
+                            },
+                            error: function(xhr) {
+                                const message = xhr.responseJSON && xhr.responseJSON.message
+                                    ? xhr.responseJSON.message
+                                    : 'Upload failed. Retry this form submission.';
+                                if (xhr.status === 409) {
+                                    descriptor.state.clientUploadId = createAdvertisementUuid();
+                                    descriptor.state.token = null;
+                                    persistAdvertisementDraft();
+                                }
+                                row.text(descriptor.file.name + ': Failed - ' + message);
+                                reject(new Error(message));
                             }
-                            // Handle success
-                        },
-                        error: function(xhr, status, error) {
-                            let message = 'Unable to submit application.';
-
-                            if (xhr.responseJSON && xhr.responseJSON.message) {
-                                message = xhr.responseJSON.message;
-                            }
-
-                            alert(message);
-                            $('#saSubmitBtn_step6')
-                                .prop('disabled', false)
-                                .html('<i class="bi bi-send-check"></i> अर्ज सबमिट करा');
-
-                        }
+                        });
                     });
-
-
-
-
                 }
+
+                let nextDescriptor = 0;
+                let uploadFailed = false;
+                async function uploadWorker() {
+                    while (nextDescriptor < descriptors.length) {
+                        const index = nextDescriptor++;
+                        try {
+                            await uploadOne(descriptors[index], progressRows[index]);
+                        } catch (error) {
+                            uploadFailed = true;
+                        }
+                    }
+                }
+
+                await Promise.all([uploadWorker(), uploadWorker(), uploadWorker()]);
+                if (uploadFailed) {
+                    progress.append($('<div class="text-danger small"></div>').text('Some uploads failed. Submit again to retry only failed documents.'));
+                    button.prop('disabled', false).html(buttonText || baseButtonHtml);
+                    $('#saFormStep2 .file-upload-check').prop('disabled', false);
+                    return;
+                }
+
+                const tokenReferences = {};
+                descriptors.forEach(function(descriptor) {
+                    if (descriptor.udiseCode) {
+                        tokenReferences[descriptor.documentType] = tokenReferences[descriptor.documentType] || {};
+                        tokenReferences[descriptor.documentType][descriptor.udiseCode] = descriptor.state.token;
+                    } else {
+                        tokenReferences[descriptor.documentType] = descriptor.state.token;
+                    }
+                });
+
+                const payload = {
+                    post_advertisement_id: $('#sa_basic_data').val(),
+                    school_level: schoolLevel,
+                    vacancies: selectedData.map(function(item) {
+                        return {vacancy_id: item.vacancy_id, category: item.category};
+                    }),
+                    period: period,
+                    cadetails: caDetails,
+                    period2324: period2324,
+                    minority_sanstha: $('#minority_sanstha').val(),
+                    smdetails: schoolDetails,
+                    upload_tokens: tokenReferences,
+                    submission_key: saAdvertisementSubmissionKey
+                };
+
+                progress.append($('<div class="small"></div>').text('Saving application...'));
+                button.html('<i class="fas fa-spinner fa-spin"></i> Saving...');
+                $.ajax({
+                    url: '<?= $this->Url->build(['prefix' => 'Recruit', 'controller' => 'Sanstha', 'action' => 'processVacacyRequest']); ?>',
+                    type: 'POST',
+                    data: JSON.stringify(payload),
+                    processData: false,
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
+                    headers: {'X-CSRF-Token': csrfToken},
+                    success: function(response) {
+                        if (response.success) {
+                            saAdvertisementUploadCache.clear();
+                            saAdvertisementSubmissionKey = null;
+                            sessionStorage.removeItem(saAdvertisementDraftStorageKey);
+                            alert(response.message);
+                            location.reload();
+                            return;
+                        }
+                        progress.append($('<div class="text-danger small"></div>').text(response.message || 'Unable to submit application.'));
+                        button.prop('disabled', false).html(baseButtonHtml);
+                        $('#saFormStep2 .file-upload-check').prop('disabled', false);
+                    },
+                    error: function(xhr) {
+                        const message = xhr.responseJSON && xhr.responseJSON.message
+                            ? xhr.responseJSON.message
+                            : 'Unable to submit application. Retry without re-uploading successful PDFs.';
+                        progress.append($('<div class="text-danger small"></div>').text(message));
+                        button.prop('disabled', false).html(baseButtonHtml);
+                        $('#saFormStep2 .file-upload-check').prop('disabled', false);
+                    }
+                });
+             }
             
 
 

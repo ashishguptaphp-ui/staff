@@ -772,7 +772,10 @@ public function getStaffOnboardingDetails()
                             <label for="dob_date" class="form-label marathi-label ">जन्मतारीख
                              <span class="txtval">'.$appointmentData['dob_date'].'</span></label>                             
                         </div>
-                      
+                       <div class="col-md-3">
+                            <label for="matrimonial_status " class="form-label marathi-label ">अविवाहित/विवाहित
+                             <span class="txtval">'.$appointmentData['matrimonial_status'].'</span></label>                             
+                        </div>
                     </div>';             
         $html .='<div class="row mb-3">
                          <div class="col-md-3">

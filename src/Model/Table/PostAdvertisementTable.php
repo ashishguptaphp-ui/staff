@@ -26,7 +26,7 @@ class PostAdvertisementTable extends Table
 
     }
 
-     public function getAdvertisementList()
+     public function getAdvertisementList($isPrimary = null,$isSecondary = null,$isHigherSecondary = null)
     {
 
         return $this->find()
@@ -49,7 +49,13 @@ class PostAdvertisementTable extends Table
             ])  
              ->where([
                 'is_direct_approved' => 0
-            ])      
+            ])
+            /*->where(function ($exp) {
+                    return $exp->or([
+                        'PostAdvertisement.is_primary' => true,
+                        'PostAdvertisement.secondary' => true,
+                    ]);
+                })*/      
             ->all();
     }
 

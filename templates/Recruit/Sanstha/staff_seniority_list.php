@@ -776,6 +776,18 @@
                             <label for="dob_date" class="form-label marathi-label required-field">जन्मतारीख </label>
                             <input type="date" class="form-control form-control-sm" id="dob_date" name="dob_date"  max="<?= h(date('Y-m-d', strtotime('-1 day'))) ?>" required>
                         </div>
+
+                        <div class="col-md-3">
+                            <label for="matrimonial_status" class="form-label marathi-label required-field">अविवाहित/विवाहित  </label>
+                            <select class="form-select" id="matrimonial_status" name="matrimonial_status" required>
+                            <option value="">Select matrimonial status</option>
+                            <?php foreach ($matrimonial as $ms): ?>
+                                <option value="<?= h($ms) ?>">
+                                    <?= h($ms) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        </div> 
                       
                     </div>
 
@@ -980,78 +992,9 @@
 
 
 
-                    <div class="col-md-12 mt-3">
+                    <div class="col-md-12 mt-3" id="periodSectionDivView">
 
-                        <label class="form-label fw-bold d-block">
-                            आपले सदस्य पद सन २०२३-२४ च्या संयमान्यतेनुसार आहे किंवा त्यापूर्वीचे पायाभूत आहे.
-                            <span class="text-danger">*</span>
-                        </label>
-
-                        <div class="mt-3">
-
-                            <div class="form-check mb-3">
-                                <input
-                                    class="form-check-input"
-                                    type="radio"
-                                    id="periodYes"
-                                    name="period"
-                                    value="1"
-                                    onchange="hideDiv('periodDiv');showDiv('periodFileDiv');hideDiv('period2324Div');showBtn('saSubmitBtn_step6')"
-                                >
-                                <label class="form-check-label ms-2" for="periodYes">
-                                    पायाभूत
-                                </label>
-                            </div>
-
-                            <div class="form-check">
-                                <input
-                                    class="form-check-input"
-                                    type="radio"
-                                    id="periodNo"
-                                    name="period"
-                                    value="2"
-                                    onchange="hideDiv('periodFileDiv');showDiv('periodDiv');hideDiv('period2324Div')"
-                                >
-                                <label class="form-check-label ms-2" for="periodNo">
-                                    सन २०२३-२४ नंतर पद मंजूर
-                                </label>
-                            </div>
-
-                        </div>
-
-
-                        <div id="periodDiv" class="mt-3 hidden">
-                            <label for="courtOrdertext" class="form-label marathi-label required-field">
-                                 २०२३-२४ च्या नंतरचे असल्यास, संचालित शासन मान्यता घेतली आहे का? 
-                            </label>
-                          <div class="d-flex w-25 mt-2">
-                            <div class="form-check flex-fill">
-                                <input class="form-check-input" type="radio"
-                                    id="period2324Yes" name="period2324" value="1"
-                                    onchange="showDiv('period2324Div');showBtn('saSubmitBtn_step6');">
-                                <label class="form-check-label ms-2" for="period2324Yes">
-                                    होय
-                                </label>
-                            </div>
-
-                            <div class="form-check flex-fill">
-                                <input class="form-check-input" type="radio"
-                                    id="period2324No" name="period2324" value="2"
-                                    onchange="hideDiv('period2324Div');hideBtn('saSubmitBtn_step6');">
-                                <label class="form-check-label ms-2" for="period2324No">
-                                    नाही
-                                </label>
-                            </div>
-                        </div> 
-                        </div>
-
-                        <div id="period2324Div" class="form-group mt-2 hidden">      
-                            <input type="file" id="period2324File" name="period2324File" class="form-control file-upload-check" accept=".pdf">
-                        </div>
-
-                        <div id="periodFileDiv" class="form-group mt-2 hidden">      
-                            <input type="file" id="periodFile" name="periodFile" class="form-control file-upload-check" accept=".pdf">
-                        </div>
+                        
                     </div>
 
 
@@ -1060,15 +1003,9 @@
 
                     <div class="pdf-field mt-2">
                         <h3 class="section-title">जाहिरातीचा तपशील.</h3>
-                        <div class="row mt-1">
-                            <div class="col-md-3 mt-2">
-                                <label for="advApprovelFile" class="form-label marathi-label required-field">
-                                     जाहिरात मंजूरी पत्र 
-                                </label>                                
-                            </div>    
-                            <div class="col-md-3">
-                                <input type="file" id="advApprovelFile" name="advApprovelFile" class="form-control file-upload-check" accept=".pdf" required>      
-                            </div>      
+                        <div class="row mt-1" id="advApprovelFileDiv">   
+                                                     
+                                     
                         </div>
                         <div class="row mt-3">
                             <div class="col-md-3 mt-2">
@@ -1882,7 +1819,7 @@ function loadonBoardingDetails(caseId, staffObject) {
             let staffObject   = JSON.parse(staffJson)
             currentMode = $(this).attr('data-mode'); 
             currentAppId = staffObject.id; 
-            //console.log(staffObject);
+            console.log(staffObject);
             currentStep = $(this).attr('app-step'); 
             if (currentStep < 2 || currentStep > 6) {
                 currentStep = 1;
@@ -1897,12 +1834,7 @@ function loadonBoardingDetails(caseId, staffObject) {
                 ng2g_id = 0;
             }
             
-            //$('#tetdaatadiv').hide(); 
-            //$('#ctetdaatadiv').hide(); 
-            ///toggleDiv('transferCheck','transferDiv');
-           //toggleDiv('minorityCheck','minorityDiv');
-            //toggleDiv('tetCheck','tetDiv');
-            //toggleDiv('ctetCheck','ctetDiv');                
+                          
             activateStep(currentStep);
             let postName = staffObject.post_name || '';
             let normalizedPostName = postName.toLowerCase().replace(/[^a-z0-9]+/g, '_');
@@ -1912,11 +1844,7 @@ function loadonBoardingDetails(caseId, staffObject) {
             }).first().val();
             console.log("Matching Pay Scale: " + matchingPayScale);
             $('#pay_scale').val(matchingPayScale || '');
-            /*if(staffObject.is_minority_school == 1){
-                $("#bindunamavaliMavakaDawareBox").hide();
-                $('#mavakCheckListDate').prop('disabled', true);
-                $('#mavakCheckListFile').prop('disabled', true);   
-            }*/
+        
                         
             $('#sa_footerBox').show();
             $('#sa_footerMsgBox').hide();    
@@ -1940,13 +1868,11 @@ function loadonBoardingDetails(caseId, staffObject) {
         });
 
         function loadSaDetails(caseId,staffObject) {
-           // $('#saForm')[0].reset();
-           // $('#saForm input[type="file"]').val('');
-            //console.log(staffObject);
+              console.log(caseId);
            
             $('#staffId').val(staffObject.id);
             //$('#caseId').text(caseId);
-            
+            let staffId = staffObject.id;
                 
             //$('#empName').text(staffObject.teacher_name);
             $('#udiseNumber').text(staffObject.udise_code);
@@ -1974,9 +1900,54 @@ function loadonBoardingDetails(caseId, staffObject) {
                                 "medium" : staffObject.medium
                             };
             $("#sa_basic_data").val(JSON.stringify(basicData));                       
-           // $('#designation').text(designation);
-            //$('#school').text(staffObject?.caste_category?.category_name);
-            //$('#remarks').text('Case under scrutiny by Education Officer.');
+          
+     $.ajax({
+        url: '<?= $this->Url->build(["controller" => "Sanstha", "action" => "getStaffadvertisementDetails"]); ?>' + '?staff_id=' + encodeURIComponent(staffId),
+        type: 'GET',
+        dataType: 'json',
+        headers: {
+            'X-CSRF-Token': $('meta[name="csrfToken"]').attr('content')
+        },
+        success: function(response) {
+            if (!response.success || !response.data) {
+                return;
+            }
+
+            const d = response.data;
+
+            if(response.periodDiv && response.periodDiv.trim() !== ''){
+                document.getElementById('periodSectionDivView').innerHTML = response.periodDiv;
+                }else{
+                document.getElementById('periodSectionDivView').innerHTML = '';
+               
+                }
+           
+           if(d.approved_file==null || d.approved_file==''){
+            $('#advApprovelFileDiv').html(`<div class="col-md-3 mt-2">
+                                <label for="advApprovelFile" class="form-label marathi-label required-field">
+                                     जाहिरात मंजूरी पत्र 
+                                </label>                                
+                            </div>    
+                            <div class="col-md-3">
+                               <input type="file" id="advApprovelFile" name="advApprovelFile" class="form-control file-upload-check" accept=".pdf" required>
+                            </div>
+                            `);
+           }else{       
+            $('#advApprovelFileDiv').html(`<div class="col-md-3 mt-2">
+                                <label for="advApprovelFile" class="form-label marathi-label">
+                                     जाहिरात मंजूरी पत्र 
+                                </label>                                
+                            </div>    
+                            <div class="col-md-3">
+                              <a href="<?= $this->Url->build("/", ["fullBase" => true]) ?>'+d.approved_file+'" target="_blank" rel="noopener">कागदपत्र पहा</a>
+                            </div>
+                            `); 
+            }     
+          console.log(d);
+
+        }
+    });
+
         }
 
         $('#saFormStep1').submit(function(e) {
@@ -2991,54 +2962,9 @@ function loadonBoardingDetails(caseId, staffObject) {
         setupFileUpload('minorityCertUploadArea','minorityCertOutwardFile','minorityCertOutwardFileList','tetCertificateUploadArea','tetCertificateFile','tetCertificateFileList');
         setupFileUpload('schoolAtTransferUploadArea','schoolAtTransferFile','schoolAtTransferFileList');
         // Form submission
-        /*document.getElementById('teacherTransferForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            if (!document.getElementById('declaration').checked) {
-                alert('कृपया घोषणा तपासा.');
-                return;
-            }
-            
-            // Show success message
-            alert('तुमचा अर्ज यशस्वीरित्या सबमिट केला गेला आहे! आवेदन क्रमांक: ' + document.getElementById('applicationId').textContent);
-            
-           
-            
-        });*/
-        
+   
 
-        
-
-        /*$('#teacherTransferForm').submit(function(e) {
-           
-            e.preventDefault();
-            
-            var formData = new FormData(this);
-            
-            $.ajax({
-                url: '',
-                type: 'POST',
-                data: formData,
-                processData: false,
-                contentType: false,
-                headers: {
-                    'X-CSRF-Token': $('meta[name="csrfToken"]').attr('content') 
-                },
-                success: function(response) {
-                    console.log(response);
-                    alert(response.message);
-                    if(response.success){
-                        location.reload();
-                    }
-                    // Handle success
-                },
-                error: function(xhr, status, error) {
-                    // Handle error
-
-                }
-            });
-           
-        });*/
+       
         
        
         
@@ -3047,19 +2973,7 @@ function loadonBoardingDetails(caseId, staffObject) {
             this.value = this.value.toUpperCase();
         });
         
-        // Auto-fill some API fields with sample data (for demo)
-        /*document.addEventListener('DOMContentLoaded', function() {
-            // Sample API data (in real app, this would come from API call)
-            setTimeout(() => {
-                document.getElementById('institutionName').value = "शिवाजी विद्यालय, पुणे";
-                document.getElementById('unaidedSchoolName').value = "ज्ञानदीप विद्यामंदिर, नगर रोड, पुणे";
-                document.getElementById('schoolPermission').value = "परवानगी क्र. 1234/2023, दि. 15/03/2023";
-                document.getElementById('udiseNumber').value = "27250900123";
-                
-              
-                
-            }, 500);
-        });*/
+
 
 
 });

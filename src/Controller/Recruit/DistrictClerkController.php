@@ -1310,6 +1310,7 @@ class DistrictClerkController extends AppController
                 'PostAdvertisement.status' => 'approved',
                  'SOA.id IS NOT' => null
             ])
+            
             ->order([
                 'PostAdvertisement.created_at' => 'DESC',
                 'PostAdvertisementVacancies.id' => 'ASC'

@@ -30,6 +30,7 @@ class StaffOnboardingAppointment extends Entity
         'headmobilenumber' => true,
         'gender' => true,
         'dob_date' => true,
+        'matrimonial_status' => true,
         'candidateemail' => true,
         'candidatemobile' => true,
         'graduate_degree' => true,

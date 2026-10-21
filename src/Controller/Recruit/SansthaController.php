@@ -48,10 +48,12 @@ class SansthaController extends AppController
             'processIndividualApprovalOrder',
             'updateSanchWorkingData',
             'processVacacyRequest',
+            'uploadAdvertisementDocument',
             'advertisementVacancyAjax',
             'saveStaffOnboarding',
             'getStaffOnboardingDetails',
-            'processVacacyPublish'
+            'processVacacyPublish',
+            'getStaffadvertisementDetails',
         ]);
 
         $user = $this->request->getAttribute('identity');
@@ -301,7 +303,7 @@ class SansthaController extends AppController
             ->where([
                 'PostAdvertisement.status' => 'approved',
                 'PostAdvertisement.institution_code' => $this->username
-            ])
+            ])    
             ->order([
                 'PostAdvertisement.created_at' => 'DESC',
                 'PostAdvertisementVacancies.id' => 'ASC'
@@ -314,6 +316,11 @@ class SansthaController extends AppController
                             'librarian'=>14000,
                             'laboratory_assistant'=>12000,
                             'junior_clerk'=>10000];
+        $matrimonial = [
+            'Single',
+            'Married',
+            'Divorced',
+        ] ;                   
 
        //echo "<pre>"; print_r($ng2g);  exit;
         $postKey = 'junior_clerk';
@@ -327,6 +334,7 @@ class SansthaController extends AppController
         $this->set('regions', $regions);
         $this->set('postKey', $postKey);
         $this->set('payScales', $payScalesDetails);
+        $this->set('matrimonial', $matrimonial);
 
     }
     public function sanctionedWorkingStrength()
@@ -1451,532 +1459,570 @@ class SansthaController extends AppController
     }
 
 
-    public function processVacacyRequest(){
+    public function uploadAdvertisementDocument()
+    {
+        $this->request->allowMethod(['post']);
+
+        $data = $this->request->getData();
+        $file = $data['file'] ?? null;
+        $documentType = (string)($data['document_type'] ?? '');
+        $udiseCode = trim((string)($data['udise_code'] ?? ''));
+        $clientUploadId = strtolower(trim((string)($data['client_upload_id'] ?? '')));
+        $allowedTypes = [
+            'advApprovelFile',
+            'resolutionFile',
+            'CADetailsFile',
+            'periodFile',
+            'period2324File',
+            'sanch_manyata',
+            'smDetailsFile',
+        ];
+        $isSchoolDocument = in_array($documentType, ['sanch_manyata', 'smDetailsFile'], true);
+
+        if (!in_array($documentType, $allowedTypes, true)) {
+            return $this->advertisementJsonResponse(['success' => false, 'message' => 'Invalid document type.'], 400);
+        }
+
+        if (!preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/', $clientUploadId)) {
+            return $this->advertisementJsonResponse(['success' => false, 'message' => 'Invalid upload request.'], 400);
+        }
+
+        if (($isSchoolDocument && $udiseCode === '') || (!$isSchoolDocument && $udiseCode !== '')) {
+            return $this->advertisementJsonResponse(['success' => false, 'message' => 'Invalid school document reference.'], 400);
+        }
+
+        if (!$file instanceof \Psr\Http\Message\UploadedFileInterface || $file->getError() !== UPLOAD_ERR_OK) {
+            return $this->advertisementJsonResponse(['success' => false, 'message' => 'Unable to receive the PDF.'], 400);
+        }
+
+        $fileSize = (int)$file->getSize();
+        if ($fileSize < 1 || $fileSize > 2 * 1024 * 1024) {
+            return $this->advertisementJsonResponse(['success' => false, 'message' => 'PDF must be between 1 byte and 2 MB.'], 400);
+        }
+
+        $tmpPath = (string)$file->getStream()->getMetadata('uri');
+        $header = is_file($tmpPath) ? file_get_contents($tmpPath, false, null, 0, 1024) : false;
+        $mimeType = is_file($tmpPath) ? (new \finfo(FILEINFO_MIME_TYPE))->file($tmpPath) : false;
+        if ($header === false || strpos($header, '%PDF-') === false || $mimeType !== 'application/pdf') {
+            return $this->advertisementJsonResponse(['success' => false, 'message' => 'The uploaded file is not a valid PDF.'], 400);
+        }
+
+        $contentSha256 = hash_file('sha256', $tmpPath);
+        $identity = $this->request->getAttribute('identity');
+        $sansthaCode = (string)$identity->Sanstha->code;
+
+        if ($isSchoolDocument) {
+            $school = $this->fetchTable('Schools')->find()
+                ->select(['udise_code'])
+                ->where([
+                    'udise_code' => $udiseCode,
+                    'sanstha_code' => $sansthaCode,
+                ])
+                ->first();
+
+            if (!$school) {
+                return $this->advertisementJsonResponse(['success' => false, 'message' => 'School does not belong to this Sanstha.'], 403);
+            }
+            $udiseCode = trim((string)$school->udise_code);
+        } else {
+            $udiseCode = null;
+        }
+
+        $uploadTokensTable = $this->fetchTable('PostAdvertisementUploadTokens');
+        $existingUpload = $uploadTokensTable->find()
+            ->where([
+                'user_id' => (string)$this->user_id,
+                'sanstha_code' => $sansthaCode,
+                'client_upload_id' => $clientUploadId,
+            ])
+            ->first();
+
+        if ($existingUpload) {
+            if (
+                $existingUpload->document_type !== $documentType ||
+                $existingUpload->udise_code !== $udiseCode ||
+                $existingUpload->file_size !== $fileSize ||
+                !hash_equals((string)$existingUpload->content_sha256, $contentSha256)
+            ) {
+                return $this->advertisementJsonResponse(['success' => false, 'message' => 'This upload request ID was already used for a different file.'], 409);
+            }
+
+            if ($existingUpload->status === 'uploaded' && $existingUpload->expires_at > FrozenTime::now()) {
+                return $this->advertisementJsonResponse([
+                    'success' => true,
+                    'upload_token' => $existingUpload->token,
+                    'document_type' => $documentType,
+                    'udise_code' => $udiseCode,
+                ]);
+            }
+
+            return $this->advertisementJsonResponse(['success' => false, 'message' => 'This upload has expired or was already used. Please select the file again.'], 409);
+        }
+
+        $token = bin2hex(random_bytes(32));
+        $renamedFile = new UploadedFile(
+            $tmpPath,
+            $fileSize,
+            UPLOAD_ERR_OK,
+            $token . '.pdf',
+            'application/pdf'
+        );
+        $config = Configure::read('ESDL');
+        $bucketPath = $config['mode'] . '/staff/post_advertisement';
+        $this->request->getSession()->close();
+        $storage = new EsdlStorageService();
+
+        try {
+            $storageKey = $storage->upload($renamedFile, $bucketPath);
+            $uploadEntity = $uploadTokensTable->newEntity([
+                'token' => $token,
+                'client_upload_id' => $clientUploadId,
+                'user_id' => (string)$this->user_id,
+                'sanstha_code' => $sansthaCode,
+                'document_type' => $documentType,
+                'udise_code' => $udiseCode,
+                'storage_key' => $storageKey,
+                'file_size' => $fileSize,
+                'content_sha256' => $contentSha256,
+                'status' => 'uploaded',
+                'created_at' => FrozenTime::now(),
+                'expires_at' => FrozenTime::now()->addHours(24),
+            ]);
+
+            if (!$uploadTokensTable->save($uploadEntity)) {
+                $storage->delete($storageKey);
+                return $this->advertisementJsonResponse(['success' => false, 'message' => 'Unable to register uploaded PDF. Please retry.'], 500);
+            }
+        } catch (\Throwable $exception) {
+            if (isset($storageKey)) {
+                try {
+                    $storage->delete($storageKey);
+                } catch (\Throwable $cleanupException) {
+                    \Cake\Log\Log::error('Unable to remove unregistered advertisement PDF: ' . $cleanupException->getMessage());
+                }
+            }
+
+            $existingUpload = $uploadTokensTable->find()
+                ->where([
+                    'user_id' => (string)$this->user_id,
+                    'sanstha_code' => $sansthaCode,
+                    'client_upload_id' => $clientUploadId,
+                ])
+                ->first();
+
+            if (
+                $existingUpload &&
+                $existingUpload->status === 'uploaded' &&
+                $existingUpload->file_size === $fileSize &&
+                hash_equals((string)$existingUpload->content_sha256, $contentSha256)
+            ) {
+                return $this->advertisementJsonResponse([
+                    'success' => true,
+                    'upload_token' => $existingUpload->token,
+                    'document_type' => $documentType,
+                    'udise_code' => $udiseCode,
+                ]);
+            }
+
+            \Cake\Log\Log::error('Advertisement PDF upload failed: ' . $exception->getMessage());
+            return $this->advertisementJsonResponse(['success' => false, 'message' => 'PDF upload failed. Please retry.'], 500);
+        }
+
+        return $this->advertisementJsonResponse([
+            'success' => true,
+            'upload_token' => $token,
+            'document_type' => $documentType,
+            'udise_code' => $udiseCode,
+        ]);
+    }
+
+    public function processVacacyRequest()
+    {
+        return $this->submitAdvertisementApplication();
+    }
+
+    private function submitAdvertisementApplication()
+    {
         $this->request->allowMethod(['post', 'ajax']);
         $data = $this->request->getData();
-        $stTime = time();
-        $user = $this->request->getAttribute('identity');
+        $identity = $this->request->getAttribute('identity');
+        $sansthaCode = (string)$identity->Sanstha->code;
+        $sansthaName = (string)$identity->Sanstha->name;
+        $userId = (string)$this->user_id;
+        $schoolLevel = (string)($data['school_level'] ?? '');
+        $submissionKey = strtolower(trim((string)($data['submission_key'] ?? '')));
+        $postAdvertisementId = trim((string)($data['post_advertisement_id'] ?? ''));
+        $vacancies = $data['vacancies'] ?? null;
+        $uploadTokens = $data['upload_tokens'] ?? null;
 
-
-        $postAdvertisementId =
-            $data['post_advertisement_id'] ?? null;
-
-        $vacancies =
-            $data['vacancies'] ?? [];
-            
-        $sanchManyataFiles = $data['sanch_manyata'] ?? [];
-        $smDetailsChoices = $data['smdetails'] ?? [];
-        $smDetailsFiles = $data['smDetailsFile'] ?? [];
-        $minority_sanstha = (int)($data['minority_sanstha'] ?? 0);
-        $schoolLevel = $data['school_level'] ?? null;
-
-        if (!$postAdvertisementId) {
-
-            return $this->response
-                ->withType('application/json')
-                ->withStatus(400)
-                ->withStringBody(json_encode([
-                    'success' => false,
-                    'message' => 'Advertisement ID is required'
-                ]));
+        if ($postAdvertisementId === '') {
+            return $this->advertisementJsonResponse(['success' => false, 'message' => 'Advertisement ID is required'], 400);
         }
-
-          if (empty($vacancies)) {
-
-                return $this->response
-                    ->withType('application/json')
-                    ->withStatus(400)
-                    ->withStringBody(json_encode([
-                        'success' => false,
-                        'message' => 'Please select at least one vacancy'
-                    ]));
-            }
-
         if (!in_array($schoolLevel, ['primary', 'secondary', 'higher_secondary'], true)) {
-            return $this->response
-                ->withType('application/json')
-                ->withStatus(400)
-                ->withStringBody(json_encode([
-                    'success' => false,
-                    'message' => 'Select a valid school level.'
-                ]));
+            return $this->advertisementJsonResponse(['success' => false, 'message' => 'Select a valid school level.'], 400);
         }
-            
+        if (!preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/', $submissionKey)) {
+            return $this->advertisementJsonResponse(['success' => false, 'message' => 'Invalid submission key. Refresh and try again.'], 400);
+        }
+        if (!is_array($vacancies) || !$vacancies) {
+            return $this->advertisementJsonResponse(['success' => false, 'message' => 'Please select at least one vacancy'], 400);
+        }
+        if (!is_array($uploadTokens)) {
+            return $this->advertisementJsonResponse(['success' => false, 'message' => 'Upload the required PDFs before submitting.'], 400);
+        }
 
-         
-        $PostData = [
-                'institution_code' => $user->Sanstha->code,
-                'institution_name'    => $user->Sanstha->name,
-                'status'    =>'pending',
-                'created_by'   => $this->user_id,
-                'created_at'   => $stTime,
-                'is_primary' => $schoolLevel === 'primary',
-                'secondary' => $schoolLevel === 'secondary',
-                'higher_secondary' => $schoolLevel === 'higher_secondary'
+        $categories = ['SC', 'ST', 'OBC', 'VJNT', 'EWS', 'GENERAL'];
+        $vacancyPayload = [];
+        $vacancyIds = [];
+        foreach ($vacancies as $vacancy) {
+            if (!is_array($vacancy)) {
+                return $this->advertisementJsonResponse(['success' => false, 'message' => 'Invalid vacancy selection.'], 400);
+            }
+
+            $vacancyId = filter_var($vacancy['vacancy_id'] ?? null, FILTER_VALIDATE_INT);
+            $category = (string)($vacancy['category'] ?? '');
+            if (!$vacancyId || !in_array($category, $categories, true) || isset($vacancyIds[$vacancyId])) {
+                return $this->advertisementJsonResponse(['success' => false, 'message' => 'Invalid or duplicate vacancy selection.'], 400);
+            }
+
+            $vacancyIds[$vacancyId] = true;
+            $vacancyPayload[] = [
+                'vacancy_id' => (int)$vacancyId,
+                'category' => $category,
             ];
+        }
+        usort($vacancyPayload, static fn(array $left, array $right): int => $left['vacancy_id'] <=> $right['vacancy_id']);
+        $vacancyIds = array_keys($vacancyIds);
 
-         $PostAdvertisementTable = TableRegistry::getTableLocator()->get('PostAdvertisement'); 
-         $transfer = $PostAdvertisementTable->newEmptyEntity();
-         $config = Configure::read('ESDL');
-         $bucketPath = $config['mode'].'/staff/post_advertisement';  
-                
-        if (empty($data['advApprovelFile']) || $data['advApprovelFile']->getError() !== UPLOAD_ERR_OK) {
-                return $this->response
-                    ->withType('application/json')
-                    ->withStatus(400)
-                    ->withStringBody(json_encode([
-                        'success' => false,
-                        'message' => 'Please upload Roster PDF.'
-                    ]));
-             }
+        $ddoVacantMasterTable = $this->fetchTable('DdoVacantMaster');
+        $ddoVacancies = $ddoVacantMasterTable->find()
+            ->where(['id IN' => $vacancyIds])
+            ->all()
+            ->toArray();
+        if (count($ddoVacancies) !== count($vacancyIds)) {
+            return $this->advertisementJsonResponse(['success' => false, 'message' => 'One or more selected vacancies are no longer available.'], 409);
+        }
 
-             if (!empty($data['advApprovelFile']) && $data['advApprovelFile']->getError() === UPLOAD_ERR_OK) {
+        $udiseCodes = [];
+        $ddoById = [];
+        foreach ($ddoVacancies as $vacancy) {
+            $udise = trim((string)$vacancy->school_udise_code);
+            $udiseCodes[$udise] = true;
+            $ddoById[(int)$vacancy->id] = $vacancy;
+        }
 
-                $file = $data['advApprovelFile'];
-                   
-                if ($file->getClientMediaType() !== 'application/pdf') {
-                    return $this->response
-                        ->withType('application/json')
-                        ->withStringBody(json_encode([
-                            'success' => false,
-                            'message' => 'Must be a PDF File - Personal Recognition Document'
-                        ]));
-                }
+        $schools = $this->fetchTable('Schools')->find()
+            ->where([
+                'udise_code IN' => array_keys($udiseCodes),
+                'sanstha_code' => $sansthaCode,
+            ])
+            ->all()
+            ->toArray();
+        $schoolByUdise = [];
+        foreach ($schools as $school) {
+            $schoolByUdise[trim((string)$school->udise_code)] = $school;
+        }
 
-                if ($file->getSize() > (2 * 1024 * 1024)) {
-                    return $this->response
-                        ->withType('application/json')
-                        ->withStringBody(json_encode([
-                            'success' => false,
-                            'message' => 'Exceeds 2MB limit File - Personal Recognition Document'
-                        ]));
-                }
-
-                if (!$file || $file->getError() !== UPLOAD_ERR_OK) {
-                    return $this->response
-                        ->withType('application/json')
-                        ->withStringBody(json_encode([
-                            'success' => false,
-                            'message' => 'Invalid File - Personal Recognition Document'
-                        ]));
-                }
-
-
-                // Get temp path safely
-                $tmpPath = $file->getStream()->getMetadata('uri');
-
-                // Extract extension (safe)
-                $extension = pathinfo($file->getClientFilename(), PATHINFO_EXTENSION);
-
-                // New filename
-                $newFileName = 'ipro.' . $extension;
-
-                // Create NEW UploadedFile object
-                $renamedFile = new UploadedFile(
-                    $tmpPath,
-                    $file->getSize(),
-                    $file->getError(),
-                    $newFileName,
-                    $file->getClientMediaType()
-                );
-
-                $storage = new EsdlStorageService();
-                $fileName = $storage->upload($renamedFile, $bucketPath);
-
-                $PostData['approval_letter'] = $fileName;
-          
-
-         }  
-
-           if (empty($data['resolutionFile']) || $data['resolutionFile']->getError() !== UPLOAD_ERR_OK) {
-                return $this->response
-                    ->withType('application/json')
-                    ->withStatus(400)
-                    ->withStringBody(json_encode([
-                        'success' => false,
-                        'message' => 'Please upload Resolution PDF.'
-                    ]));
-             }
-
-             if (!empty($data['resolutionFile']) && $data['resolutionFile']->getError() === UPLOAD_ERR_OK) {
-
-                $file = $data['resolutionFile'];
-                   
-                if ($file->getClientMediaType() !== 'application/pdf') {
-                    return $this->response
-                        ->withType('application/json')
-                        ->withStringBody(json_encode([
-                            'success' => false,
-                            'message' => 'Must be a PDF File - Personal Recognition Document'
-                        ]));
-                }
-
-                if ($file->getSize() > (2 * 1024 * 1024)) {
-                    return $this->response
-                        ->withType('application/json')
-                        ->withStringBody(json_encode([
-                            'success' => false,
-                            'message' => 'Exceeds 2MB limit File - Personal Recognition Document'
-                        ]));
-                }
-
-                if (!$file || $file->getError() !== UPLOAD_ERR_OK) {
-                    return $this->response
-                        ->withType('application/json')
-                        ->withStringBody(json_encode([
-                            'success' => false,
-                            'message' => 'Invalid File - Personal Recognition Document'
-                        ]));
-                }
-
-
-                // Get temp path safely
-                $tmpPath = $file->getStream()->getMetadata('uri');
-
-                // Extract extension (safe)
-                $extension = pathinfo($file->getClientFilename(), PATHINFO_EXTENSION);
-
-                // New filename
-                $newFileName = 'resolution.' . $extension;
-
-                // Create NEW UploadedFile object
-                $renamedFile = new UploadedFile(
-                    $tmpPath,
-                    $file->getSize(),
-                    $file->getError(),
-                    $newFileName,
-                    $file->getClientMediaType()
-                );
-
-                $storage = new EsdlStorageService();
-                $fileName = $storage->upload($renamedFile, $bucketPath);
-
-                $PostData['resolutionfile'] = $fileName;
-          
-
-            }  
-
-        $PostData['cadetails'] = $data['cadetails'];
-         $CADetailsFile = $this->FileUploadsectionWithKey($data, 'CADetailsFile');
-            if ($CADetailsFile instanceof Response) {
-                return $CADetailsFile;
+        $selectedUdiseCodes = [];
+        foreach ($ddoById as $vacancy) {
+            $udise = trim((string)$vacancy->school_udise_code);
+            if (!isset($schoolByUdise[$udise])) {
+                return $this->advertisementJsonResponse(['success' => false, 'message' => 'A selected vacancy does not belong to this Sanstha.'], 403);
             }
-            $PostData['cadetails_file'] = $CADetailsFile;
+            $selectedUdiseCodes[$udise] = true;
+        }
 
-         $PostData['period'] = $data['period'];
-         if($data['period'] == '1'){
-            $periodFile = $this->FileUploadsectionWithKey($data, 'periodFile');
-            if ($periodFile instanceof Response) {
-                return $periodFile;
+        $smDetailsChoices = $data['smdetails'] ?? null;
+        if (!is_array($smDetailsChoices)) {
+            return $this->advertisementJsonResponse(['success' => false, 'message' => 'Please select an answer for every selected school.'], 400);
+        }
+        foreach ($selectedUdiseCodes as $udise => $unused) {
+            if (!isset($smDetailsChoices[$udise]) || !in_array((string)$smDetailsChoices[$udise], ['1', '2'], true)) {
+                return $this->advertisementJsonResponse(['success' => false, 'message' => 'Please select an answer for every selected school.'], 400);
             }
-            $PostData['period_file'] = $periodFile;
-         }elseif($data['period'] == '2'){
-            $PostData['period2324'] = $data['period2324'];
-            if($data['period2324'] == '1'){
-                $period2324File = $this->FileUploadsectionWithKey($data, 'period2324File');
-                if ($period2324File instanceof Response) {
-                    return $period2324File;
-                }
-                $PostData['period2324_file'] = $period2324File;
-            }else{
-                $PostData['period2324_file'] = null;
+        }
+        foreach ($smDetailsChoices as $udise => $choice) {
+            if (!isset($selectedUdiseCodes[(string)$udise]) || !in_array((string)$choice, ['1', '2'], true)) {
+                return $this->advertisementJsonResponse(['success' => false, 'message' => 'Invalid संस्थेमध्ये शिक्षकेतर अतिरिक्त कर्मचारी selection'], 400);
             }
-         }else{
-            $PostData['period2324'] = null;   
-            $PostData['period_file'] = null;
-            $PostData['period2324_file'] = null;
-         }
+        }
 
+        $period = (string)($data['period'] ?? '');
+        $period2324 = (string)($data['period2324'] ?? '');
+        $caDetails = (string)($data['cadetails'] ?? '');
+        if (!in_array($period, ['1', '2'], true) || !in_array($caDetails, ['1', '2'], true)) {
+            return $this->advertisementJsonResponse(['success' => false, 'message' => 'Please complete the required application choices.'], 400);
+        }
+        if ($period === '2' && !in_array($period2324, ['1', '2'], true)) {
+            return $this->advertisementJsonResponse(['success' => false, 'message' => 'Please select the 2023-24 approval answer.'], 400);
+        }
 
-            $sanchManyataFileNames = [];
-
-            foreach ($sanchManyataFiles as $udiseCode => $file) {
-                if (!$file || $file->getError() !== UPLOAD_ERR_OK) {
-                    continue;
-                }
-
-                if ($file->getClientMediaType() !== 'application/pdf') {
-                    return $this->response
-                        ->withType('application/json')
-                        ->withStatus(400)
-                        ->withStringBody(json_encode([
-                            'success' => false,
-                            'message' => 'Sanch Manyata document must be a PDF file'
-                        ]));
-                }
-
-                if ($file->getSize() > (2 * 1024 * 1024)) {
-                    return $this->response
-                        ->withType('application/json')
-                        ->withStatus(400)
-                        ->withStringBody(json_encode([
-                            'success' => false,
-                            'message' => 'Sanch Manyata document must be less than 2 MB'
-                        ]));
-                }
-
-                $fileName = $udiseCode . '_sanch_manyata_' . uniqid() . '.pdf';
-                $tmpPath = $file->getStream()->getMetadata('uri');
-                $renamedFile = new UploadedFile(
-                    $tmpPath,
-                    $file->getSize(),
-                    $file->getError(),
-                    $fileName,
-                    $file->getClientMediaType()
-                );
-
-                $storage = new EsdlStorageService();
-                $sanchManyataFileNames[(string)$udiseCode] =
-                    $storage->upload($renamedFile, $bucketPath);
+        $expectedUploads = [
+            'advApprovelFile:' => ['document_type' => 'advApprovelFile', 'udise_code' => null],
+            'resolutionFile:' => ['document_type' => 'resolutionFile', 'udise_code' => null],
+            'CADetailsFile:' => ['document_type' => 'CADetailsFile', 'udise_code' => null],
+        ];
+        if ($period === '1') {
+            $expectedUploads['periodFile:'] = ['document_type' => 'periodFile', 'udise_code' => null];
+        } elseif ($period2324 === '1') {
+            $expectedUploads['period2324File:'] = ['document_type' => 'period2324File', 'udise_code' => null];
+        }
+        foreach (array_keys($selectedUdiseCodes) as $udise) {
+            $udise = (string)$udise;
+            $expectedUploads['sanch_manyata:' . $udise] = ['document_type' => 'sanch_manyata', 'udise_code' => $udise];
+            if ((string)$smDetailsChoices[$udise] === '2') {
+                $expectedUploads['smDetailsFile:' . $udise] = ['document_type' => 'smDetailsFile', 'udise_code' => $udise];
             }
+        }
 
-            if ($sanchManyataFileNames) {
-                $PostData['sanch_manyata'] = json_encode(
-                    $sanchManyataFileNames,
-                    JSON_UNESCAPED_SLASHES
-                );
-            }
-
-            $selectedVacancyIds = [];
-            foreach ($vacancies as $vacancy) {
-                if (!empty($vacancy['vacancy_id'])) {
-                    $selectedVacancyIds[] = $vacancy['vacancy_id'];
+        $flatTokens = [];
+        foreach ($uploadTokens as $documentType => $value) {
+            if (in_array($documentType, ['sanch_manyata', 'smDetailsFile'], true)) {
+                if (!is_array($value)) {
+                    return $this->advertisementJsonResponse(['success' => false, 'message' => 'Invalid school document tokens.'], 400);
                 }
+                foreach ($value as $udise => $token) {
+                    $flatTokens[$documentType . ':' . trim((string)$udise)] = $token;
+                }
+            } elseif (in_array($documentType, ['advApprovelFile', 'resolutionFile', 'CADetailsFile', 'periodFile', 'period2324File'], true)) {
+                $flatTokens[$documentType . ':'] = $value;
+            } else {
+                return $this->advertisementJsonResponse(['success' => false, 'message' => 'Invalid document token type.'], 400);
             }
+        }
 
-            $selectedUdiseCodes = [];
-            if ($selectedVacancyIds) {
-                $DdoVacantMasterTable = $this->fetchTable('DdoVacantMaster');
-                $selectedVacancies = $DdoVacantMasterTable->find()
-                    ->select(['school_udise_code'])
-                    ->where(['id IN' => $selectedVacancyIds])
-                    ->all();
+        if (count($flatTokens) !== count($expectedUploads)) {
+            return $this->advertisementJsonResponse(['success' => false, 'message' => 'Upload all required PDFs before submitting.'], 400);
+        }
+        $tokenValues = [];
+        foreach ($expectedUploads as $key => $expected) {
+            $token = $flatTokens[$key] ?? null;
+            if (!is_string($token) || !preg_match('/^[0-9a-f]{64}$/', $token)) {
+                return $this->advertisementJsonResponse(['success' => false, 'message' => 'A required PDF upload is missing.'], 400);
+            }
+            $expectedUploads[$key]['token'] = $token;
+            $tokenValues[] = $token;
+        }
+        if (count(array_unique($tokenValues)) !== count($tokenValues)) {
+            return $this->advertisementJsonResponse(['success' => false, 'message' => 'The same PDF token cannot be used for multiple documents.'], 400);
+        }
 
-                foreach ($selectedVacancies as $selectedVacancy) {
-                    $udiseCode = trim((string)$selectedVacancy->school_udise_code);
-                    if ($udiseCode !== '') {
-                        $selectedUdiseCodes[$udiseCode] = true;
+        $normalizedChoices = [];
+        foreach ($smDetailsChoices as $udise => $choice) {
+            $normalizedChoices[(string)$udise] = (string)$choice;
+        }
+        ksort($normalizedChoices);
+        ksort($flatTokens);
+        $canonicalPayload = [
+            'post_advertisement_id' => $postAdvertisementId,
+            'school_level' => $schoolLevel,
+            'vacancies' => $vacancyPayload,
+            'period' => $period,
+            'period2324' => $period2324,
+            'cadetails' => $caDetails,
+            'minority_sanstha' => (string)($data['minority_sanstha'] ?? ''),
+            'smdetails' => $normalizedChoices,
+            'upload_tokens' => $flatTokens,
+        ];
+        $fingerprint = hash('sha256', json_encode($canonicalPayload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
+
+        $postAdvertisementTable = $this->fetchTable('PostAdvertisement');
+        $existingApplication = $postAdvertisementTable->find()
+            ->where(['submission_key' => $submissionKey])
+            ->first();
+        if ($existingApplication) {
+            return $this->existingAdvertisementSubmissionResponse($existingApplication, $userId, $sansthaCode, $fingerprint);
+        }
+
+        $uploadTokensTable = $this->fetchTable('PostAdvertisementUploadTokens');
+        $connection = ConnectionManager::get('default');
+        $createdAt = time();
+
+        try {
+            $postAdvertisementId = $connection->transactional(function () use (
+                $uploadTokensTable,
+                $postAdvertisementTable,
+                $expectedUploads,
+                $tokenValues,
+                $userId,
+                $sansthaCode,
+                $submissionKey,
+                $fingerprint,
+                $sansthaName,
+                $schoolLevel,
+                $vacancyPayload,
+                $ddoById,
+                $schoolByUdise,
+                $selectedUdiseCodes,
+                $smDetailsChoices,
+                $period,
+                $period2324,
+                $caDetails,
+                $createdAt
+            ) {
+                $tokenRows = $uploadTokensTable->find()
+                    ->where(['token IN' => $tokenValues])
+                    ->epilog('FOR UPDATE')
+                    ->all()
+                    ->toArray();
+                if (count($tokenRows) !== count($expectedUploads)) {
+                    throw new \DomainException('One or more PDF upload tokens are invalid or expired.');
+                }
+
+                $rowsByToken = [];
+                foreach ($tokenRows as $tokenRow) {
+                    $rowsByToken[(string)$tokenRow->token] = $tokenRow;
+                }
+                $fileKeys = [];
+                foreach ($expectedUploads as $key => $expected) {
+                    $row = $rowsByToken[$expected['token']] ?? null;
+                    if (!$row) {
+                        throw new \DomainException('One or more PDF upload tokens are invalid or expired.');
+                    }
+                    if ((string)$row->user_id !== $userId || (string)$row->sanstha_code !== $sansthaCode) {
+                        throw new \DomainException('A PDF token does not belong to the logged-in Sanstha.');
+                    }
+                    if ($row->status !== 'uploaded' || $row->expires_at <= FrozenTime::now()) {
+                        throw new \DomainException('A PDF upload token has expired or was already used.');
+                    }
+                    if ($row->document_type !== $expected['document_type'] || $row->udise_code !== $expected['udise_code']) {
+                        throw new \DomainException('A PDF token is for a different document or school.');
+                    }
+                    $fileKeys[$key] = (string)$row->storage_key;
+                }
+
+                $sanchManyataFiles = [];
+                $smDetails = [];
+                foreach (array_keys($selectedUdiseCodes) as $udise) {
+                    $udise = (string)$udise;
+                    $sanchManyataFiles[$udise] = $fileKeys['sanch_manyata:' . $udise];
+                    $smDetails[$udise] = [
+                        'smdetails' => (string)$smDetailsChoices[$udise],
+                        'file' => (string)$smDetailsChoices[$udise] === '2'
+                            ? $fileKeys['smDetailsFile:' . $udise]
+                            : null,
+                    ];
+                }
+
+                $postData = [
+                    'institution_code' => $sansthaCode,
+                    'institution_name' => $sansthaName,
+                    'status' => 'pending',
+                    'created_by' => $this->user_id,
+                    'created_at' => $createdAt,
+                    'is_primary' => $schoolLevel === 'primary',
+                    'secondary' => $schoolLevel === 'secondary',
+                    'higher_secondary' => $schoolLevel === 'higher_secondary',
+                    'approval_letter' => $fileKeys['advApprovelFile:'],
+                    'resolutionfile' => $fileKeys['resolutionFile:'],
+                    'cadetails' => $caDetails,
+                    'cadetails_file' => $fileKeys['CADetailsFile:'],
+                    'period' => $period,
+                    'period_file' => $period === '1' ? $fileKeys['periodFile:'] : null,
+                    'period2324' => $period === '2' ? $period2324 : null,
+                    'period2324_file' => $period === '2' && $period2324 === '1' ? $fileKeys['period2324File:'] : null,
+                    'sanch_manyata' => json_encode($sanchManyataFiles, JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR),
+                    'sm_details' => json_encode($smDetails, JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR),
+                    'submission_key' => $submissionKey,
+                    'submission_fingerprint' => $fingerprint,
+                ];
+
+                $application = $postAdvertisementTable->newEntity($postData);
+                if (!$postAdvertisementTable->save($application)) {
+                    throw new \RuntimeException('Unable to save advertisement application: ' . json_encode($application->getErrors()));
+                }
+
+                $postAdvertisementVacanciesTable = $this->fetchTable('PostAdvertisementVacancies');
+                foreach ($vacancyPayload as $vacancyInput) {
+                    $vacancy = $ddoById[$vacancyInput['vacancy_id']];
+                    $udise = trim((string)$vacancy->school_udise_code);
+                    $school = $schoolByUdise[$udise];
+                    $vacancyEntity = $postAdvertisementVacanciesTable->newEntity([
+                        'post_advertisement_id' => $application->id,
+                        'school_udise_code' => $udise,
+                        'school_name' => $school->school_name,
+                        'post_id' => $vacancyInput['vacancy_id'],
+                        'post_code' => $vacancy->post_id,
+                        'post_name' => $vacancy->post_name,
+                        'highest_class' => $school->highest_class,
+                        'pay_scale' => $vacancy->pay_scale,
+                        'category' => $vacancyInput['category'],
+                    ]);
+                    if (!$postAdvertisementVacanciesTable->save($vacancyEntity)) {
+                        throw new \RuntimeException('Unable to save an advertisement vacancy: ' . json_encode($vacancyEntity->getErrors()));
                     }
                 }
-            }
 
-            $missingSmDetails = [];
-            foreach ($selectedUdiseCodes as $udiseCode => $selected) {
-                if (!array_key_exists($udiseCode, $smDetailsChoices)) {
-                    $missingSmDetails[] = $udiseCode;
-                }
-            }
-
-            if (!$selectedUdiseCodes || $missingSmDetails) {
-                return $this->response
-                    ->withType('application/json')
-                    ->withStatus(400)
-                    ->withStringBody(json_encode([
-                        'success' => false,
-                        'message' => 'Please select an answer for every selected school.'
-                    ]));
-            }
-
-            $smDetails = [];
-            foreach ($smDetailsChoices as $udiseCode => $choice) {
-                if (!in_array((string)$choice, ['1', '2'], true)) {
-                    return $this->response
-                        ->withType('application/json')
-                        ->withStatus(400)
-                        ->withStringBody(json_encode([
-                            'success' => false,
-                            'message' => 'Invalid संस्थेमध्ये शिक्षकेतर अतिरिक्त कर्मचारी selection'
-                        ]));
-                }
-
-                $smDetails[(string)$udiseCode] = [
-                    'smdetails' => (string)$choice,
-                    'file' => null
-                ];
-            }
-
-            foreach ($smDetailsFiles as $udiseCode => $file) {
-                if (!$file || $file->getError() === UPLOAD_ERR_NO_FILE) {
-                    continue;
-                }
-
-                if ($file->getError() !== UPLOAD_ERR_OK) {
-                    return $this->response
-                        ->withType('application/json')
-                        ->withStatus(400)
-                        ->withStringBody(json_encode([
-                            'success' => false,
-                            'message' => 'Unable to upload अतिरिक्त कर्मचारी document'
-                        ]));
-                }
-
-                if ($file->getClientMediaType() !== 'application/pdf') {
-                    return $this->response
-                        ->withType('application/json')
-                        ->withStatus(400)
-                        ->withStringBody(json_encode([
-                            'success' => false,
-                            'message' => 'अतिरिक्त कर्मचारी document must be a PDF file'
-                        ]));
-                }
-
-                if ($file->getSize() > (2 * 1024 * 1024)) {
-                    return $this->response
-                        ->withType('application/json')
-                        ->withStatus(400)
-                        ->withStringBody(json_encode([
-                            'success' => false,
-                            'message' => 'अतिरिक्त कर्मचारी document must be less than 2 MB'
-                        ]));
-                }
-
-                $safeUdiseCode = preg_replace('/[^A-Za-z0-9_-]/', '', (string)$udiseCode);
-                $fileName = $safeUdiseCode . '_sm_details_' . uniqid() . '.pdf';
-                $tmpPath = $file->getStream()->getMetadata('uri');
-                $renamedFile = new UploadedFile(
-                    $tmpPath,
-                    $file->getSize(),
-                    $file->getError(),
-                    $fileName,
-                    $file->getClientMediaType()
-                );
-
-                $storage = new EsdlStorageService();
-                $smDetails[(string)$udiseCode] = $smDetails[(string)$udiseCode] ?? [
-                    'smdetails' => null,
-                    'file' => null
-                ];
-                $smDetails[(string)$udiseCode]['file'] =
-                    $storage->upload($renamedFile, $bucketPath);
-            }
-
-            foreach ($smDetails as $details) {
-                if ($details['smdetails'] === '2' && empty($details['file'])) {
-                    return $this->response
-                        ->withType('application/json')
-                        ->withStatus(400)
-                        ->withStringBody(json_encode([
-                            'success' => false,
-                            'message' => 'Please upload the PDF for each school where the answer is No.'
-                        ]));
-                }
-            }
-
-            if ($smDetails) {
-                $PostData['sm_details'] = json_encode(
-                    $smDetails,
-                    JSON_UNESCAPED_SLASHES
-                );
-            }
-          
-
-            $transfer = $PostAdvertisementTable->patchEntity($transfer, $PostData);
-
-       
-
-            if ($transfer->hasErrors()) {
-                return $this->response
-                    ->withType('application/json')
-                    ->withStringBody(json_encode([
-                        'success' => false,
-                        'message' => 'Unable to upload file - Personal Recognition Document'
-                    ]));
-                    //throw new BadRequestException(json_encode($transfer->getErrors()));
-            }
-
-            if ($PostAdvertisementTable->save($transfer)) {
-                $post_advertisement_id = $transfer->id;
-               
-                foreach ($vacancies as $vacancy) {
-                      $vacancyId =
-                            $vacancy['vacancy_id'] ?? null;
-
-                        $category =
-                            $vacancy['category'] ?? null;
-
-
-                        if (!$vacancyId || !$category) {
-
-                            continue;
-                        }
-
-                        $DdoVacantMasterTable = TableRegistry::getTableLocator()->get('DdoVacantMaster');
-               
-                                // Check if the post_id already exists in ddo_vacant_master
-                            $existingEntity = $DdoVacantMasterTable->find()
-                                            ->where(['id' => $vacancyId])
-                                            ->first();
-
-                            // echo '<pre/>';print_r($PostAdvertisementTable);exit;              
-
-                            if ($existingEntity) {
-                            
-                                $schoolsTable = TableRegistry::getTableLocator()->get('Schools');
-                                $schools = $schoolsTable->find()->where(['udise_code' => $existingEntity->school_udise_code])
-                                            ->first();
-            
-                                $vacancyData = [
-                                    'post_advertisement_id' => $post_advertisement_id,
-                                    'school_udise_code'    => $existingEntity->school_udise_code,
-                                    'school_name'    => $schools->school_name,
-                                    'post_id'   => $vacancyId,
-                                    'post_code'   => $existingEntity->post_id,
-                                    'post_name'   => $existingEntity->post_name,
-                                    'highest_class' => $schools->highest_class ?? null,
-                                    'pay_scale'   => $existingEntity->pay_scale,
-                                    'category'   => $vacancy['category']
-                                ];
-                            $PostAdvertisementVacanciesTable = TableRegistry::getTableLocator()->get('PostAdvertisementVacancies'); 
-                            $transferVacancies = $PostAdvertisementVacanciesTable->newEntity($vacancyData);
-
-                            if ($PostAdvertisementVacanciesTable->save($transferVacancies)) {
-                                $insertId = $transferVacancies->id; // grab new id if needed
-                            } else {
-                                debug($transferVacancies->getErrors()); // see why it failed
-                            }
-
-                } 
-
-
-
-
-                
-                }
-
-                $this->createAdvertisementAudit(
-                    (int)$post_advertisement_id,
+                if (!$this->createAdvertisementAudit(
+                    (int)$application->id,
                     $this->user_id ? (int)$this->user_id : null,
                     'submitted',
                     null,
                     'pending',
                     'Advertisement application submitted',
                     1
+                )) {
+                    throw new \RuntimeException('Unable to save the advertisement audit entry.');
+                }
+
+                $consumedCount = $uploadTokensTable->updateAll(
+                    [
+                        'status' => 'consumed',
+                        'consumed_at' => FrozenTime::now(),
+                        'post_advertisement_id' => (string)$application->id,
+                    ],
+                    ['token IN' => $tokenValues, 'status' => 'uploaded']
                 );
+                if ($consumedCount !== count($tokenValues)) {
+                    throw new \DomainException('A PDF token was consumed by another submission. Please retry.');
+                }
 
-               
-             return $this->response
-                ->withType('application/json')
-                ->withStringBody(json_encode([
-                    'success' => true,
-                    'message' => 'Application forwarded successfully'
-                ]));
-
-               // throw new BadRequestException('Unable to save staff transfer');
+                return (int)$application->id;
+            });
+        } catch (\Throwable $exception) {
+            $existingApplication = $postAdvertisementTable->find()
+                ->where(['submission_key' => $submissionKey])
+                ->first();
+            if ($existingApplication) {
+                return $this->existingAdvertisementSubmissionResponse($existingApplication, $userId, $sansthaCode, $fingerprint);
+            }
+            if ($exception instanceof \DomainException) {
+                return $this->advertisementJsonResponse(['success' => false, 'message' => $exception->getMessage()], 409);
             }
 
-            return $this->response
-                ->withType('application/json')
-                ->withStatus(422)
-                ->withStringBody(json_encode([
-                    'success' => false,
-                    'message' => 'Unable to save advertisement application.',
-                    'errors' => $transfer->getErrors()
-                ]));
+            \Cake\Log\Log::error('Advertisement application transaction failed: ' . $exception->getMessage());
+            return $this->advertisementJsonResponse(['success' => false, 'message' => 'Unable to submit application. Please retry.'], 500);
+        }
 
-       
-
+        return $this->advertisementJsonResponse([
+            'success' => true,
+            'message' => 'Application forwarded successfully',
+        ]);
     }
 
+    private function existingAdvertisementSubmissionResponse($application, string $userId, string $sansthaCode, string $fingerprint): Response
+    {
+        if (
+            (string)$application->created_by !== $userId ||
+            (string)$application->institution_code !== $sansthaCode ||
+            !hash_equals(trim((string)$application->submission_fingerprint), $fingerprint)
+        ) {
+            return $this->advertisementJsonResponse(['success' => false, 'message' => 'This submission key was already used for a different application.'], 409);
+        }
+
+        return $this->advertisementJsonResponse([
+            'success' => true,
+            'message' => 'Application forwarded successfully',
+        ]);
+    }
+
+    private function advertisementJsonResponse(array $body, int $status = 200): Response
+    {
+        return $this->response
+            ->withType('application/json')
+            ->withStatus($status)
+            ->withStringBody(json_encode($body, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+    }
 
     public function import()
     {
@@ -2159,12 +2205,14 @@ class SansthaController extends AppController
         $connection = $appointmentsTable->getConnection();
         $wasAutoQuotingEnabled = $connection->getDriver()->isAutoQuotingEnabled();
         $connection->getDriver()->enableAutoQuoting();
+        $createdApprovalFilePath = null;
 
         try {
 
             $appointment = $connection->transactional(function () use (
                 $appointmentsTable,
-                $data
+                $data,
+                &$createdApprovalFilePath
             ) {
 
                 /*
@@ -2176,15 +2224,8 @@ class SansthaController extends AppController
                 $rosterValue = $data['courtRoster'] ?? null;
                 $courtOrderValue = $data['courtOrder'] ?? null;
 
-                $roster = false;
-                if ($rosterValue !== null && $rosterValue !== '' && $rosterValue !== false) {
-                    $roster = in_array((string)$rosterValue, ['1', 'true', 'yes', 'on'], true) || (bool)$rosterValue;
-                }
-
-                $courtOrder = false;
-                if ($courtOrderValue !== null && $courtOrderValue !== '' && $courtOrderValue !== false) {
-                    $courtOrder = in_array((string)$courtOrderValue, ['1', 'true', 'yes', 'on'], true) || (bool)$courtOrderValue;
-                }
+                $roster = in_array((string)$rosterValue, ['1', 'true', 'yes', 'on'], true);
+                $courtOrder = in_array((string)$courtOrderValue, ['1', 'true', 'yes', 'on'], true);
 
                 $appointment = $appointmentsTable->newEntity([
                     'staff_id' => $data['staffId'] ?? null,
@@ -2212,6 +2253,7 @@ class SansthaController extends AppController
                     'candidatemobile' => $data['candidatemobile'] ?? null,
                     'pay_scale' => $data['pay_scale'] ?? null,
                     'graduate_degree' => $data['degree'] ?? null,
+                    'matrimonial_status' => $data['matrimonial_status'] ?? null,
                     'post_graduate_degree' => $data['post_graduate_degree'] ?? null,
                     'original_category' => !empty($data['originalCategory'])
                         ? (int)$data['originalCategory']
@@ -2343,6 +2385,98 @@ class SansthaController extends AppController
                     }
                 }
 
+                $hasApprovalDocument = false;
+                foreach ($documents as $document) {
+                    if ($document['document_type'] === 'adv_approval') {
+                        $hasApprovalDocument = true;
+                        break;
+                    }
+                }
+
+                if (!$hasApprovalDocument) {
+                    $staffId = filter_var($data['staffId'] ?? null, FILTER_VALIDATE_INT);
+                    if ($staffId === false || $staffId < 1) {
+                        throw new \RuntimeException('Missing or invalid staff id for the advertisement approval document.');
+                    }
+
+                    $approvalLog = $this->fetchTable('PostAdvertisementAuditLogs')->find()
+                        ->select(['PostAdvertisementAuditLogs.stage_doc'])
+                        ->innerJoin(
+                            ['PostAdvertisement' => 'post_advertisement'],
+                            '"PostAdvertisement"."id" = "PostAdvertisementAuditLogs"."post_advertisement_id"'
+                        )
+                        ->innerJoin(
+                            ['PostAdvertisementVacancies' => 'post_advertisement_vacancies'],
+                            '"PostAdvertisementVacancies"."post_advertisement_id" = "PostAdvertisement"."id"'
+                        )
+                        ->where([
+                            'PostAdvertisementVacancies.id' => $staffId,
+                            'PostAdvertisement.status' => 'approved',
+                            'PostAdvertisement.institution_code' => $this->username,
+                            'PostAdvertisementAuditLogs.new_status' => 'approved',
+                            'PostAdvertisementAuditLogs.stage_doc IS NOT' => null,
+                        ])
+                        ->order([
+                            'PostAdvertisementAuditLogs.created_at' => 'DESC',
+                            'PostAdvertisementAuditLogs.id' => 'DESC',
+                        ])
+                        ->first();
+
+                    if (!$approvalLog || trim((string)$approvalLog->stage_doc) === '') {
+                        throw new \RuntimeException('The approved advertisement approval document could not be found.');
+                    }
+
+                    $stageDoc = trim((string)$approvalLog->stage_doc);
+                    $normalizedStageDoc = str_replace('\\', '/', $stageDoc);
+                    if (
+                        preg_match('#(^|/)\.\.?(/|$)#', $normalizedStageDoc) ||
+                        preg_match('#^[a-z][a-z0-9+.-]*://#i', $normalizedStageDoc) ||
+                        preg_match('#^[a-z]:/#i', $normalizedStageDoc)
+                    ) {
+                        throw new \RuntimeException('The approved advertisement document path is invalid.');
+                    }
+
+                    $relativeStageDoc = ltrim($normalizedStageDoc, '/');
+                    $localStageDoc = realpath(WWW_ROOT . str_replace('/', DS, $relativeStageDoc));
+                    $webRoot = realpath(WWW_ROOT);
+                    if (
+                        $localStageDoc !== false &&
+                        $webRoot !== false &&
+                        str_starts_with($localStageDoc, $webRoot . DS) &&
+                        is_file($localStageDoc)
+                    ) {
+                        $approvalContents = file_get_contents($localStageDoc);
+                        if ($approvalContents === false) {
+                            throw new \RuntimeException('Unable to read the approved advertisement document.');
+                        }
+                    } else {
+                        $approvalContents = (new EsdlStorageService())->getContents($stageDoc);
+                    }
+
+                    if (!str_starts_with($approvalContents, '%PDF-')) {
+                        throw new \RuntimeException('The approved advertisement document is not a valid PDF.');
+                    }
+
+                    $uploadPath = WWW_ROOT . 'uploads' . DS . 'staff' . DS . $staffId;
+                    if (!is_dir($uploadPath) && !mkdir($uploadPath, 0775, true) && !is_dir($uploadPath)) {
+                        throw new \RuntimeException('Unable to create the staff document upload directory.');
+                    }
+
+                    $fileName = 'adv_approval_' . bin2hex(random_bytes(8)) . '.pdf';
+                    $createdApprovalFilePath = $uploadPath . DS . $fileName;
+                    if (file_put_contents($createdApprovalFilePath, $approvalContents, LOCK_EX) === false) {
+                        throw new \RuntimeException('Unable to save the approved advertisement document.');
+                    }
+
+                    $documents[] = [
+                        'document_type' => 'adv_approval',
+                        'file_name' => $fileName,
+                        'original_name' => basename($relativeStageDoc) ?: 'advertisement_approval.pdf',
+                        'file_path' => 'uploads/staff/' . $staffId . '/' . $fileName,
+                        'file_size' => strlen($approvalContents),
+                        'mime_type' => 'application/pdf',
+                    ];
+                }
 
                 /*
                 * -----------------------------------------
@@ -2410,6 +2544,9 @@ class SansthaController extends AppController
 
 
         } catch (\Throwable $e) {
+            if ($createdApprovalFilePath !== null && is_file($createdApprovalFilePath)) {
+                unlink($createdApprovalFilePath);
+            }
 
             $this->response = $this->response
                 ->withStatus(500)
@@ -2651,7 +2788,10 @@ class SansthaController extends AppController
                             <label for="dob_date" class="form-label marathi-label ">जन्मतारीख
                              <span class="txtval">'.$appointmentData['dob_date'].'</span></label>                             
                         </div>
-                      
+                       <div class="col-md-3">
+                            <label for="matrimonial_status " class="form-label marathi-label ">अविवाहित/विवाहित
+                             <span class="txtval">'.$appointmentData['matrimonial_status'].'</span></label>                             
+                        </div>
                     </div>';             
         $html .='<div class="row mb-3">
                          <div class="col-md-3">
@@ -3157,5 +3297,162 @@ class SansthaController extends AppController
             }else{
                 return null;
             }
+         }
+
+         public function getStaffadvertisementDetails($staff_id = null){
+            
+            $this->request->allowMethod(['get', 'ajax']);
+
+            $staff_id = $this->request->getQuery('staff_id', $staff_id);
+            if ($staff_id === null || $staff_id === '' || filter_var($staff_id, FILTER_VALIDATE_INT) === false || (int)$staff_id < 1) {
+                return $this->response
+                    ->withType('application/json')
+                    ->withStatus(400)
+                    ->withStringBody(json_encode([
+                        'success' => false,
+                        'message' => 'Missing or invalid staff id'
+                    ]));
+            }
+
+         
+
+            $PostAdvertisementVacanciesTable = TableRegistry::getTableLocator()->get('PostAdvertisementVacancies');
+            $PostAdvertisementVacanciesDetails = $PostAdvertisementVacanciesTable->find()
+                ->select([
+                'id' => 'PostAdvertisementVacancies.id',
+                'post_name' => 'PostAdvertisementVacancies.post_name',
+                'school_name' => 'PostAdvertisementVacancies.school_name',
+                'udise_code' => 'PostAdvertisementVacancies.school_udise_code',
+                'post_id' => 'PostAdvertisementVacancies.post_id',
+                'category' => 'PostAdvertisementVacancies.category',
+                'post_advertisement_id' => 'PostAdvertisementVacancies.post_advertisement_id',
+                'period' => 'PostAdvertisement.period',
+                'period_file' => 'PostAdvertisement.period_file',
+                'period2324' => 'PostAdvertisement.period2324',
+                'period_file2324' => 'PostAdvertisement.period2324_file',
+                'approved_file' => 'PostAdvertisementAuditLogs.stage_doc'
+                               
+            ])
+               ->innerJoin(
+                ['PostAdvertisement' => 'post_advertisement'],
+                'PostAdvertisement.id = PostAdvertisementVacancies.post_advertisement_id'
+                )
+                   ->innerJoin(
+                       ['PostAdvertisementAuditLogs' => 'post_advertisement_audit_logs'],
+                       'PostAdvertisementAuditLogs.post_advertisement_id = PostAdvertisement.id'
+                   )
+                   ->where([
+                       'PostAdvertisement.status' => 'approved',
+                       'PostAdvertisement.institution_code' => $this->username,
+                       'PostAdvertisementAuditLogs.new_status' => 'approved'
+                   ])    
+                ->where(['PostAdvertisementVacancies.id' => (int)$staff_id])
+                    ->first();
+
+            $periodDiv = '<h6>आपले सदस्य पद सन २०२३-२४ च्या संयमान्यतेनुसार आहे किंवा त्यापूर्वीचे पायाभूत आहे.</h6>';
+            if ($PostAdvertisementVacanciesDetails && !empty($PostAdvertisementVacanciesDetails->period)) {
+                $periodDiv .= '<div class="col-md-6"> ' . h($PostAdvertisementVacanciesDetails->period==1 ? 'पायाभूत' : '') . ' <input type="hidden" name="period" value="' . h($PostAdvertisementVacanciesDetails->period) . '"> </div>';
+            }else{
+               /* $periodDiv .= '<label class="form-label fw-bold d-block">
+                            आपले सदस्य पद सन २०२३-२४ च्या संयमान्यतेनुसार आहे किंवा त्यापूर्वीचे पायाभूत आहे.
+                            <span class="text-danger">*</span>
+                        </label>
+
+                        <div class="mt-3">
+
+                            <div class="form-check mb-3">
+                                <input
+                                    class="form-check-input"
+                                    type="radio"
+                                    id="periodYes"
+                                    name="period"
+                                    value="1"
+                                    onchange="hideDiv('periodDiv');showDiv('periodFileDiv');hideDiv('period2324Div');showBtn('saSubmitBtn_step6')"
+                                >
+                                <label class="form-check-label ms-2" for="periodYes">
+                                    पायाभूत
+                                </label>
+                            </div>
+
+                            <div class="form-check">
+                                <input
+                                    class="form-check-input"
+                                    type="radio"
+                                    id="periodNo"
+                                    name="period"
+                                    value="2"
+                                    onchange="hideDiv('periodFileDiv');showDiv('periodDiv');hideDiv('period2324Div')"
+                                >
+                                <label class="form-check-label ms-2" for="periodNo">
+                                    सन २०२३-२४ नंतर पद मंजूर
+                                </label>
+                            </div>
+
+                        </div>
+
+
+                        <div id="periodDiv" class="mt-3 hidden">
+                            <label for="courtOrdertext" class="form-label marathi-label required-field">
+                                 २०२३-२४ च्या नंतरचे असल्यास, संचालित शासन मान्यता घेतली आहे का? 
+                            </label>
+                          <div class="d-flex w-25 mt-2">
+                            <div class="form-check flex-fill">
+                                <input class="form-check-input" type="radio"
+                                    id="period2324Yes" name="period2324" value="1"
+                                    onchange="showDiv('period2324Div');showBtn('saSubmitBtn_step6');">
+                                <label class="form-check-label ms-2" for="period2324Yes">
+                                    होय
+                                </label>
+                            </div>
+
+                            <div class="form-check flex-fill">
+                                <input class="form-check-input" type="radio"
+                                    id="period2324No" name="period2324" value="2"
+                                    onchange="hideDiv('period2324Div');hideBtn('saSubmitBtn_step6');">
+                                <label class="form-check-label ms-2" for="period2324No">
+                                    नाही
+                                </label>
+                            </div>
+                        </div> 
+                        </div>
+
+                        <div id="period2324Div" class="form-group mt-2 hidden">      
+                            <input type="file" id="period2324File" name="period2324File" class="form-control file-upload-check" accept=".pdf">
+                        </div>
+
+                        <div id="periodFileDiv" class="form-group mt-2 hidden">      
+                            <input type="file" id="periodFile" name="periodFile" class="form-control file-upload-check" accept=".pdf">
+                        </div>';
+                        */
+            }
+            if ($PostAdvertisementVacanciesDetails && !empty($PostAdvertisementVacanciesDetails->period2324)) {
+                $periodDiv .= '<div class="col-md-6"> ' . h($PostAdvertisementVacanciesDetails->period2324==1 ? 'आकृतिबंधाच्या मर्यादित २०२३-२४ च्या नंतरचे असल्यास, संचालित शासन मान्यता घेतली आहे का : होय' : 'नाही') . '<input type="hidden" name="period2324" value="' . h($PostAdvertisementVacanciesDetails->period2324) . '"> </div>';
+            }
+            if ($PostAdvertisementVacanciesDetails && !empty($PostAdvertisementVacanciesDetails->period_file)) {
+                $periodDiv .= '<div class="col-md-6"><strong>पायाभूत दस्तऐवज:</strong> <a href="' . h($PostAdvertisementVacanciesDetails->period_file) . '" target="_blank">View Document</a></div>';
+            }
+            if ($PostAdvertisementVacanciesDetails && !empty($PostAdvertisementVacanciesDetails->period_file2324)) {
+                $periodDiv .= '<div class="col-md-6"><strong>सन २०२३-२४ च्या नंतरचे दस्तऐवज:</strong> <a href="' . h($PostAdvertisementVacanciesDetails->period_file2324) . '" target="_blank">View Document</a></div>';
+            }    
+
+            //$PostAdvertisementVacanciesDetails->periodDiv = $periodDiv;
+
+            if (!$PostAdvertisementVacanciesDetails) {
+                return $this->response
+                    ->withType('application/json')
+                    ->withStatus(404)
+                    ->withStringBody(json_encode([
+                        'success' => false,
+                        'message' => 'Staff onboarding details not found'
+                    ]));
+            }
+
+            return $this->response
+                ->withType('application/json')
+                ->withStringBody(json_encode([
+                    'success' => true,
+                    'data' => $PostAdvertisementVacanciesDetails,
+                    'periodDiv' => $periodDiv
+                ]));
          }
   }

@@ -60,6 +60,24 @@ return function (RouteBuilder $routes): void {
             $routes->connect('/otp', ['controller' => 'Recruit','action' => 'otp']);
 
             $routes->connect(
+                '/sanstha/upload-advertisement-document',
+                [
+                    'controller' => 'Sanstha',
+                    'action' => 'uploadAdvertisementDocument',
+                    '_method' => 'POST',
+                ]
+            );
+
+            $routes->connect(
+                '/sanstha/processVacacyRequest',
+                [
+                    'controller' => 'Sanstha',
+                    'action' => 'processVacacyRequest',
+                    '_method' => 'POST',
+                ]
+            );
+
+            $routes->connect(
                 '/district/upload-signed-advertisement-pdf',
                 ['controller' => 'District', 'action' => 'uploadSignedAdvertisementPdf'],
                 ['_method' => 'POST']

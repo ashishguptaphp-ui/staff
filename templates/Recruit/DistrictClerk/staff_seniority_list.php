@@ -755,7 +755,7 @@
                             echo "<a href='#' style='text-decoration:none;' class='startApplicationHistory-open-view' data-staffObject='". json_encode($post, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP)."' data-mode='1'  data-id='".$post->id."'>
                                 <i class='fa-solid fa-comments'></i>  टिप्पणी
                             </a><br/>";
-                            if($post->status === 'draft') {
+                            if($post->status === 'submitted') {
 
                             echo "<a href='#' style='text-decoration:none;color:green;' class='forwardApplication-open-transfer' data-staffObject='". json_encode($post, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP)."' data-id='".$post->id."' data-seq='".$idx."'>
                                     <i class='fa-solid fa-arrow-trend-up'></i>  पुढे करा
