@@ -938,7 +938,7 @@ class DivisionClerkController extends AppController
      public function advertisementList()
     {
       
-        $districtTable = TableRegistry::getTableLocator()->get('Districts');
+         $districtTable = TableRegistry::getTableLocator()->get('Districts');
         $districts = $districtTable->find()->all();
         $regionTable = TableRegistry::getTableLocator()->get('Regions');
         $regions = $regionTable->find()->all();
@@ -962,7 +962,7 @@ class DivisionClerkController extends AppController
         $postWorkingTable = $this->fetchTable('PostWorking');
 
         $postAdvertisementTable = $this->fetchTable('PostAdvertisement');
-        $ng2g = $postAdvertisementTable->getAdvertisementList();
+        $ng2g = $postAdvertisementTable->getAdvertisementHSList();
 
         
        

@@ -2046,7 +2046,13 @@ private function generateAdvertisementRejectPdf($appId, $rejectReason): ?string
                     <div>
                         आदेश :-
                     </div>
-
+<br>
+      प्रति,
+<div>
+    <span class="indent">अध्यक्ष / सचिव, संबंधित संस्था
+                        </span>
+    
+</div>
                 
                <br>
                 <div class="subject">
@@ -2091,7 +2097,7 @@ private function generateAdvertisementRejectPdf($appId, $rejectReason): ?string
                     <p>सादर प्रस्तावामध्ये खालीलप्रमाणे त्रुटी दिसून येतात:</p>
                     '.$data['rejectReason'].'
                     <p></p>
-                    <p>सदर केलेल्या प्रस्तावामध्ये वर नमूद केलेल्या त्रुटी असल्यामुळे, जाहिरात परवानगी  प्रस्ताव अमान्य / परत करण्यात येत आहे.</p>
+                    <p>सादर केलेल्या प्रस्तावामध्ये वर नमूद केलेल्या त्रुटी असल्यामुळे, जाहिरात परवानगी  प्रस्ताव अमान्य / परत करण्यात येत आहे.</p>
                 </div>
 
         
@@ -2101,7 +2107,15 @@ private function generateAdvertisementRejectPdf($appId, $rejectReason): ?string
                             स्वाक्षरी/-
                         </p>
 
-                  
+                   <div style="height: 100px;"></div>
+
+                        <p style="margin:0;">
+                            प्रत -
+                        </p>
+
+                        <p>
+                            १. मुख्याध्यापक / संबंधित शाळा
+                        </p>
                        
                     </div>
 
@@ -2379,7 +2393,12 @@ private function generateAdvertisementRejectPdf($appId, $rejectReason): ?string
                     <div>
                         आदेश :-
                     </div>
-
+            <br>
+               
+        प्रति,
+                <div>
+                    <span class="indent">अध्यक्ष / सचिव, संबंधित संस्था,</span>                    
+                </div>
                 
                <br>
                 <div class="subject">
@@ -2553,6 +2572,60 @@ private function generateAdvertisementRejectPdf($appId, $rejectReason): ?string
             ->all();
 
 
+        $approvedLogDocuments = [];
+        $rejectLogDocuments = [];
+        $returnLogDocuments = [];
+         $applicationIds = array_map(static function ($post): int {
+            return (int)$post->id;
+        }, $ng2g->toArray());
+
+         if ($applicationIds !== []) {
+            $logsTable = TableRegistry::getTableLocator()->get('staffOnboardApplicationLogs');
+            $approvedLogs = $logsTable->find()
+                ->select(['app_id', 'stage_doc', 'created_at'])
+                ->where([
+                    'app_id IN' => $applicationIds,
+                    'app_stage' => 'Approved',
+                    'stage_doc IS NOT' => null,
+                ])
+                ->order(['created_at' => 'DESC'])
+                ->all();
+
+            foreach ($approvedLogs as $approvedLog) {
+                $approvedLogDocuments[(int)$approvedLog->app_id] ??= $approvedLog->stage_doc;
+            }
+
+             $rejectLogs = $logsTable->find()
+                ->select(['app_id', 'stage_doc', 'created_at'])
+                ->where([
+                    'app_id IN' => $applicationIds,
+                    'app_stage' => 'rejected',
+                    'stage_doc IS NOT' => null,
+                ])
+                ->order(['created_at' => 'DESC'])
+                ->all();
+
+            
+            foreach ($rejectLogs as $rejectLog) {
+                $rejectLogDocuments[(int)$rejectLog->app_id] ??= $rejectLog->stage_doc;
+            }
+
+            $returnLogs = $logsTable->find()
+                ->select(['app_id', 'stage_doc', 'created_at'])
+                ->where([
+                    'app_id IN' => $applicationIds,
+                    'app_stage' => 'returned',
+                    'stage_doc IS NOT' => null,
+                ])
+                ->order(['created_at' => 'DESC'])
+                ->all();
+
+            
+            foreach ($returnLogs as $returnLog) {
+                $returnLogDocuments[(int)$returnLog->app_id] ??= $returnLog->stage_doc;
+            }
+
+        }
 
        //echo "<pre>"; print_r($ng2g);  exit;
                     
@@ -2563,6 +2636,9 @@ private function generateAdvertisementRejectPdf($appId, $rejectReason): ?string
         $this->set('mnp_nps', $mnp_nps);
         $this->set('districts', $districts);
         $this->set('regions', $regions);
+        $this->set('approvedLogDocuments', $approvedLogDocuments);
+        $this->set('rejectLogDocuments', $rejectLogDocuments);
+        $this->set('returnLogDocuments', $returnLogDocuments);
 
 
     }
@@ -3183,6 +3259,7 @@ $postAdvertisementVacancy = $postAdvertisementVacanciesTable->find()
             //$this->generateQRCode($fullUrl, $appId);
             $html = $this->normalizeMarathiText($this->renderApprovalLetterViewContent($letterData));
 
+            
             $writeResult = file_put_contents($tempHtmlPath, $html);
             if ($writeResult === false) {
                 throw new \RuntimeException('Unable to write temporary approval letter HTML.');
@@ -3194,7 +3271,7 @@ $postAdvertisementVacancy = $postAdvertisementVacanciesTable->find()
             }
 
             $cmd = sprintf(
-               '%s --enable-local-file-access --encoding UTF-8 --page-size A4 --orientation Portrait --margin-top 12mm --margin-right 12mm --margin-bottom 12mm --margin-left 12mm %s %s',
+                '%s --enable-local-file-access --encoding UTF-8 --page-size A4 %s %s',
                 escapeshellarg($wkhtmltopdfBinary),
                 escapeshellarg($tempHtmlPath),
                 escapeshellarg($outputPath)
@@ -3282,14 +3359,16 @@ $postAdvertisementVacancy = $postAdvertisementVacanciesTable->find()
                 <html lang="mr">
                 <head>
                     <meta charset="UTF-8">
+                    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
                     <style>
                         @page {
                             size: A4 portrait;
                             margin: 12mm;
                         }
                         body {
-                            font-family: "DejaVu Sans", "Nirmala UI", "Mangal", "Arial Unicode MS", sans-serif;
-                            font-size: 17px;
+                            font-family: "Kokila", "Arial Unicode MS", "Noto Sans Devanagari","Mangal", sans-serif;
+}                            font-size: 17px;
                             line-height: 1.7;
                             margin: 0;
                             padding: 0;
@@ -3409,19 +3488,14 @@ $postAdvertisementVacancy = $postAdvertisementVacanciesTable->find()
                 <body>
                 <div class="letter-page">
                     ' . (!empty($base64Image) ? '<div class="header-wrap"><img class="header-img" src="' . $base64Image . '"></div>' : '') . '
-                    
                     <div>
                         आदेश :-
                     </div>
-
                 <br>
-
                 प्रति,
                 <div>
-                    <span class="indent">अध्यक्ष/सचिव,</span>
-                    
+                    <span class="indent">अध्यक्ष/सचिव संबंधित संस्था,</span>                    
                 </div>
-
                 <br>
                 <div class="subject">
                     विषय :- कनिष्‍ठ लिपिक/प्रयोगशाळा सहाय्यक/ग्रंथपाल पदी वैयक्तीक मान्यता देणे बाबत---.
@@ -3458,21 +3532,21 @@ $postAdvertisementVacancy = $postAdvertisementVacanciesTable->find()
                         </tr>
                         ' . $staffTableRows . '
                     </table>
+                  </div>
+                   <div class="content">                  
                     <p>अटी -</p>
                     <p>१. शिक्षकेतरांच्या मान्यते संदर्भातील शासन निर्णय क्रमांक शालेय शिक्षण व क्रीडा विभाग क्र. एसएसएन-२६०३/(४१/०३)/माशि-२ दि.२५ नोव्हेंबर २००५ व शासन शुध्दीपत्रक क्र.एसएसएन-१००८/(२००/०८)/माशि-२ दि.१३ मार्च २००९ व शासन निर्णय, वित्त विभाग, क्रमांक असंप्र-१०१०/प्र.क्र.१/२०१० वित्तीय सुधारणा-१ दिनांक ०५ जून २०१० व शासन निर्णय क्रमांक दिनांक २८/१/२०१९ च्या आकृतीबंधानुसार प्रयोगशाळा सहायक / कनिष्ठ लिपीक पदासाठी अनुज्ञेय असलेल्या नेमणुकीस मान्यता देण्यात येत आहे.</p>
-                    <p>२.  शाळेने /संस्थेने या कार्यालयात सादर केलेल्या प्रस्तावानुसार संबंधित कर्मचाऱ्याच्या नेमणुकीस मान्यता देण्यात येत आहे. या बाबत एखाद्या कर्मचाऱ्याने न्यायीक मार्गाचा अवलंब केल्यास न्यायालयाचा निर्णय संस्थेवर बंधनकारक राहील तसेच एखाद्या कर्मचाऱ्याने तक्रार केल्यास व त्यामध्ये तथ्य आढळल्यास दिलेली मान्यता रद्द करण्यात येईल.</p>
+                    <p>२. शाळेने /संस्थेने या कार्यालयात सादर केलेल्या प्रस्तावानुसार संबंधित कर्मचाऱ्याच्या नेमणुकीस मान्यता देण्यात येत आहे. या बाबत एखाद्या कर्मचाऱ्याने न्यायीक मार्गाचा अवलंब केल्यास न्यायालयाचा निर्णय संस्थेवर बंधनकारक राहील तसेच एखाद्या कर्मचाऱ्याने तक्रार केल्यास व त्यामध्ये तथ्य आढळल्यास दिलेली मान्यता रद्द करण्यात येईल.</p>
                     <p>३. सध्या सेवेत असलेल्या कर्मचाऱ्यास सेवेतून कमी करून नवीन कर्मचाऱ्याची नेमणूक केली असेल तर या कार्यालयाचे मान्यता घेतली असल्याचे निदर्शनास येताच सदरचे मान्यता आदेश रद्द करण्यात येतील व अदा करण्यात आलेले वेतन विहीत पद्धतीचा अवलंब करून संस्थेकडून वसूल करण्यात येईल.</p>
                     <p>४. मंजूर पदापेक्षा जादा शिक्षक / शिक्षकेतर कर्मचाऱ्याच्या नेमणुका केल्यास व त्यास या कार्यालयाची मान्यता घेतल्यास संबंधित शाळेच्या मुख्याध्यापकास व संस्थेस जबाबदार धरण्यात येईल व मंजूर पदापेक्षा जादा नेमणुका करण्यात आलेल्या कर्मचाऱ्याच्या वेतनाची वसुली संस्थेस देय वेतनेत्तर अनुदानातून कपात करण्यात येईल.</p>
                     <p>५. संस्थेत अतिरिक्त कर्मचारी असताना नवीन नेमणुकीस मान्यता घेतल्यास सदर नेमणुकीची मान्यता रद्द करून नवीन नेमणूक केलेल्या कर्मचाऱ्यास दिलेले वेतन व भत्ते संस्थेकडून वसूल करण्यात येईल.</p>
-                    <p>६. एखाद्या कर्मचाऱ्याचे प्रकरण न्यायप्रविष्ठ असेल अशा कर्मचाऱ्याच्या जागी दुसऱ्या कर्मचाऱ्याची नेमणूक करू नये. सदर बाब या कार्यालयाच्या निदर्शनास न आणता अशा जागी संस्थेने नेमणूक केली असल्यास व अशा नवीन नेमणूक केलेल्या सेवकाची या कार्यालयाकडून मान्यता घेऊन संबंधित सेवकास दिलेले वेतन संस्थेकडून वसूल करण्यात येईल.</p>
+                    <p>६. एखाद्या कर्मचाऱ्याचे प्रकरण न्यायप्रविष्ठ असेल अशा कर्मचाऱ्याची जागी दुसऱ्या कर्मचाऱ्याची नेमणूक करू नये. सदर बाब या कार्यालयाच्या निदर्शनास न आणता अशा जागी संस्थेने नेमणूक केली असल्यास व अशा नवीन नेमणूक केलेल्या सेवकाची या कार्यालयाकडून मान्यता घेऊन संबंधित सेवकास दिलेले वेतन संस्थेकडून वसूल करण्यात येईल.</p>
                     <p>७. संस्थेतील अतिरिक्त कर्मचाऱ्याचे या पूर्वी कोणत्याही इतर संस्थेच्या माध्यमिक शाळेत समावेश केला असल्यास व नवीन नेमणुकीपूर्वी अशा कर्मचाऱ्याचा संस्थेत पुन्हा सेवेत घेण्याबाबतचा विकल्प (नाहरकत) न घेता नवीन नेमणूक केली असल्यास व अशा नेमणुकीस खात्याकडून मान्यता घेतल्याचे निदर्शनास आल्यास या पूर्वी समावेश केलेल्या सेवकाची तक्रार आल्यास नव्या नेमणुकीस दिलेली मान्यता रद्द करण्यात येईल व नव्याने नेमणूक दिलेल्या कर्मचाऱ्याचे वेतन संस्थेकडून वसूल करण्यात येईल.</p>
-                    <p>८. मान्यतेसाठी पाठविलेल्या प्रस्तावात एखाद्या कर्मचाऱ्याचे नाव वगळून दुसऱ्याच कर्मचाऱ्याच्या नेमणुकीस मान्यता घेतली असल्यास व माहितीमध्ये एखादे प्रकरण उद्भवल्यास होणाऱ्या परिणामास मुख्याध्यापक व संस्था जबाबदार राहील.</p>
+                    <p>८. मान्यतेसाठी पाठविलेल्या प्रस्तावात एखाद्या कर्मचाऱ्याचे नाव वगळून दुसऱ्या कर्मचाऱ्याची नेमणुकीस मान्यता घेतली असल्यास व माहितीमध्ये एखादे प्रकरण उद्भवल्यास होणाऱ्या परिणामास मुख्याध्यापक व संस्था जबाबदार राहील.</p>
                     <p>९. सदरचे प्रस्ताव शालार्थ प्रणालीमध्ये समाविष्ट करण्यासाठी मा. शिक्षण उपसंचालक कार्यालयाकडेस पाठविणेत येतील. त्यांच्या स्तरावरून सदर कर्मचाऱ्याचे नाव शालार्थ प्रणालीमध्ये समाविष्ट न झाल्यास दिलेली ही मान्यता रद्द समजण्यात येईल.</p>
                     <p></p>
                     <p></p>
-                </div>
-
-        
+                </div>     
 
                 <div class="content">
                         <p class="right" style="text-align:right; margin:0;">
@@ -3485,11 +3559,11 @@ $postAdvertisementVacancy = $postAdvertisementVacanciesTable->find()
                         <p style="margin:0;">
                             प्रत -
                         </p>
-                        <p>१. अधिक्षक वेतन पथक भविष्‍य निर्वाह निधी (माध्‍यमिक)--------- यांना माहितीसाठी व पुढील कार्यवाहीसाठी.</p>
-                        <p>२. मुख्‍याध्‍यापक संबंधित शाळा यांना माहितीसाठी व पुढील कार्यवाहीसाठी. </p>
-                        <p>३. संबंधित कर्मचारी यांना मुख्‍याध्‍यापकामार्फत.</p>
+                        <p>१. शिक्षण उपसंचालक / अध्यक्ष विभागीय शिक्षण मंडळ.</p>
+                        <p>२. अधिक्षक वेतन पथक भविष्‍य निर्वाह निधी (माध्यमिक)--------- यांना माहितीसाठी व पुढील कार्यवाहीसाठी.</p>
+                        <p>३. मुख्याध्यापक संबंधित शाळा यांना माहितीसाठी व पुढील कार्यवाहीसाठी. </p>
+                        <p>४. संबंधित कर्मचारी यांना मुख्याध्यापकांमार्फत.</p>
                     </div>
-
 
                 <div style="clear:both;"></div>
                 </div>
@@ -3732,13 +3806,11 @@ $postAdvertisementVacancy = $postAdvertisementVacanciesTable->find()
                 </head>
                 <body>
                 ' . (!empty($base64Image) ? '<img class="header-img" src="' . $base64Image . '">' : '') . '
-
-               
+            
                 <br>
-
                 प्रति,
                 <div>
-                    <span class="indent">अध्यक्ष/सचिव संबंधित शाळा,
+                    <span class="indent">अध्यक्ष/सचिव संबंधित संस्था,
                     </span>
                     
                 </div>
@@ -3770,7 +3842,9 @@ $postAdvertisementVacancy = $postAdvertisementVacanciesTable->find()
 
                 <div>'.$data['reject_text'].'</div>
         
-
+<div>
+<p>उपरोक्त प्रस्तावामध्ये वरील त्रुटी आढळून आल्याने सदर प्रस्ताव परत पाठविण्यात येत आहे. सदर प्रस्तावातील त्रुटींची पूर्तता करून १५ दिवसांच्या आत फेरसादर करावा.</p>
+</div>
                 <div>
                         <p class="right" style="text-align:right; margin:0;">
                             स्वाक्षरी/-
@@ -3783,16 +3857,12 @@ $postAdvertisementVacancy = $postAdvertisementVacanciesTable->find()
                             प्रत -
                         </p>
 
+                       
                         <p>
-                            १. अधिक्षक वेतन पथक भविष्‍य निर्वाह निधी (माध्‍यमिक) --------- यांना माहितीसाठी व पुढील कार्यवाहीसाठी.
+                            १. मुख्‍याध्‍यापक  संबंधित शाळा  यांना माहितीसाठी व पुढील कार्यवाहीसाठी
                         </p>
-
                         <p>
-                            २. मुख्‍याध्‍यापक  संबंधित शाळा  यांना माहितीसाठी व पुढील कार्यवाहीसाठी
-                        </p>
-
-                        <p>
-                            ३.संबंधित कर्मचारी यांना मुख्‍याध्‍यापकामार्फत.
+                            २.संबंधित कर्मचारी यांना मुख्‍याध्‍यापकामार्फत.
                         </p>
 
                        
@@ -4063,12 +4133,8 @@ $postAdvertisementVacancy = $postAdvertisementVacanciesTable->find()
                     <p>उपरोक्त संदर्भाधिन पत्राानुसार निर्देशित करण्यांत येते की, संदर्भाधिन प्रस्तावामध्ये ............................ या शाळेतील/कनिष्ठ महाविदयालयातील नियुक्त शिक्षकेत्तर कर्मचारी (कनिष्ठ लिपिक,प्रयोगशाळा सहाय्यक,ग्रंथपाल) यांचे पदास मान्यता मिळणेबाबतचा प्रस्ताव सादर करण्यात आलेला होता.</p>
 
                     <p>
-                    त्यास अनुसरुन...........................................स्तरावर करण्यात आलेल्या छाननीअंती आपल्या प्रस्तावात त्रुटी आढळून आल्या आहेत</p>
-                     <p>1.</p>
-                     <p>2.</p>
-                     <p>3.</p>
-                     <p>4.</p>
-                     <p>5.</p>
+                    त्यास अनुसरून...........................................स्तरावर करण्यात आलेल्या छाननीअंती आपल्या प्रस्तावात त्रुटी आढळून आल्या आहेत</p>
+                     
                      <p>वरील त्रुटी असल्याने आपला शिक्षकेत्तर कर्मचारी (कनिष्ठ लिपिक,प्रयोगशाळा सहाय्यक,ग्रंथपाल) पदास मान्यता मिळणेबाबतचा प्रस्ताव अमान्य करण्यात येत आहे.</p>
                 </div>
 
@@ -4511,15 +4577,28 @@ $postAdvertisementVacancy = $postAdvertisementVacanciesTable->find()
     }
 
      private function normalizeMarathiText(string $text): string
-    {
-        if (class_exists(\Normalizer::class)) {
-            $normalized = \Normalizer::normalize($text, \Normalizer::FORM_C);
-            if (is_string($normalized)) {
-                $text = $normalized;
-            }
-        }
+        {
+            // Remove UTF-8 BOM if present
+            $text = preg_replace('/^\xEF\xBB\xBF/', '', $text);
 
-        return str_replace("्‍य", "्य", $text);
-    }
+            // Normalize Unicode characters to NFC, if intl extension is enabled
+            if (class_exists(\Normalizer::class)) {
+                $normalized = \Normalizer::normalize(
+                    $text,
+                    \Normalizer::FORM_C
+                );
+
+                if ($normalized !== false) {
+                    $text = $normalized;
+                }
+            }
+
+            // Remove invalid UTF-8 sequences only when necessary
+            if (!mb_check_encoding($text, 'UTF-8')) {
+                $text = mb_convert_encoding($text, 'UTF-8', 'UTF-8');
+            }
+
+            return $text;
+        }
     
   }

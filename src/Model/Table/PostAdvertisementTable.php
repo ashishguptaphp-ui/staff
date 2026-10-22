@@ -50,12 +50,45 @@ class PostAdvertisementTable extends Table
              ->where([
                 'is_direct_approved' => 0
             ])
-            /*->where(function ($exp) {
+            ->where(function ($exp) {
                     return $exp->or([
                         'PostAdvertisement.is_primary' => true,
                         'PostAdvertisement.secondary' => true,
                     ]);
-                })*/      
+                })      
+            ->all();
+    }
+
+
+     public function getAdvertisementHSList($isPrimary = null,$isSecondary = null,$isHigherSecondary = null)
+    {
+
+        return $this->find()
+            ->select([
+                'PostAdvertisement.id',
+                'PostAdvertisement.institution_name',
+                'PostAdvertisement.institution_code',
+                'PostAdvertisement.created_at',
+                'PostAdvertisement.status',
+                'vacancy_count' => $this->find()
+                    ->func()
+                    ->count('PostAdvertisementVacancies.id'),
+            ])
+            ->leftJoinWith('PostAdvertisementVacancies')
+            ->group([
+                'PostAdvertisement.id',
+            ])
+            ->order([
+                'PostAdvertisement.created_at' => 'DESC',
+            ])  
+             ->where([
+                'is_direct_approved' => 0
+            ])
+            ->where(function ($exp) {
+                    return $exp->or([
+                        'PostAdvertisement.higher_secondary' => true,
+                    ]);
+                })      
             ->all();
     }
 

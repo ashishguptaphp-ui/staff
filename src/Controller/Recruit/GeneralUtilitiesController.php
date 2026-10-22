@@ -2255,7 +2255,7 @@ foreach ($documentGroups as $group) {
 
                     $this->generateReturnLetter($ng2g_id);
 
-                    $generatedDocument = 'uploads/staffonboarding/return/staff_order_return_' . $onboard->id . '.pdf';
+                    $generatedDocument = 'uploads/staffonboarding/return/staff_order_return_' . $ng2g_id . '.pdf';
                     if (is_file(WWW_ROOT . $generatedDocument)) {
                         $fileName = $generatedDocument;
                     }
@@ -2897,6 +2897,12 @@ foreach ($documentGroups as $group) {
                 throw new \InvalidArgumentException('Invalid application ID');
             }
 
+            $StaffOnboardApplicationReturnsTable = TableRegistry::getTableLocator()->get('StaffOnboardApplicationReturns');
+            $StaffOnboardApplicationReturns = $StaffOnboardApplicationReturnsTable->find()
+                                                ->select(['rtn_field_name', 'rtn_field_reason'])
+                                                ->where(['app_id' => $appId])
+                                                ->all();
+
             $staffName = 'श्री. अमोल रमेश पाटील';
             $orderDate = '24-08-2026';
             $post = 'सहाय्यक शिक्षक';
@@ -2960,6 +2966,7 @@ foreach ($documentGroups as $group) {
 
             $letterData['app_id'] = $appId;
             $letterData['targetAppUrl'] = $fullUrl;
+            $letterData['returnData'] = $StaffOnboardApplicationReturns;
             $letterData['targetQRUrl'] = $this->request->scheme() . '://' . $this->request->host() . $basePath . '/uploads/staffonboarding/return/qrcodes/staff_order_return_' . $appId . '.png';
             $letterData['targetQRPath'] = $qrcodeDir . 'staff_order_return_' . $appId . '.png';
 
@@ -3022,6 +3029,10 @@ foreach ($documentGroups as $group) {
         }
 
         $base64Image = $this->getActiveHeaderImageDataUri((int)$this->user_id);
+        $returnDiv = '';
+        foreach( $data['returnData'] as $returnItem) {
+            $returnDiv .= '<p>'.str_replace('_',' ',$returnItem->rtn_field_name).' - ' . htmlspecialchars($returnItem->rtn_field_reason) . '</p>';
+        }       
 
         return '<!DOCTYPE html>
                 <html lang="mr">
@@ -3145,11 +3156,7 @@ foreach ($documentGroups as $group) {
                     <div class="content">
                         <p>उपरोक्त संदर्भाधिन पत्राानुसार निर्देशित करण्यांत येते की, संदर्भाधिन प्रस्तावामध्ये ............................ या शाळेतील/कनिष्ठ महाविदयालयातील नियुक्त शिक्षकेत्तर कर्मचारी (कनिष्ठ लिपिक,प्रयोगशाळा सहाय्यक,ग्रंथपाल) यांचे पदास मान्यता मिळणेबाबतचा प्रस्ताव सादर करण्यात आलेला होता.</p>
                         <p>त्यास अनुसरुन...........................................स्तरावर करण्यात आलेल्या छाननीअंती आपल्या प्रस्तावात त्रुटी आढळून आल्या आहेत</p>
-                        <p>1.</p>
-                        <p>2.</p>
-                        <p>3.</p>
-                        <p>4.</p>
-                        <p>5.</p>
+                        '.$returnDiv.'
                         <p>वरील त्रुटी असल्याने आपला शिक्षकेत्तर कर्मचारी (कनिष्ठ लिपिक,प्रयोगशाळा सहाय्यक,ग्रंथपाल) पदास मान्यता मिळणेबाबतचा प्रस्ताव अमान्य करण्यात येत आहे.</p>
                     </div>      
                     <div>

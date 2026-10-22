@@ -872,13 +872,7 @@
                            if($approvedLogUrl!=null){
                                echo "<a href='" . h($approvedLogUrl) . "' style='text-decoration:none;' class='approved-order-pdf' data-pdf-title='आदेश'>
                                     <i class='fa-solid fa-reorder'></i>  आदेश
-                                </a><br/>";
-
-                                echo "<a href='" . h($approvedLogUrl) . "' style='text-decoration:none;' class='approved-order-pdf' data-pdf-title='आदेश'>
-                                    <i class='fa-solid fa-reorder'></i>  आदेश 2
-                                </a><br/>";
-
-                                
+                                </a><br/>";                        
          
                            }
                        

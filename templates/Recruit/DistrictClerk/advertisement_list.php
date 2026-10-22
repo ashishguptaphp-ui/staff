@@ -761,12 +761,12 @@
         }
         ?>
 
-        <?php if ($hasOverdueUnapprovedAdvertisement): ?>
+        <?php //if ($hasOverdueUnapprovedAdvertisement): ?>
             <div class="alert alert-warning" role="alert">
                <?= h('संस्थेने शिक्षणाधिकारी / शिक्षण उपसंचालक यांचेकडे जाहिरात परवानगी प्रस्ताव सादर केल्यानंतर त्याबाबतची मान्य / अमान्य बाबतचा निर्णय सादर केलेल्या तारखेपासून १५ दिवसांत देणे बंधनकारक राहील अन्यथा तदनंतर शिक्षणाधिकारी / शिक्षण उपसंचालक यांची परवानगी आहे असे गृहीत धरून संस्था पुढील कार्यवाही करेल. संस्थेकडून पदभरतीमध्ये चुकीची कार्यपद्धती अवलंबल्यास त्यास संस्था व शिक्षणाधिकारी / शिक्षण उपसंचालक जबाबदार राहतील.') ?>
             
             </div>
-        <?php endif; ?>
+        <?php //endif; ?>
 
         <table id="staffTable" class="table table-bordered table-striped table-hover align-middle">
             <thead class="table-light">

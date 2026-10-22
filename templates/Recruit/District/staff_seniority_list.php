@@ -566,6 +566,10 @@
         border: 1px solid #cbd5e0;
         border-radius: 6px;
     }
+
+    #approvedOrderPdfModal {
+    z-index: 10010 !important;
+}
 </style>
 
     <style>
@@ -752,6 +756,33 @@
                     if($post->post_type == 1){
                         continue;
                     }
+
+                $approvedLogDocument = $approvedLogDocuments[$post->id] ?? null;
+                   
+                $approvedLogUrl = null;
+                if (!empty($approvedLogDocument)) {
+                    $approvedLogUrl = preg_match('/^https?:\/\//i', $approvedLogDocument)
+                        ? $approvedLogDocument
+                        : $this->Url->build('/' . ltrim($approvedLogDocument, '/'));
+                }
+
+                $rejectLogDocument = $rejectLogDocuments[$post->id] ?? null;
+                   
+                $rejectLogUrl = null;
+                if (!empty($rejectLogDocument)) {
+                    $rejectLogUrl = preg_match('/^https?:\/\//i', $rejectLogDocument)
+                        ? $rejectLogDocument
+                        : $this->Url->build('/' . ltrim($rejectLogDocument, '/'));
+                }
+
+                $returnLogDocument = $returnLogDocuments[$post->id] ?? null;
+                   
+                $returnLogUrl = null;
+                if (!empty($returnLogDocument)) {
+                    $returnLogUrl = preg_match('/^https?:\/\//i', $returnLogDocument)
+                        ? $returnLogDocument
+                        : $this->Url->build('/' . ltrim($returnLogDocument, '/'));
+                }
                    
                 ?>
                 <tr>
@@ -778,6 +809,23 @@
                                 <i class='fa-solid fa-history'></i> टिप्पणी
                             </a><br/>";
 
+                            if($approvedLogUrl!=null){
+                               echo "<a href='" . h($approvedLogUrl) . "'   style='text-decoration:none;' class='approved-order-pdf' data-pdf-title='आदेश'>
+                                    <i class='fa-solid fa-reorder'></i>  आदेश
+                                </a><br/>";  
+                           }
+                             if($rejectLogUrl!=null){
+                               echo "<a href='" . h($rejectLogUrl) . "'   style='text-decoration:none;' class='approved-order-pdf' data-pdf-title='नकार आदेश'>
+                                    <i class='fa-solid fa-reorder'></i>  नकार आदेश
+                                </a><br/>";  
+                           }
+                            if($post->status=='returned'){
+                                    if($returnLogUrl!=null){
+                                    echo "<a href='" . h($returnLogUrl) . "' style='text-decoration:none;' class='approved-order-pdf' data-pdf-title='दुरुस्तीसाठी आदेश'>
+                                            <i class='fa-solid fa-reorder'></i>  दुरुस्तीसाठी आदेश
+                                        </a><br/>";  
+                                }
+                            }
                             if($post->status === 'Forwarded_sup') {                            
 
                                echo "<a href='#' style='text-decoration:none;color:green;' class='approvedApplication-open-transfer' data-staffObject='". json_encode($post, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP)."' data-id='".$post->id."' data-seq='".$idx."'>
@@ -810,6 +858,21 @@
 </div>
 
 
+
+
+<div class="modal fade" id="approvedOrderPdfModal" tabindex="-1" aria-labelledby="approvedOrderPdfModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered" style="max-width: 92vw;">
+        <div class="modal-content" style="height: 90vh;">
+            <div class="modal-header">
+                <h5 class="modal-title" id="approvedOrderPdfModalLabel">आदेश</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0">
+                <iframe id="approvedOrderPdfFrame" title="आदेश PDF" src="about:blank" style="width: 100%; height: 100%; border: 0;"></iframe>
+            </div>
+        </div>
+    </div>
+</div>
 
 
 <!-- Slide Panel -->
@@ -4190,6 +4253,19 @@ $(document).ready(function() {
             });
         }
 
+
+    $(document).on('click', '.approved-order-pdf', function (event) {
+    event.preventDefault();
+    const pdfTitle = this.dataset.pdfTitle || 'आदेश';
+    $('#approvedOrderPdfModalLabel').text(pdfTitle);
+    $('#approvedOrderPdfFrame').attr('title', pdfTitle + ' PDF');
+    $('#approvedOrderPdfFrame').attr('src', this.href);
+    $('#approvedOrderPdfModal').modal('show');
+    });
+
+    $('#approvedOrderPdfModal').on('hidden.bs.modal', function () {
+        $('#approvedOrderPdfFrame').attr('src', 'about:blank');
+    });
 
     });
 

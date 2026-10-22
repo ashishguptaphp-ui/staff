@@ -57,6 +57,11 @@ function isActiveMenu($controller, $action, $currentController, $currentAction, 
             <i class="fas fa-chart-line me-1"></i> डॅशबोर्ड</a>
           </li>
 
+         <li class="nav-item">
+            <a class="nav-link <?= isActiveMenu('DivisionClerk', 'advertisementList', $currentController, $currentAction, $currentPrefix) ?>" href="<?= $this->Url->build(['prefix' => 'Recruit',"controller" => "DivisionClerk", "action" => "advertisementList"]); ?>"><i class="fas fa-chart-line me-1"></i> जाहिरात मान्यता</a>
+          </li>
+
+
             <li class="nav-item">
           <a class="nav-link <?= isActiveMenu(
               'DivisionClerk',
