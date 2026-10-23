@@ -40,7 +40,8 @@ class DivisionAssistantDirectorController extends AppController
             'ng2gApproveTransfer','ng2gRejectTransfer',
             'staffSeniorityList','advertisementVacancyAjax',
             'advertisementList',            
-            'staffOnboardForward'
+            'staffOnboardForward',
+            'advertisementPostforword'
         ]);
 
         $user = $this->request->getAttribute('identity');
@@ -333,522 +334,14 @@ class DivisionAssistantDirectorController extends AppController
          $this->set('advertisementStatusCounts', $advertisementStatusCounts);
         
     }
-
-     
-
-    public function ng2gReturnedTransfer()
-    {
-        $this->Authorization->skipAuthorization();
-        $this->viewBuilder()->setLayout('division-assistant-director');    
-        $staffTransfersTable = TableRegistry::getTableLocator()->get('StaffTransfers');       
-        $status= ['dyd_assistant_director_higher_secondary_desk_returned','dyd_assistant_director_higher_secondary_desk_forwarded'];                   
-      
-        $ng2g = $staffTransfersTable->find()
-                ->select([
-                            'district' => 'Districts.name',
-                            'block' => 'Blocks.name',
-                            'cluster' => 'Clusters.name',
-                            'StaffTransfers.id', 
-                            'StaffTransfers.staff_id', 
-                            'StaffTransfers.employee_name', 
-                            'StaffTransfers.designation',
-                            'institution_name', 
-                            'StaffTransfers.school_name', 
-                            'StaffTransfers.created_at',  // newly added
-                            'StaffTransfers.school_name_at_transfer', 
-                            'StaffTransfers.staff_type_name', 
-                            'StaffTransfers.aid_name',
-                            'StaffTransfers.status',
-                            'StaffTransfers.stage1_fwd_to_target'
-                            ])
-                 ->join([
-                    'Schools' => [
-                        'table' => 'schools',
-                        'type' => 'INNER',
-                        'conditions' => 'StaffTransfers.udise_number = Schools.udise_code'
-                    ],
-                    'Clusters' => [
-                        'table' => 'clusters',
-                        'type' => 'INNER',
-                        'conditions' => 'Clusters.code = Schools.cluster_code'
-                    ],
-                    'Blocks' => [
-                        'table' => 'blocks',
-                        'type' => 'INNER',
-                        'conditions' => 'Blocks.code = Clusters.block_code::int'
-                    ],
-                    'Districts' => [
-                        'table' => 'districts',
-                        'type' => 'INNER',
-                        'conditions' => 'Districts.code = Blocks.district_code::int'
-                    ]                    
-                ])     
-                ->where([
-                    'StaffTransfers.status IN' => $status,
-                    'StaffTransfers.stage1_fwd_to' =>  $this->Jurisdiction,
-                    'StaffTransfers.stage1_fwd_to_target' => (int) $this->dcode
-                ])
-                ->orderBy([
-                    'StaffTransfers.id' => 'ASC'
-                ])
-                
-            ->all(); 
-        /*echo "<pre>";
-        echo "<hr>". $this->dcode;
-        echo count($ng2g);
-        print_r($ng2g);
-        exit;*/
-        $this->set('ng2g', $ng2g);
-
-        
-
-    }
-
-
-    public function ng2gTransfer()
-    {
-        $this->Authorization->skipAuthorization();
-        $this->viewBuilder()->setLayout('division-assistant-director');
-        $staffTransfersTable = TableRegistry::getTableLocator()->get('StaffTransfers');
-        $ng2g = $staffTransfersTable->find()
-                ->select([
-                            'district' => 'Districts.name',
-                            'block' => 'Blocks.name',
-                            'cluster' => 'Clusters.name',
-                            'StaffTransfers.id', 
-                            'StaffTransfers.staff_id', 
-                            'StaffTransfers.employee_name', 
-                            'StaffTransfers.designation',
-                            'institution_name', 
-                            'StaffTransfers.school_name', 
-                            'StaffTransfers.created_at',  // newly added
-                            'StaffTransfers.school_name_at_transfer', 
-                            'StaffTransfers.staff_type_name', 
-                            'StaffTransfers.aid_name',
-                            'StaffTransfers.status',
-                            'StaffTransfers.stage1_fwd_to_target'
-                            ])
-                 ->join([
-                    'Schools' => [
-                        'table' => 'schools',
-                        'type' => 'INNER',
-                        'conditions' => 'StaffTransfers.udise_number = Schools.udise_code'
-                    ],
-                    'Clusters' => [
-                        'table' => 'clusters',
-                        'type' => 'INNER',
-                        'conditions' => 'Clusters.code = Schools.cluster_code'
-                    ],
-                    'Blocks' => [
-                        'table' => 'blocks',
-                        'type' => 'INNER',
-                        'conditions' => 'Blocks.code = Clusters.block_code::int'
-                    ],
-                    'Districts' => [
-                        'table' => 'districts',
-                        'type' => 'INNER',
-                        'conditions' => 'Districts.code = Blocks.district_code::int'
-                    ]
-                    
-                ])     
-                ->where([
-                    'StaffTransfers.status IN' => $this->statuses,
-                    'StaffTransfers.stage1_fwd_to' => $this->Jurisdiction,
-                    //'StaffTransfers.stage1_fwd_to_target' => (int) $this->dcode
-                ])
-                ->orderBy([
-                    'StaffTransfers.id' => 'ASC'
-                ])
-                
-            ->all();
-        /*echo "<pre>";
-        echo "<hr>". $this->dcode;
-        echo count($ng2g);
-        print_r($ng2g);
-        exit;*/
-        $this->set('ng2g', $ng2g);
-
-        
-
-    }
-
-    
-    
-    public function ng2gApproveTransfer()
-    {
-        $this->Authorization->skipAuthorization();
-        $this->request->allowMethod(['post', 'ajax']);
-        $data = $this->request->getData();
-        $files = $this->request->getUploadedFiles();
-        $connection = ConnectionManager::get('default');
-        $connection->begin();
-
-        try {
-            $staffTransferTable = TableRegistry::getTableLocator()->get('StaffTransfers');            
-            if (!empty($data['ng2g_id'])) {
-                $transfer = $staffTransferTable->get($data['ng2g_id']);
-            }else{
-                return $this->response
-                            ->withType('application/json')
-                            ->withStringBody(json_encode([
-                                'success' => false,
-                                'message' => 'Invalid Application'
-                            ]));
-            }
-
-            if($transfer->id < 1){
-                return $this->response
-                            ->withType('application/json')
-                            ->withStringBody(json_encode([
-                                'success' => false,
-                                'message' => 'Invalid Application'
-                            ]));
-            }            
-           
-            
-            $app_stage = 'dyd_assistant_director_higher_secondary_approved';
-            $status= 'dyd_desk_pending';
-            
-
-
-            //'pending'::staff_update_statuses_enum
-            $staffData = [               
-                'status'            => $status, 
-                //'dyd_clk_remark'        => $data['app_remark'] ?? null,
-                //'dyd_clk_replied_by' => $this->user_id,
-                //'dyd_replied_at'  =>  time()           
-
-            ];
-            $config = Configure::read('ESDL');
-            //staff/<staff_id>/transfers
-            //staff/<staff_id>/docs
-            $bucketPath = $config['mode'].'/staff/transfers/'.$transfer->id;
-
-           
-
-            if (!empty($data['app_doc']) && $data['app_doc']->getError() === UPLOAD_ERR_OK) {
-
-                $file = $data['app_doc'];
-                
-                if ($file->getClientMediaType() !== 'application/pdf') {
-                    return $this->response
-                        ->withType('application/json')
-                        ->withStringBody(json_encode([
-                            'success' => false,
-                            'message' => 'Must be a PDF File'
-                        ]));
-                }
-
-                if ($file->getSize() > (2 * 1024 * 1024)) {
-                    return $this->response
-                        ->withType('application/json')
-                        ->withStringBody(json_encode([
-                            'success' => false,
-                            'message' => 'Exceeds 2MB limit File'
-                        ]));
-                }
-
-                if (!$file || $file->getError() !== UPLOAD_ERR_OK) {
-                    return $this->response
-                        ->withType('application/json')
-                        ->withStringBody(json_encode([
-                            'success' => false,
-                            'message' => 'Invalid File'
-                        ]));
-                    //$this->Flash->error('Invalid file');
-                }
-
-
-                // Get temp path safely
-                $tmpPath = $file->getStream()->getMetadata('uri');
-
-                // Extract extension (safe)
-                $extension = pathinfo($file->getClientFilename(), PATHINFO_EXTENSION);
-
-                
-
-                // New filename
-                $newFileName = 'dyd_adh_replied_file.' . $extension;
-
-                // Create NEW UploadedFile object
-                $renamedFile = new UploadedFile(
-                    $tmpPath,
-                    $file->getSize(),
-                    $file->getError(),
-                    $newFileName,
-                    $file->getClientMediaType()
-                );
-
-                $storage = new EsdlStorageService();
-                $fileName = $storage->upload($renamedFile, $bucketPath);
-
-                //$staffData['dyd_clk_replied_file'] = $fileName;
-            } 
-    
-            
-            $transfer = $staffTransferTable->patchEntity($transfer, $staffData);
-
-            if ($transfer->hasErrors()) {
-                return $this->response
-                    ->withType('application/json')
-                    ->withStringBody(json_encode([
-                        'success' => false,
-                        'message' => 'Unable to upload file'
-                    ]));
-            }
-
-            if (!$staffTransferTable->save($transfer)) {
-                return $this->response
-                    ->withType('application/json')
-                    ->withStringBody(json_encode([
-                        'success' => false,
-                        'message' => 'Unable to approve staff transfer'
-                    ]));
-            }
-            $ng2g_id = $transfer->id;            
-            $stTime = time();
-            $ng2gApplicationLogsTable = $this->fetchTable('Ng2gApplicationLogs');
-            $logData = [
-                'ng2g_id'      => $ng2g_id,
-                'transaction_id' => $stTime,
-                'app_stage'    => $app_stage,
-                'stage_remark' => $data['app_remark'] ?? null,
-                'stage_doc' => $fileName,
-                'created_by'   => $this->user_id,
-                'created_at'   => $stTime
-            ];
-
-            $log = $ng2gApplicationLogsTable->newEntity($logData);
-
-            if (!$ng2gApplicationLogsTable->save($log)){
-                $connection->rollback();
-                return $this->response
-                    ->withType('application/json')
-                    ->withStringBody(json_encode([
-                        'success' => false,
-                        'message' => 'Unable to Approve Application'
-                    ]));  
-            }
-
-            $connection->commit();
-            return $this->response
-                ->withType('application/json')
-                ->withStringBody(json_encode([
-                    'success' => true,
-                    'id' => $transfer->id,
-                    'message' => 'Transfer application approved successfully'
-                ]));
-
-           
-
-        } catch (\Throwable $e) {
-            $connection->rollback();
-
-            return $this->response
-                ->withStatus(422)
-                ->withType('application/json')
-                ->withStringBody(json_encode([
-                    'status' => false,
-                    'error' => $e->getMessage()
-                ]));
-        }
-    }
  
-    public function ng2gRejectTransfer()
-    {
-        $this->Authorization->skipAuthorization();
-        $this->request->allowMethod(['post', 'ajax']);
-        $data = $this->request->getData();
-        
-        /*echo "<pre>";
-       
-        print_r( $data);
-        exit;*/
-        $files = $this->request->getUploadedFiles();
-
-        $connection = ConnectionManager::get('default');
-        $connection->begin();
-
-        try {
-           
-           
-            $staffTransferTable = TableRegistry::getTableLocator()->get('StaffTransfers');
-            
-            if (!empty($data['ng2g_id'])) {
-                $transfer = $staffTransferTable->get($data['ng2g_id']);
-            }else{
-                return $this->response
-                            ->withType('application/json')
-                            ->withStringBody(json_encode([
-                                'success' => false,
-                                'message' => 'Invalid Application'
-                            ]));
-            }
-
-            if($transfer->id < 1){
-                return $this->response
-                            ->withType('application/json')
-                            ->withStringBody(json_encode([
-                                'success' => false,
-                                'message' => 'Invalid Application'
-                            ]));
-            }
-        
-            
-            //'pending'::staff_update_statuses_enum
-            $staffData = [               
-                'status'            => 'dyd_assistant_director_rejected', 
-                //'dyd_clk_remark'        => $data['reject_remark'] ?? null,
-                //'dyd_clk_replied_by' => $this->user_id,
-                //'dyd_clk_replied_at'  =>  time()           
-
-            ];
-            $config = Configure::read('ESDL');
-            //staff/<staff_id>/transfers
-            //staff/<staff_id>/docs
-            $bucketPath = $config['mode'].'/staff/transfers/'.$transfer->id;
-
-            
-                
-
-            if (!empty($data['reject_doc']) && $data['reject_doc']->getError() === UPLOAD_ERR_OK) {
-
-                $file = $data['reject_doc'];
-                
-                if ($file->getClientMediaType() !== 'application/pdf') {
-                    return $this->response
-                        ->withType('application/json')
-                        ->withStringBody(json_encode([
-                            'success' => false,
-                            'message' => 'Must be a PDF File'
-                        ]));
-                }
-
-                if ($file->getSize() > (2 * 1024 * 1024)) {
-                    return $this->response
-                        ->withType('application/json')
-                        ->withStringBody(json_encode([
-                            'success' => false,
-                            'message' => 'Exceeds 2MB limit File'
-                        ]));
-                }
-
-                if (!$file || $file->getError() !== UPLOAD_ERR_OK) {
-                    return $this->response
-                        ->withType('application/json')
-                        ->withStringBody(json_encode([
-                            'success' => false,
-                            'message' => 'Invalid File'
-                        ]));
-                    //$this->Flash->error('Invalid file');
-                }
-
-
-                // Get temp path safely
-                $tmpPath = $file->getStream()->getMetadata('uri');
-
-                // Extract extension (safe)
-                $extension = pathinfo($file->getClientFilename(), PATHINFO_EXTENSION);
-
-                // New filename
-                $newFileName = 'dyd_adh_replied_file.' . $extension;
-                
-                // Create NEW UploadedFile object
-                $renamedFile = new UploadedFile(
-                    $tmpPath,
-                    $file->getSize(),
-                    $file->getError(),
-                    $newFileName,
-                    $file->getClientMediaType()
-                );
-
-                $storage = new EsdlStorageService();
-                $fileName = $storage->upload($renamedFile, $bucketPath);
-
-                //$staffData['dyd_clk_replied_file'] = $fileName;
-            } 
-    
-            
-            $transfer = $staffTransferTable->patchEntity($transfer, $staffData);
-
-            if ($transfer->hasErrors()) {
-                return $this->response
-                    ->withType('application/json')
-                    ->withStringBody(json_encode([
-                        'success' => false,
-                        'message' => 'Unable to upload file'
-                    ]));
-            }
-
-            if (!$staffTransferTable->save($transfer)) {
-                return $this->response
-                    ->withType('application/json')
-                    ->withStringBody(json_encode([
-                        'success' => false,
-                        'message' => 'Unable to reject staff transfer'
-                    ]));
-            }
-
-            $app_stage = 'dyd_assistant_director_higher_secondary_rejected';           
-            
-            $ng2g_id = $transfer->id;            
-            $stTime = time();
-            $ng2gApplicationLogsTable = $this->fetchTable('Ng2gApplicationLogs');
-            $logData = [
-                'ng2g_id'      => $ng2g_id,
-                'transaction_id' => $stTime,
-                'app_stage'    => $app_stage,
-                'stage_remark' => $data['reject_remark'] ?? null,
-                'stage_doc' => $fileName,
-                'created_by'   => $this->user_id,
-                'created_at'   => $stTime
-            ];
-
-            $log = $ng2gApplicationLogsTable->newEntity($logData);
-
-            if (!$ng2gApplicationLogsTable->save($log)){
-                $connection->rollback();
-                return $this->response
-                    ->withType('application/json')
-                    ->withStringBody(json_encode([
-                        'success' => false,
-                        'message' => 'Unable to reject Application'
-                    ]));  
-            }
-
-            $connection->commit();
-
-            /* ===============================
-            * 4. JSON Response
-            * =============================== */
-            return $this->response
-                ->withType('application/json')
-                ->withStringBody(json_encode([
-                    'success' => true,
-                    'id' => $transfer->id,
-                    'message' => 'Transfer application rejected successfully'
-                ]));
-
-           
-
-        } catch (\Throwable $e) {
-            $connection->rollback();
-
-            return $this->response
-                ->withStatus(422)
-                ->withType('application/json')
-                ->withStringBody(json_encode([
-                    'status' => false,
-                    'error' => $e->getMessage()
-                ]));
-        }
-    }
+  
 
 
      public function advertisementList()
     {
       
-        $districtTable = TableRegistry::getTableLocator()->get('Districts');
+       $districtTable = TableRegistry::getTableLocator()->get('Districts');
         $districts = $districtTable->find()->all();
         $regionTable = TableRegistry::getTableLocator()->get('Regions');
         $regions = $regionTable->find()->all();
@@ -872,7 +365,7 @@ class DivisionAssistantDirectorController extends AppController
         $postWorkingTable = $this->fetchTable('PostWorking');
 
         $postAdvertisementTable = $this->fetchTable('PostAdvertisement');
-        $ng2g = $postAdvertisementTable->getAdvertisementList();
+        $ng2g = $postAdvertisementTable->getAdvertisementHSList();
 
         
        
@@ -916,6 +409,7 @@ class DivisionAssistantDirectorController extends AppController
         $this->set('horizontalCategories', $horizontalCategoriesDetails);        
         $this->set('districts', $districts);
         $this->set('regions', $regions);
+
 
 
     }
@@ -1314,6 +808,181 @@ class DivisionAssistantDirectorController extends AppController
         ]);
 
         return (bool)$staffOnboardApplicationLogsTable->save($log);
+    }
+
+    
+     public function advertisementPostforword(){
+
+         $this->request->allowMethod(['post', 'ajax']);
+        $data = $this->request->getData();
+        $postAdvertisementId = $data['post_id'];
+        $action = strtolower(trim($data['action'] ?? ''));
+        $rejectReason = trim($data['reject_reason'] ?? '');
+        $forwardReason = trim($data['remark'] ?? '');
+       
+
+          // Validate post_id
+        if (empty($postAdvertisementId)) {
+            return $this->response
+                ->withType('application/json')
+                ->withStatus(400)
+                ->withStringBody(json_encode([
+                    'success' => false,
+                    'message' => 'Post ID is required'
+                ]));
+        }
+
+        // Convert action to database status
+        $statusMap = [
+            'approve'       => 'approved',
+            'forward'       => 'forwarded_dyd_ad',
+            'reject'        => 'rejected',
+            'correction'    => 'send_back_correction',
+            'clarification' => 'request_clarification'
+        ];
+
+        // Validate action
+        if (!isset($statusMap[$action])) {
+            return $this->response
+                ->withType('application/json')
+                ->withStatus(400)
+                ->withStringBody(json_encode([
+                    'success' => false,
+                    'message' => 'Invalid action'
+                ]));
+        }
+
+         // Reject reason is mandatory
+        if ($action === 'reject' && empty($rejectReason)) {
+            return $this->response
+                ->withType('application/json')
+                ->withStatus(400)
+                ->withStringBody(json_encode([
+                    'success' => false,
+                    'message' => 'Reject reason is required'
+                ]));
+        }
+        
+
+        $newStatus = $statusMap[$action];
+
+        // Find advertisement
+         $postAdvertisementTable = $this->fetchTable('PostAdvertisement');
+
+        $postAdvertisement = $postAdvertisementTable->find()
+            ->where([
+                'id' => $postAdvertisementId
+            ])
+            ->first();
+
+        $previousStatus = $postAdvertisement->status;    
+
+        // Check record exists
+        if (!$postAdvertisement) {
+            return $this->response
+                ->withType('application/json')
+                ->withStatus(404)
+                ->withStringBody(json_encode([
+                    'success' => false,
+                    'message' => 'Advertisement not found'
+                ]));
+        }
+
+        // Update status
+        $postAdvertisement->status = $newStatus;
+
+         // Save reject reason
+        if ($action === 'reject') {
+            $postAdvertisement->reject_reason = $rejectReason;
+        }
+        if ($action === 'forward' || $action === 'approve') {
+            $postAdvertisement->remark  = $forwardReason;
+        }
+        
+         $identity = $this->request->getAttribute('identity');
+
+        $userId = $identity
+            ? $identity->getIdentifier()
+            : null;
+
+       // Save
+        if ($postAdvertisementTable->save($postAdvertisement)) {
+
+            $messages = [
+                'approved' => 'Application Approved successfully',
+                'forwarded' => 'Application Forwarded successfully',
+                'rejected' => 'Application Rejected successfully',
+                'send_back_correction' => 'Application sent back for correction successfully',
+                'request_clarification' => 'Clarification requested successfully',
+                'forwarded_dyd_dadi' => 'Application forwarded to DYD/DADI successfully',
+                'forwarded_dyd_ad' => 'Application forwarded to DYD/AD successfully'
+            ];
+
+            $this->createAdvertisementAudit(
+                    $postAdvertisementId,
+                    $userId,
+                    $action,
+                    $previousStatus,
+                    $newStatus,
+                    $forwardReason,
+                    1
+                );
+
+            return $this->response
+                ->withType('application/json')
+                ->withStringBody(json_encode([
+                    'success' => true,
+                    'data' => [
+                        'post_id' => $postAdvertisementId,
+                        'action' => $action,
+                        'status' => $newStatus
+                    ],
+                    'message' => $messages[$newStatus]
+                ]));
+        }
+
+        // Save failed
+        return $this->response
+            ->withType('application/json')
+            ->withStatus(500)
+            ->withStringBody(json_encode([
+                'success' => false,
+                'message' => 'Failed to update application status',
+                'errors' => $postAdvertisement->getErrors()
+            ]));
+        
+   
+
+    }
+
+    private function createAdvertisementAudit(
+                        int $postAdvertisementId,
+                        ?int $userId,
+                        string $action,
+                        ?string $previousStatus,
+                        ?string $newStatus,
+                        ?string $remarks = null,
+                        ?int $version = null)
+    {
+        $auditTable = $this->fetchTable('PostAdvertisementAuditLogs');
+
+        $request = $this->getRequest();
+
+        $audit = $auditTable->newEntity([
+            'post_advertisement_id' => $postAdvertisementId,
+            'user_id' => $userId,
+            'user_name' => $this->username,
+            'action' => $action,
+            'previous_status' => $previousStatus,
+            'new_status' => $newStatus,
+            'remarks' => $remarks,
+            'ip_address' => $request->clientIp(),
+            'user_agent' => $request->getHeaderLine('User-Agent'),
+            'version' => $version,
+            'metadata' => null
+        ]);
+
+        return $auditTable->save($audit);
     }
 
   }

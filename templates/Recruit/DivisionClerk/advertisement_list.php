@@ -791,7 +791,7 @@
      <!-- Header -->
     <div class="slide-header d-flex justify-content-between align-items-center">
         <div style="width:100%;">
-            <h5 class="mb-0"><i class="fas fa-arrow-trend-up me-1"></i> नवीन जाहिरात मंजुरी अर्ज </h5>
+            <h5 class="mb-0"><i class="fas fa-arrow-trend-up me-1"></i> जाहिरात मंजुरी अर्ज </h5>
             <!--<small class="text-muted">Case ID: <span id="caseId"></span></small>-->
             
            
@@ -926,7 +926,7 @@
      <!-- Header -->
     <div class="slide-header d-flex justify-content-between align-items-center">
         <div style="width:100%;">
-            <h5 class="mb-0"><i class="fas fa-arrow-trend-up me-1"></i> नवीन जाहिरात मंजुरी अर्ज </h5>
+            <h5 class="mb-0"><i class="fas fa-arrow-trend-up me-1"></i>  जाहिरात मंजुरी अर्ज </h5>
             <!--<small class="text-muted">Case ID: <span id="caseId"></span></small>-->          
         </div>
         <button class="btn btn-sm btn-outline-danger startApplicationHistory-close-slider">X</button>
@@ -1713,7 +1713,7 @@ $(document).ready(function(){
                             $('#saActionButtons').hide();
 
                             // Show only when status is pending
-                            if (status && status.toLowerCase() === 'pending') {
+                            if (status && status.toLowerCase() === 'forwarded') {
                                 $('#saActionButtons').show();
                             }
 
@@ -3039,7 +3039,7 @@ loadApprovedPost = function(PostId,action,reason=''){
         }
            console.log('Approve Post ID:', PostId);
             $.ajax({
-                url: '<?= $this->Url->build(['prefix' => 'Recruit',"controller" => "DistrictClerk", "action" => "advertisementPostforword"]); ?>',
+                url: '<?= $this->Url->build(['prefix' => 'Recruit',"controller" => "DivisionClerk", "action" => "advertisementPostforword"]); ?>',
                 type: 'Post',
                 data: formData,
                 processData: false,

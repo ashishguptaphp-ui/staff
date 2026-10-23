@@ -54,7 +54,7 @@ function isActiveMenu($controller, $action, $currentController, $currentAction, 
          <li class="nav-item">
             <a class="nav-link <?= isActiveMenu("DivisionAssistantDirector", "dashboard", $currentController, $currentAction, $currentPrefix) ?>"
              href="<?= $this->Url->build(['prefix' => 'Recruit',"controller" => "DivisionAssistantDirector", "action" => "dashboard"]); ?>">
-            <i class="fas fa-chart-line me-1"></i> माहिती फलक (Dashboard)</a>
+            <i class="fas fa-chart-line me-1"></i> डॅशबोर्ड</a>
           </li>
 
         <li class="nav-item">
@@ -64,7 +64,7 @@ function isActiveMenu($controller, $action, $currentController, $currentAction, 
             $currentController,
             $currentAction,
             $currentPrefix
-           ) ?>" href="<?= $this->Url->build(['prefix' => 'Recruit',"controller" => "DivisionAssistantDirector", "action" => "AdvertisementList"]); ?>"><i class="fas fa-chart-line me-1"></i> Advertisement List</a>
+           ) ?>" href="<?= $this->Url->build(['prefix' => 'Recruit',"controller" => "DivisionAssistantDirector", "action" => "AdvertisementList"]); ?>"><i class="fas fa-chart-line me-1"></i> जाहिरात मान्यता</a>
           </li>
    
 
@@ -75,7 +75,7 @@ function isActiveMenu($controller, $action, $currentController, $currentAction, 
                   $currentController,
                   $currentAction,
                   $currentPrefix
-              ) ?>" href="<?= $this->Url->build(['prefix' => 'Recruit',"controller" => "DivisionAssistantDirector", "action" => "staffSeniorityList"]); ?>"><i class="fas fa-users me-1"></i> Post Vacancies</a>
+              ) ?>" href="<?= $this->Url->build(['prefix' => 'Recruit',"controller" => "DivisionAssistantDirector", "action" => "staffSeniorityList"]); ?>"><i class="fas fa-users me-1"></i> उमेदवार निवड मान्यता</a>
           </li>
         
        

@@ -735,7 +735,10 @@
 <!-- Bootstrap + Bootstrap Icons -->
 <div style="background: #fff; padding:10px;height: 560px !important;overflow-y: auto;">      
     
-        
+         <div class="alert alert-warning" role="alert">
+               <?= h('संस्थेने शिक्षणाधिकारी / शिक्षण उपसंचालक यांचेकडे जाहिरात परवानगी प्रस्ताव सादर केल्यानंतर त्याबाबतची मान्य / अमान्य बाबतचा निर्णय सादर केलेल्या तारखेपासून १५ दिवसांत देणे बंधनकारक राहील अन्यथा तदनंतर शिक्षणाधिकारी / शिक्षण उपसंचालक यांची परवानगी आहे असे गृहीत धरून संस्था पुढील कार्यवाही करेल. संस्थेकडून पदभरतीमध्ये चुकीची कार्यपद्धती अवलंबल्यास त्यास संस्था व शिक्षणाधिकारी / शिक्षण उपसंचालक जबाबदार राहतील.') ?>
+            
+            </div>
 
         <table id="staffTable" class="table table-bordered table-striped table-hover align-middle">
             <thead class="table-light">
@@ -767,8 +770,8 @@
                     <td id="actionBtns111_<?= h($request->id) ?>">
                         <?php
 
-                           echo "<button class='btn btn-primary badge bg-purple text-light action-ud startApplication-open-view me-2' data-mode='2' app-step='1'  data-staffObject='". json_encode($request, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ."' data-id='".$request->id."'> <i class='fa-solid fa-address-card'></i> अर्ज पहा</button>";
-                           echo "<button class='btn btn-primary badge bg-purple text-light action-ud startApplicationHistory-open-view me-2' data-mode='2' app-step='1'  data-staffObject='". json_encode($request, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ."' data-id='".$request->id."'> <i class='fa-solid fa-history'></i> अर्ज इतिहास पहा</button>";
+                           echo "<a href='#'  style='text-decoration:none;' class='startApplication-open-view me-2' data-mode='2' app-step='1'  data-staffObject='". json_encode($request, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ."' data-id='".$request->id."'> <i class='fa-solid fa-address-card'></i> अर्ज पहा</a><br>";
+                           echo "<a href='#'  style='text-decoration:none;' class='startApplicationHistory-open-view me-2' data-mode='2' app-step='1'  data-staffObject='". json_encode($request, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ."' data-id='".$request->id."'> <i class='fa-solid fa-history'></i> टिप्पणी</a>";
                          
                         ?>                    
                          
@@ -788,7 +791,7 @@
      <!-- Header -->
     <div class="slide-header d-flex justify-content-between align-items-center">
         <div style="width:100%;">
-            <h5 class="mb-0"><i class="fas fa-arrow-trend-up me-1"></i> नवीन जाहिरात मंजुरी अर्ज </h5>
+            <h5 class="mb-0"><i class="fas fa-arrow-trend-up me-1"></i> जाहिरात मंजुरी अर्ज </h5>
             <!--<small class="text-muted">Case ID: <span id="caseId"></span></small>-->
             
            
@@ -923,7 +926,7 @@
      <!-- Header -->
     <div class="slide-header d-flex justify-content-between align-items-center">
         <div style="width:100%;">
-            <h5 class="mb-0"><i class="fas fa-arrow-trend-up me-1"></i> नवीन जाहिरात मंजुरी अर्ज </h5>
+            <h5 class="mb-0"><i class="fas fa-arrow-trend-up me-1"></i>जाहिरात मंजुरी अर्ज </h5>
             <!--<small class="text-muted">Case ID: <span id="caseId"></span></small>-->          
         </div>
         <button class="btn btn-sm btn-outline-danger startApplicationHistory-close-slider">X</button>
@@ -1710,7 +1713,7 @@ $(document).ready(function(){
                             $('#saActionButtons').hide();
 
                             // Show only when status is pending
-                            if (status && status.toLowerCase() === 'pending') {
+                            if (status && status.toLowerCase() === 'forwarded_dyd_clerk') {
                                 $('#saActionButtons').show();
                             }
 
@@ -3036,7 +3039,7 @@ loadApprovedPost = function(PostId,action,reason=''){
         }
            console.log('Approve Post ID:', PostId);
             $.ajax({
-                url: '<?= $this->Url->build(['prefix' => 'Recruit',"controller" => "DistrictClerk", "action" => "advertisementPostforword"]); ?>',
+                url: '<?= $this->Url->build(['prefix' => 'Recruit',"controller" => "DivisionAssistantDeputyInspector", "action" => "advertisementPostforword"]); ?>',
                 type: 'Post',
                 data: formData,
                 processData: false,

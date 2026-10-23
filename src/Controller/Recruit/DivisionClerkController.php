@@ -40,7 +40,8 @@ class DivisionClerkController extends AppController
             'ng2gApproveTransfer','ng2gRejectTransfer',
             'staffSeniorityList','advertisementVacancyAjax',
             'advertisementList',
-            'staffOnboardForward'
+            'staffOnboardForward',
+            'advertisementPostforword'
         ]);
 
         $user = $this->request->getAttribute('identity');
@@ -1405,5 +1406,178 @@ class DivisionClerkController extends AppController
         return (bool)$staffOnboardApplicationLogsTable->save($log);
     }
 
+
+     public function advertisementPostforword(){
+
+         $this->request->allowMethod(['post', 'ajax']);
+        $data = $this->request->getData();
+        $postAdvertisementId = $data['post_id'];
+        $action = strtolower(trim($data['action'] ?? ''));
+        $rejectReason = trim($data['reject_reason'] ?? '');
+        $forwardReason = trim($data['remark'] ?? '');
+       
+
+          // Validate post_id
+        if (empty($postAdvertisementId)) {
+            return $this->response
+                ->withType('application/json')
+                ->withStatus(400)
+                ->withStringBody(json_encode([
+                    'success' => false,
+                    'message' => 'Post ID is required'
+                ]));
+        }
+
+        // Convert action to database status
+        $statusMap = [
+            'approve'       => 'approved',
+            'forward'       => 'forwarded_dyd_clerk',
+            'reject'        => 'rejected',
+            'correction'    => 'send_back_correction',
+            'clarification' => 'request_clarification'
+        ];
+
+        // Validate action
+        if (!isset($statusMap[$action])) {
+            return $this->response
+                ->withType('application/json')
+                ->withStatus(400)
+                ->withStringBody(json_encode([
+                    'success' => false,
+                    'message' => 'Invalid action'
+                ]));
+        }
+
+         // Reject reason is mandatory
+        if ($action === 'reject' && empty($rejectReason)) {
+            return $this->response
+                ->withType('application/json')
+                ->withStatus(400)
+                ->withStringBody(json_encode([
+                    'success' => false,
+                    'message' => 'Reject reason is required'
+                ]));
+        }
+        
+
+        $newStatus = $statusMap[$action];
+
+        // Find advertisement
+         $postAdvertisementTable = $this->fetchTable('PostAdvertisement');
+
+        $postAdvertisement = $postAdvertisementTable->find()
+            ->where([
+                'id' => $postAdvertisementId
+            ])
+            ->first();
+
+        $previousStatus = $postAdvertisement->status;    
+
+        // Check record exists
+        if (!$postAdvertisement) {
+            return $this->response
+                ->withType('application/json')
+                ->withStatus(404)
+                ->withStringBody(json_encode([
+                    'success' => false,
+                    'message' => 'Advertisement not found'
+                ]));
+        }
+
+        // Update status
+        $postAdvertisement->status = $newStatus;
+
+         // Save reject reason
+        if ($action === 'reject') {
+            $postAdvertisement->reject_reason = $rejectReason;
+        }
+        if ($action === 'forward' || $action === 'approve') {
+            $postAdvertisement->remark  = $forwardReason;
+        }
+        
+         $identity = $this->request->getAttribute('identity');
+
+        $userId = $identity
+            ? $identity->getIdentifier()
+            : null;
+
+       // Save
+        if ($postAdvertisementTable->save($postAdvertisement)) {
+
+            $messages = [
+                'approved' => 'Application Approved successfully',
+                'forwarded' => 'Application Forwarded successfully',
+                'rejected' => 'Application Rejected successfully',
+                'send_back_correction' => 'Application sent back for correction successfully',
+                'request_clarification' => 'Clarification requested successfully',
+                'forwarded_dyd_clerk' => 'Application forwarded to DYD Clerk successfully'
+            ];
+
+            $this->createAdvertisementAudit(
+                    $postAdvertisementId,
+                    $userId,
+                    $action,
+                    $previousStatus,
+                    $newStatus,
+                    $forwardReason,
+                    1
+                );
+
+            return $this->response
+                ->withType('application/json')
+                ->withStringBody(json_encode([
+                    'success' => true,
+                    'data' => [
+                        'post_id' => $postAdvertisementId,
+                        'action' => $action,
+                        'status' => $newStatus
+                    ],
+                    'message' => $messages[$newStatus]
+                ]));
+        }
+
+        // Save failed
+        return $this->response
+            ->withType('application/json')
+            ->withStatus(500)
+            ->withStringBody(json_encode([
+                'success' => false,
+                'message' => 'Failed to update application status',
+                'errors' => $postAdvertisement->getErrors()
+            ]));
+        
+   
+
+    }
+
+    private function createAdvertisementAudit(
+                        int $postAdvertisementId,
+                        ?int $userId,
+                        string $action,
+                        ?string $previousStatus,
+                        ?string $newStatus,
+                        ?string $remarks = null,
+                        ?int $version = null)
+    {
+        $auditTable = $this->fetchTable('PostAdvertisementAuditLogs');
+
+        $request = $this->getRequest();
+
+        $audit = $auditTable->newEntity([
+            'post_advertisement_id' => $postAdvertisementId,
+            'user_id' => $userId,
+            'user_name' => $this->username,
+            'action' => $action,
+            'previous_status' => $previousStatus,
+            'new_status' => $newStatus,
+            'remarks' => $remarks,
+            'ip_address' => $request->clientIp(),
+            'user_agent' => $request->getHeaderLine('User-Agent'),
+            'version' => $version,
+            'metadata' => null
+        ]);
+
+        return $auditTable->save($audit);
+    }
 
   }

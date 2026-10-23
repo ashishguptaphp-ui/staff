@@ -817,7 +817,7 @@
      <!-- Header -->
     <div class="slide-header d-flex justify-content-between align-items-center">
         <div style="width:100%;">
-            <h5 class="mb-0"><i class="fas fa-arrow-trend-up me-1"></i> नवीन जाहिरात मंजुरी अर्ज </h5>
+            <h5 class="mb-0"><i class="fas fa-arrow-trend-up me-1"></i> जाहिरात मंजुरी अर्ज </h5>
             <!--<small class="text-muted">Case ID: <span id="caseId"></span></small>-->
             
            
@@ -954,7 +954,7 @@
      <!-- Header -->
     <div class="slide-header d-flex justify-content-between align-items-center">
         <div style="width:100%;">
-            <h5 class="mb-0"><i class="fas fa-arrow-trend-up me-1"></i> नवीन जाहिरात मंजुरी अर्ज </h5>
+            <h5 class="mb-0"><i class="fas fa-arrow-trend-up me-1"></i> जाहिरात मंजुरी अर्ज </h5>
             <!--<small class="text-muted">Case ID: <span id="caseId"></span></small>-->
             
            
