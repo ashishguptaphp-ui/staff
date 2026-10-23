@@ -578,6 +578,10 @@
     z-index: 10001 !important;
 }
 
+#approvedOrderPdfModal {
+    z-index: 10020 !important;
+}
+
 .modal-backdrop {
     z-index: 10000 !important;
 }
@@ -714,6 +718,8 @@
 }
 
 
+
+
 </style>
 
     <style>
@@ -789,13 +795,23 @@
 
                             echo "<a href='#' style='text-decoration:none;'  class='startApplication-open-view me-2' data-mode='2' app-step='1'  data-staffObject='". json_encode($request, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ."' data-id='".$request->id."'> <i class='fa-solid fa-address-card'></i> अर्ज पहा</a><br>";
                            echo "<a href='#' style='text-decoration:none;'  class='startApplicationHistory-open-view me-2' data-mode='2' app-step='1'  data-staffObject='". json_encode($request, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ."' data-id='".$request->id."'> <i class='fa-solid fa-history'></i> टिप्पणी</a><br>";
+
+                             if($request->status === 'forwarded_dyd_ad') { 
+                            echo "<a href='#' style='text-decoration:none;color:green;' class='approvedApplication-open-transfer' data-staffObject='". json_encode($request, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP)."' data-id='".$request->id."' >
+                                    <i class='fa-solid fa-arrow-trend-up'></i>  मंजूर करा
+                                </a><br/>";
+                            echo "<a href='#' style='text-decoration:none;color:red;' class='rejectBtn'  data-post-id='".$request->id."' >
+                                    <i class='fa-solid fa-arrow-trend-down'></i>  नामंजूर करा
+                                </a><br/>";
+                            }
+
                            if($approvedLogUrl!=null){
                               echo "<a href='" . h($approvedLogUrl ?? '#') . "' style='text-decoration:none;' target='_blank'" . ($approvedLogUrl ? '' : " onclick=\"return false;\"") . ">
                                 <i class='fa-solid fa-reorder'></i>  आदेश
                             </a><br/>";
                            }
                            if($rejectLogUrl!=null){
-                              echo "<a href='" . h($rejectLogUrl ?? '#') . "' style='text-decoration:none;' target='_blank'" . ($rejectLogUrl ? '' : " onclick=\"return false;\"") . ">
+                              echo "<a href='" . h($rejectLogUrl ?? '#') . "' style='text-decoration:none;' class='approved-order-pdf' data-pdf-title='नकार आदेश'>
                                 <i class='fa-solid fa-reorder'></i>  नकार आदेश
                             </a><br/>";
                            }
@@ -1149,82 +1165,6 @@
 </div>
 
 
-<!-- Reject Reason Modal -->
-<div class="modal fade"
-     id="saRejectReasonModal"
-     tabindex="-1"
-     aria-labelledby="saRejectReasonModalLabel"
-     aria-hidden="true">
-
-    <div class="modal-dialog modal-dialog-centered">
-
-        <div class="modal-content">
-
-            <div class="modal-header bg-success text-white">
-
-                <h5 class="modal-title" id="saRejectReasonModalLabel">
-                    <i class="fas fa-check-circle me-1"></i>
-                    Forward Application
-                </h5>
-
-                <button type="button"
-                        class="btn-close btn-close-white"
-                        data-bs-dismiss="modal">
-                </button>
-
-            </div>
-
-            <div class="modal-body">
-
-                <input type="hidden" id="saRejectPostId">
-
-                <div class="mb-3">
-
-                    <label class="form-label">
-                        Forward Reason
-                        <span class="text-danger">*</span>
-                    </label>
-
-                    <textarea
-                        id="saRejectReason"
-                        class="form-control"
-                        rows="5"
-                        placeholder="Enter forward reason..."
-                        maxlength="1000"></textarea>
-
-                    <div id="saRejectReasonError"
-                         class="text-danger mt-1"
-                         style="display:none;">
-                        Please enter forward reason.
-                    </div>
-
-                </div>
-
-            </div>
-
-            <div class="modal-footer">
-
-                <button type="button"
-                        class="btn btn-secondary btn-sm"
-                        data-bs-dismiss="modal">
-                    Cancel
-                </button>
-
-                <button type="button"
-                        id="saSubmitForwardBtn"
-                        class="btn btn-success btn-sm">
-                    <i class="fas fa-paper-plane me-1"></i>
-                    Submit Forward
-                </button>
-
-            </div>
-
-        </div>
-
-    </div>
-
-</div>
-
 <!-- Slide Panel for Correction Form -->
 <div id="correctionApplicationSlider" class="slide-panel" aria-hidden="true" style="border:3px solid #537895;">
      <!-- Header -->
@@ -1341,6 +1281,148 @@
 </div>
 
 
+
+<!-- Reject Reason Modal -->
+<div class="modal fade"
+     id="saRejectReasonModal"
+     tabindex="-1"
+     aria-labelledby="saRejectReasonModalLabel"
+     aria-hidden="true">
+
+    <div class="modal-dialog modal-dialog-centered">
+
+        <div class="modal-content">
+
+            <div class="modal-header bg-danger text-white">
+
+                <h5 class="modal-title" id="saRejectReasonModalLabel">
+                    <i class="fas fa-times-circle me-1"></i>
+                    Reject Application
+                </h5>
+
+                <button type="button"
+                        class="btn-close btn-close-white"
+                        data-bs-dismiss="modal">
+                </button>
+
+            </div>
+
+            <div class="modal-body">
+
+                <input type="hidden" id="saRejectPostId">
+
+                <div class="reject-reasons">
+
+    <div class="form-check reject-check">
+        <input
+            class="form-check-input"
+            type="checkbox"
+            name="issues[]"
+            value="१. बिंदूनामावली सादर नाही."
+            id="issue1"
+        >
+        <label class="form-check-label" for="issue1">
+            बिंदूनामावली सादर नाही.
+        </label>
+    </div>
+
+    <div class="form-check reject-check">
+        <input
+            class="form-check-input"
+            type="checkbox"
+            name="issues[]"
+            value="२. पदे गोषवारा नाही."
+            id="issue2"
+        >
+        <label class="form-check-label" for="issue2">
+            पदे गोषवारा नाही.
+        </label>
+    </div>
+
+    <div class="form-check reject-check">
+        <input
+            class="form-check-input"
+            type="checkbox"
+            name="issues[]"
+            value="३. रिक्त पदांची माहिती नाही."
+            id="issue3"
+        >
+        <label class="form-check-label" for="issue3">
+            रिक्त पदांची माहिती नाही.
+        </label>
+    </div>
+
+    <div class="form-check reject-check">
+        <input
+            class="form-check-input"
+            type="checkbox"
+            name="issues[]"
+            value="४. अनुकंपा माहिती नाही."
+            id="issue4"
+        >
+        <label class="form-check-label" for="issue4">
+            अनुकंपा माहिती नाही.
+        </label>
+    </div>
+
+</div>
+
+             <textarea
+                        id="saRejectReason"
+                        class="form-control mt-3"
+                        rows="6"
+                        placeholder="Enter reject reason..."
+                        maxlength="1000"></textarea>
+
+                   <div id="saRejectReasonError"
+                         class="text-danger mt-1"
+                         style="display:none;">
+                        Please enter reject reason.
+                    </div>        
+
+
+                
+
+            </div>
+
+            <div class="modal-footer">
+
+                <button type="button"
+                        class="btn btn-secondary btn-sm"
+                        data-bs-dismiss="modal">
+                    Cancel
+                </button>
+
+                <button type="button"
+                        id="saSubmitRejectBtn"
+                        class="btn btn-danger btn-sm">
+                    <i class="fas fa-paper-plane me-1"></i>
+                    Submit Reject
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+<div class="modal fade" id="approvedOrderPdfModal" tabindex="-1" aria-labelledby="approvedOrderPdfModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered" style="max-width: 92vw;">
+        <div class="modal-content" style="height: 90vh;">
+            <div class="modal-header">
+                <h5 class="modal-title" id="approvedOrderPdfModalLabel">आदेश</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0">
+                <iframe id="approvedOrderPdfFrame" title="आदेश PDF" src="about:blank" style="width: 100%; height: 100%; border: 0;"></iframe>
+            </div>
+        </div>
+    </div>
+</div>
 
 
 <script>
@@ -3046,51 +3128,8 @@ $(document).on('click', '#saApproveBtn', function () {
     loadApprovedPost(postId,action);
 });
 
-$(document).on('click', '#saForwardBtn', function () {
-    let postId = $(this).data('post-id');
-    let action ='forward';                            
-  
-    // Store Post ID
-    $('#saRejectPostId').val(postId);
-
-    // Clear previous reason
-    $('#saRejectReason').val('');
-
-    $('#saRejectReasonError').hide();
-
-    // Keep the modal outside the slider stacking context so it stays above the backdrop.
-    const modalElement = document.getElementById('saRejectReasonModal');
-    if (modalElement.parentElement !== document.body) {
-        document.body.appendChild(modalElement);
-    }
-
-    bootstrap.Modal.getOrCreateInstance(modalElement).show();
-
-});
 
 
-$(document).on('click', '#saSubmitForwardBtn', function () {
-
-    let postId = $('#saRejectPostId').val();
-    let reason = $.trim($('#saRejectReason').val());
-
-    if (reason === '') {
-
-        $('#saRejectReasonError').show();
-
-        $('#saRejectReason').focus();
-
-        return;
-    }
-
-    $('#saRejectReasonError').hide();
-
-    loadApprovedPost(
-        postId,
-        'forward',
-        reason
-    );
-});
 
 
 $(document).on('click', '#saSendBackCorrectionBtn', function () {
@@ -3150,6 +3189,145 @@ loadApprovedPost = function(PostId,action,reason=''){
             });
         }
 
-</script>
 
+
+$(document).on('click', '#saRejectBtn, .rejectBtn', function () {
+    let postId = $(this).data('post-id');
+    let action ='reject';                            
+    console.log('Reject Post ID:', postId);
+
+    // Store Post ID
+    $('#saRejectPostId').val(postId);
+
+    // Clear previous reason
+    $('#saRejectReason').val('');
+
+    $('#saRejectReasonError').hide();
+
+  // Keep the modal outside the slider stacking context so it stays above the backdrop.
+    const modalElement = document.getElementById('saRejectReasonModal');
+    if (modalElement.parentElement !== document.body) {
+        document.body.appendChild(modalElement);
+    }
+
+    bootstrap.Modal.getOrCreateInstance(modalElement).show();
+
+});
+
+
+$(document).on('click', '#saSubmitRejectBtn', function () {
+
+    let postId = $('#saRejectPostId').val();
+    let reason = $.trim($('#saRejectReason').val());
+
+     const checked = document.querySelectorAll(
+        'input[name="issues[]"]:checked'
+    );
+    const issues = Array.from(checked, (checkbox) => checkbox.value);
+
+    if (checked.length === 0) {
+
+      alert('Please select at least one reject reason.');
+
+        return false;
+    }
+
+    if (reason === '') {
+
+        $('#saRejectReasonError').show();
+
+        $('#saRejectReason').focus();
+
+        return;
+    }
+
+
+     // Create HTML
+    let finalReason = '';
+
+    issues.forEach(function (issue) {
+        finalReason += '<p>' + issue + '</p>';
+    });
+
+    // Add manually entered reason
+    finalReason += '<p>' + reason + '<br></p>';
+
+
+    $('#saRejectReasonError').hide();
+
+    loadrejectPost(
+        postId,
+        'reject',
+        finalReason
+    );
+});
+
+
+
+
+loadrejectPost = function(PostId,action,reason=''){
+                  
+         var formData = new FormData();
+         formData.append('post_id', PostId); 
+         formData.append('action', action); 
+         if (action === 'reject') {
+            formData.append('reject_reason', reason);
+        }
+        if (action === 'forward') {
+            formData.append('remark', reason);
+        }
+           console.log('Approve Post ID:', PostId);
+            $.ajax({
+                url: '<?= $this->Url->build(['prefix' => 'Recruit',"controller" => "Division", "action" => "advertisementPostApprovel"]); ?>',
+                type: 'Post',
+                data: formData,
+                processData: false,
+                contentType: false,
+                headers: {
+                    'X-CSRF-Token': $('meta[name="csrfToken"]').attr('content') 
+                },
+                  beforeSend: function () {
+                    $('#saSubmitForwardBtn')
+                                .prop('disabled', true)
+                                .html(
+                                    '<i class="fas fa-spinner fa-spin me-1"></i> Processing...'
+                                );
+                        },
+                    success: function (response) {
+                    if(response.success){
+                         bootstrap.Modal.getOrCreateInstance(
+                             document.getElementById('saRejectReasonModal')
+                         ).hide();
+                         location.reload();
+                                                 
+                    }
+                    
+                },
+                error: function () {
+                    $("#returnHtmlForm").html('<option>Error loading data</option>');
+                }
+            });
+        }
+
+
+        $(document).on('click', '.approved-order-pdf', function (event) {
+            event.preventDefault();
+            const pdfTitle = this.dataset.pdfTitle || 'आदेश';
+            $('#approvedOrderPdfModalLabel').text(pdfTitle);
+            $('#approvedOrderPdfFrame').attr('title', pdfTitle + ' PDF');
+            $('#approvedOrderPdfFrame').attr('src', this.href);
+
+            const modalElement = document.getElementById('approvedOrderPdfModal');
+            if (modalElement.parentElement !== document.body) {
+                document.body.appendChild(modalElement);
+            }
+
+            bootstrap.Modal.getOrCreateInstance(modalElement).show();
+        });
+
+        $('#approvedOrderPdfModal').on('hidden.bs.modal', function () {
+            $('#approvedOrderPdfFrame').attr('src', 'about:blank');
+        });
+
+</script>
 

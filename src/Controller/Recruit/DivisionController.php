@@ -55,6 +55,7 @@ class DivisionController extends AppController
             'headerUpload',
             'headerDelete',
             'staffOnboardGenrateFile',
+            'advertisementPostApprovel'
         ]);
 
         $user = $this->request->getAttribute('identity');
@@ -2638,10 +2639,7 @@ private function findWkhtmltopdfBinary(): ?string
         $postWorkingTable = $this->fetchTable('PostWorking');
 
         $postAdvertisementTable = $this->fetchTable('PostAdvertisement');
-        $ng2g = $postAdvertisementTable->getAdvertisementList();
-
-        
-       
+        $ng2g = $postAdvertisementTable->getAdvertisementHSList();     
        
 
         $ddovacantTable = $this->fetchTable('DdoVacantMaster');    
@@ -2726,5 +2724,554 @@ private function findWkhtmltopdfBinary(): ?string
         $this->set('rejectLogDocuments', $rejectLogDocuments);
 
     }
+
+
+    
+    public function advertisementPostApprovel(){
+
+         $this->request->allowMethod(['post', 'ajax']);
+        $data = $this->request->getData();
+        $postAdvertisementId = $data['post_id'];
+        $action = strtolower(trim($data['action'] ?? ''));
+        $rejectReason = trim($data['reject_reason'] ?? '');
+        $forwardReason = trim($data['remark'] ?? '');
+       
+
+          // Validate post_id
+        if (empty($postAdvertisementId)) {
+            return $this->response
+                ->withType('application/json')
+                ->withStatus(400)
+                ->withStringBody(json_encode([
+                    'success' => false,
+                    'message' => 'Post ID is required'
+                ]));
+        }
+
+        // Convert action to database status
+        $statusMap = [
+            'approve'       => 'approved',
+            'reject'        => 'rejected',
+            //'correction'    => 'send_back_correction',
+            //'clarification' => 'request_clarification'
+        ];
+
+        // Validate action
+        if (!isset($statusMap[$action])) {
+            return $this->response
+                ->withType('application/json')
+                ->withStatus(400)
+                ->withStringBody(json_encode([
+                    'success' => false,
+                    'message' => 'Invalid action'
+                ]));
+        }
+
+         // Reject reason is mandatory
+        if ($action === 'reject' && empty($rejectReason)) {
+            return $this->response
+                ->withType('application/json')
+                ->withStatus(400)
+                ->withStringBody(json_encode([
+                    'success' => false,
+                    'message' => 'Reject reason is required'
+                ]));
+        }
+
+        $newStatus = $statusMap[$action];
+
+        // Find advertisement
+         $postAdvertisementTable = $this->fetchTable('PostAdvertisement');
+
+        $postAdvertisement = $postAdvertisementTable->find()
+            ->where([
+                'id' => $postAdvertisementId
+            ])
+            ->first();
+
+        // Check record exists
+        if (!$postAdvertisement) {
+            return $this->response
+                ->withType('application/json')
+                ->withStatus(404)
+                ->withStringBody(json_encode([
+                    'success' => false,
+                    'message' => 'Advertisement not found'
+                ]));
+        }
+
+        $previousStatus = $postAdvertisement->status;
+
+        // Save reject reason
+        if ($action === 'reject') {
+            $postAdvertisement->reject_reason = $rejectReason;
+        }
+        
+         $identity = $this->request->getAttribute('identity');
+
+        $userId = $identity
+            ? $identity->getIdentifier()
+            : null;
+
+        $stage_doc = null;
+        if ($action === 'approve') {
+            $stage_doc = $this->generateAdvertisementApprovalPdf($postAdvertisementId);
+            if ($stage_doc === null) {
+                return $this->response
+                    ->withType('application/json')
+                    ->withStatus(500)
+                    ->withStringBody(json_encode([
+                        'success' => false,
+                        'message' => 'Unable to generate the approval document'
+                    ]));
+            }
+        }
+
+          if ($action === 'reject') {
+            $stage_doc = $this->generateAdvertisementRejectPdf($postAdvertisementId,$rejectReason);
+            if ($stage_doc === null) {
+                return $this->response
+                    ->withType('application/json')
+                    ->withStatus(500)
+                    ->withStringBody(json_encode([
+                        'success' => false,
+                        'message' => 'Unable to generate the approval document'
+                    ]));
+            }
+        }
+
+
+        // Persist approval only after the document has been generated.
+        $postAdvertisement->status = $newStatus;
+
+        // Save
+        if ($postAdvertisementTable->save($postAdvertisement)) {
+
+            $messages = [
+                'approved' => 'Application Approved successfully',
+                'rejected' => 'Application Rejected successfully',
+                //'send_back_correction' => 'Application sent back for correction successfully',
+                //'request_clarification' => 'Clarification requested successfully'
+            ];
+
+            $this->createAdvertisementAudit(
+                    $postAdvertisementId,
+                    $userId,
+                    $action,
+                    $previousStatus,
+                    $newStatus,
+                    $forwardReason,
+                    1,
+                    $stage_doc
+                );
+
+            return $this->response
+                ->withType('application/json')
+                ->withStringBody(json_encode([
+                    'success' => true,
+                    'data' => [
+                        'post_id' => $postAdvertisementId,
+                        'action' => $action,
+                        'status' => $newStatus
+                    ],
+                    'message' => $messages[$newStatus]
+                ]));
+        }
+
+        // Save failed
+        return $this->response
+            ->withType('application/json')
+            ->withStatus(500)
+            ->withStringBody(json_encode([
+                'success' => false,
+                'message' => 'Failed to update application status',
+                'errors' => $postAdvertisement->getErrors()
+            ]));
+        
+   
+
+    }
+
+    
+private function generateAdvertisementRejectPdf($appId, $rejectReason): ?string
+    {
+        $this->autoRender = false;
+
+        try {
+            $appId = (int)$appId;
+            if ($appId <= 0) {
+                throw new \InvalidArgumentException('Invalid application ID');
+            }
+
+            $staffName = 'श्री. अमोल रमेश पाटील';
+            $orderDate = '24-08-2026';
+            $post = 'सहाय्यक शिक्षक';
+            $proposalNumber = sprintf('NG2G-TRFR-%s-%06d', date('Y'), $appId);
+            $proposalDate = '15-08-2026';
+
+            $sansthaCode = '';
+            $sansthaName = '';
+            $schoolCode = '';
+            $sansthaName = 'श्री शिवाजी हायस्कूल व कनिष्ठ महाविद्यालय, कोल्हापूर';
+
+            $sourceAided = 'विना अनुदानित';
+            $targetAided = 'अंशतः अनुदानित (२० टक्के)';
+            $unaidedTimeFrame = 'विना अनुदान सेवा कालावधी';
+            $educationQualification = 'शैक्षणिक पात्रता';
+            $payScale = 'वेतनश्रेणी';
+            $unaidedOrderDate = 'अनुदानित वरील नेमणुक दिनांक';
+            $remark = 'शेरा';
+            $status = 'मान्य';
+
+            $refNo = 'जा.क्र.: शिसंमा-' . date('Y') . "/विना-अनु बदली आदेश/" . $staffName . "/" . sprintf('%06d', $appId);
+            $letterData = [
+                'ref_no' => $refNo,
+                'letter_date' => $orderDate,
+                'division_name' => 'पुणे',
+                'proposal_number' => $proposalNumber,
+                'proposal_date' => $proposalDate,
+                'teacher_name' => $staffName,
+                'designation' => $post,
+                'sanstha_code' => $sansthaCode,
+                'sanstha_name' => $sansthaName,
+                'school_code' => $schoolCode,
+                'school_name' => $sansthaName,
+                'source_aided' => $sourceAided,
+                'target_aided' => $targetAided,
+                'unaided_time_frame' => $unaidedTimeFrame,
+                'education_qualification' => $educationQualification,
+                'pay_scale' => $payScale,
+                'unaided_order_date' => $unaidedOrderDate,
+                'remark' => $remark,
+                'status' => $status,
+            ];
+
+            $uploadDir = WWW_ROOT . 'uploads' . DS . 'staffonboarding' . DS . 'advtreject' . DS;
+            $qrcodeDir = $uploadDir . 'qrcodes' . DS;
+
+            if (!is_dir($uploadDir)) {
+                mkdir($uploadDir, 0777, true);
+            }
+
+            if (!is_dir($qrcodeDir)) {
+                mkdir($qrcodeDir, 0777, true);
+            }
+
+            $endPoint = 'uploads/staffonboarding/advtreject/advt_dyd_order_reject_' . $appId . '.pdf';
+            $outputPath = WWW_ROOT . $endPoint;
+            $tempHtmlPath = $uploadDir . 'temp_advt_dyd_reject_letter.html';
+
+            $basePath = $this->request->getAttribute('base') ?? '';
+            $fullUrl = $this->request->scheme() . '://' . $this->request->host() . $basePath . '/' . $endPoint;
+
+            $vacancyData = $this->fetchTable('PostAdvertisementVacancies')
+                    ->getVacanciesByAdvertisement($appId);
+
+            $letterData['app_id'] = $appId;
+            $letterData['Datalist'] = $vacancyData;
+            $letterData['rejectReason'] = $rejectReason;
+            $letterData['targetAppUrl'] = $fullUrl;
+            $letterData['targetQRUrl'] = $this->request->scheme() . '://' . $this->request->host() . $basePath . '/uploads/staffonboarding/advtreject/qrcodes/advt_dyd_order_reject_' . $appId . '.png';
+            $letterData['targetQRPath'] = $qrcodeDir . 'advt_dyd_order_reject_' . $appId . '.png';
+
+            //$this->generateQRCode($fullUrl, $appId);
+            $html = $this->renderAdvertisementRejectLetterViewContent($letterData);
+
+            $writeResult = file_put_contents($tempHtmlPath, $html);
+            if ($writeResult === false) {
+                throw new \RuntimeException('Unable to write temporary reject letter HTML.');
+            }
+
+            $wkhtmltopdfBinary = $this->findWkhtmltopdfBinary();
+            if ($wkhtmltopdfBinary === null) {
+                throw new \RuntimeException('wkhtmltopdf is not installed or not available in PATH.');
+            }
+
+            $cmd = sprintf(
+                '%s --enable-local-file-access --encoding UTF-8 --page-size A4 %s %s',
+                escapeshellarg($wkhtmltopdfBinary),
+                escapeshellarg($tempHtmlPath),
+                escapeshellarg($outputPath)
+            );
+
+            exec($cmd . ' 2>&1', $output, $statusCode);
+
+            if ($statusCode !== 0 || !file_exists($outputPath)) {
+                $error = implode("\n", $output);
+                throw new \RuntimeException('PDF generation failed: ' . $error);
+            }
+
+            return $endPoint;
+            
+        } catch (\Throwable $e) {
+            error_log('generateRejectLetter failed: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+
+    
+ private function renderAdvertisementRejectLetterViewContent($data): string
+    {
+        $base64ImageQR = '';
+        if (!empty($data['targetQRPath']) && file_exists($data['targetQRPath'])) {
+            $imageDataQR = base64_encode(file_get_contents($data['targetQRPath']));
+            $base64ImageQR = 'data:image/png;base64,' . $imageDataQR;
+        }
+
+        $base64Image = $this->getActiveHeaderImageDataUri((int)$this->user_id);
+        $todate = date('d-m-Y', time());
+
+        $html = '<!DOCTYPE html>
+                <html lang="mr">
+                <head>
+                    <meta charset="UTF-8">
+                    <style>
+                        @page {
+                            size: A4 portrait;
+                            margin: 12mm;
+                        }
+                        body {
+                            font-family: "Nirmala UI", "Mangal", "DejaVu Sans", "Arial Unicode MS", sans-serif;
+                            font-size: 20px;
+                            line-height: 1.7;
+                            margin: 0;
+                            padding: 0;
+                            color: #111;
+                        }
+                        .letter-page {
+                            width: 100%;
+                            box-sizing: border-box;
+                        }
+                        .header-wrap {
+                            text-align: center;
+                            margin: 0 auto 12px auto;
+                        }
+                        .header-img {
+                            display: block;
+                            width: 100%;
+                            height: auto;
+                            margin: 0 auto 8px auto;
+                        }
+                        .letter-title {
+                            font-size: 20px;
+                            font-weight: 700;
+                            text-align: center;
+                            margin-top: 6px;
+                            letter-spacing: 0.5px;
+                        }
+                        .qrcode-img {
+                            width: 300px;
+                            border:2px solid #1da5bd;
+                        }
+                        .meta-table {
+                            width: 100%;
+                            border-collapse: collapse;
+                            margin-bottom: 15px;
+                        }
+                        .meta-table td {
+                            vertical-align: top;
+                            padding: 2px 0;
+                        }
+                        .text-right {
+                            text-align: right;
+                        }
+                        .recipient {
+                            margin: 15px 0;
+                            line-height: 1.6;
+                        }
+                        .subject-box {
+                            font-weight: bold;
+                            margin: 15px 0;
+                            padding: 6px 10px;
+                            background-color: #f4f4f4;
+                            border-left: 3px solid #666;
+                        }
+                        .reference {
+                            margin-bottom: 15px;
+                        }
+                        .content {
+                            text-align: justify;
+                            text-indent: 30px;
+                            margin-top: 15px;
+                            line-height: 1.8;
+                        }
+                        .content p {
+                            margin: 10px 0;
+                        }
+                        .signature-table {
+                            width: 100%;
+                            margin-top: 50px;
+                            border-collapse: collapse;
+                            page-break-inside: avoid;
+                        }
+                        .copy-section {
+                            margin-top: 40px;
+                            padding-top: 10px;
+                            border-top: 1px dashed #aaa;
+                            font-size: 13px;
+                            page-break-inside: avoid;
+                        }
+                        .right {
+                            float:right;
+                        }
+                        .signature-wrap {
+                            width: 100%;
+                            margin-top: 40px;
+                            clear: both;
+                        }
+                        .signature-block {
+                            float: right;
+                            width: 260px;
+                            text-align: right;
+                            margin-top: 10px;
+                            margin-bottom: 10px;
+                        }
+                        .signature {
+                            text-align: right;
+                            margin: 0;
+                        }
+                        .copy-to {
+                            margin-top: 70px;
+                            clear: both;
+                            font-weight: 600;
+                        }
+                        table {
+                            border-collapse: collapse;
+                            width: 100%;
+                            table-layout: fixed;
+                        }
+                        th, td {
+                            border: 1px solid #000;
+                            padding: 6px 4px;
+                            vertical-align: top;
+                            text-align: center;
+                            word-wrap: break-word;
+                        }
+                    </style>
+                </head>
+                <body>
+                <div class="letter-page">
+                    ' . (!empty($base64Image) ? '<div class="header-wrap"><img class="header-img" src="' . $base64Image . '"></div>' : '') . '
+               
+                    <div>
+                        आदेश :-
+                    </div>
+<br>
+      प्रति,
+<div>
+    <span class="indent">अध्यक्ष / सचिव, संबंधित संस्था
+                        </span>
+    
+</div>
+                
+               <br>
+                <div class="subject">
+                    विषय :- कनिष्ठ लिपिक प्रयोगशाळा सहाय्यक / ग्रंथपाल / भरतीसाठी जाहीरात परवानगी बाबत.
+                </div>
+                <br>
+                <div>
+                      संदर्भ :-
+                    <br>
+                    ' . $this->transliterateToMarathi("१. शासन निर्णय दिनांक ११/०८/२०२६ व दि.१६/०८/२०२६ नुसार.
+                    <br>
+                    २. आपल्या  संस्थेची  जाहीरात  परवानगी  मागणी  दि १६/०८/२०२६ ") . ' </div>
+
+                <div class="content">
+                    <p>संस्थेने दि. ________ रोजी सादर केलेल्या प्रस्तावाची पडताळणी केली असता,शिक्षकेतर पदभरतीची मागणी खालीलप्रमाणे आहे.</p>
+                    <table style="width:100%;border:1px solid green;">
+                        <tr>
+                            <th>अ.क्र.</th>
+                            <th>संस्थेचे नाव </th>
+                            <th>संस्था कोड</th>
+                            <th>पदभरतीच्या पदांचा तपशील</th>
+                            <th>संवर्ग</th>
+                            <th>पदसंख्या</th>
+                             <th>वेतनश्रेणी</th>
+                        </tr>';
+                    $i = 1;
+                     foreach ($data['Datalist'] as $item) {
+                        $html .= '<tr>
+                            <td>' . h($i) . '.</td>
+                            <td>' . h($item['school_name']) . '</td>
+                            <td>' . h($item['school_udise_code']) . '</td>
+                            <td>' . h($item['post_name']) . '</td>
+                            <td>' . h($item['category']) . '</td>
+                            <td>' . h($item['vacancy_count']) . '</td>
+                            <td>' . h($item['pay_scale']) . '</td>
+                        </tr>';
+                        $i++;
+                     }   
+                   
+                      
+                  $html .='  </table>
+                    <p>सादर प्रस्तावामध्ये खालीलप्रमाणे त्रुटी दिसून येतात:</p>
+                    '.$data['rejectReason'].'
+                    <p></p>
+                    <p>सादर केलेल्या प्रस्तावामध्ये वर नमूद केलेल्या त्रुटी असल्यामुळे, जाहिरात परवानगी  प्रस्ताव अमान्य / परत करण्यात येत आहे.</p>
+                </div>
+
+        
+
+                <div>
+                        <p class="right" style="text-align:right; margin:0;">
+                            स्वाक्षरी/-
+                        </p>
+
+                   <div style="height: 100px;"></div>
+
+                        <p style="margin:0;">
+                            प्रत -
+                        </p>
+
+                        <p>
+                            १. मुख्याध्यापक / संबंधित शाळा
+                        </p>
+                       
+                    </div>
+
+
+                <div style="clear:both;"></div>
+                </div>
+            </body>
+            </html>';
+
+        return $html; 
+    
+    }
+
+    
+    private function createAdvertisementAudit(
+                        int $postAdvertisementId,
+                        ?int $userId,
+                        string $action,
+                        ?string $previousStatus,
+                        ?string $newStatus,
+                        ?string $remarks = null,
+                        ?int $version = null,
+                        ?string $stage_doc = null,)
+    {
+        $auditTable = $this->fetchTable('PostAdvertisementAuditLogs');
+
+        $request = $this->getRequest();
+
+        $audit = $auditTable->newEntity([
+            'post_advertisement_id' => $postAdvertisementId,
+            'user_id' => $userId,
+            'user_name' => $this->username,
+            'action' => $action,
+            'previous_status' => $previousStatus,
+            'new_status' => $newStatus,
+            'remarks' => $remarks,
+            'ip_address' => $request->clientIp(),
+            'user_agent' => $request->getHeaderLine('User-Agent'),
+            'version' => $version,
+            'stage_doc' => $stage_doc,
+            'metadata' => null
+        ]);
+
+        return $auditTable->save($audit);
+    }
+    
 
   }
