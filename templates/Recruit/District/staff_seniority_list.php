@@ -809,13 +809,13 @@
                                 <i class='fa-solid fa-history'></i> टिप्पणी
                             </a><br/>";
 
-                            if($approvedLogUrl!=null){
-                               echo "<a href='" . h($approvedLogUrl) . "'   style='text-decoration:none;' class='approved-order-pdf' data-pdf-title='आदेश'>
+                           if($approvedLogUrl!=null){
+                               echo "<a href='" . h($approvedLogUrl) . "' style='text-decoration:none;' class='approved-order-pdf' data-pdf-title='आदेश'>
                                     <i class='fa-solid fa-reorder'></i>  आदेश
                                 </a><br/>";  
                            }
-                             if($rejectLogUrl!=null){
-                               echo "<a href='" . h($rejectLogUrl) . "'   style='text-decoration:none;' class='approved-order-pdf' data-pdf-title='नकार आदेश'>
+                            if($rejectLogUrl!=null){
+                               echo "<a href='" . h($rejectLogUrl) . "' style='text-decoration:none;' class='approved-order-pdf' data-pdf-title='नकार आदेश'>
                                     <i class='fa-solid fa-reorder'></i>  नकार आदेश
                                 </a><br/>";  
                            }
@@ -836,19 +836,13 @@
                                 </a><br/>";
                                  echo "<a href='#' style='text-decoration:none;color:#c98813;' class='returnApplication-open-transfer' data-staffObject='". json_encode($post, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ."' data-id='".$post->id."' data-seq='".$idx."'>
                                     <i class='fa-solid fa-arrow-trend-down'></i>  त्रुटी पुरतेनासाठी परत पाठवा (दुरुस्तीसाठी)
-                                </a>";
-                              
+                                </a>";                              
                             }
-
-
                                                                
                             }else{
                                  echo "";
                             }                         
-                        
                         ?>
-                       
-                         
                     </td>
                 </tr>
                 <?php endforeach; ?>
