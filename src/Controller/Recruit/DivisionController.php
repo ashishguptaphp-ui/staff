@@ -55,7 +55,8 @@ class DivisionController extends AppController
             'headerUpload',
             'headerDelete',
             'staffOnboardGenrateFile',
-            'advertisementPostApprovel'
+            'advertisementPostApprovel',
+            'advertisementGenrateFile'
         ]);
 
         $user = $this->request->getAttribute('identity');
@@ -3273,5 +3274,388 @@ private function generateAdvertisementRejectPdf($appId, $rejectReason): ?string
         return $auditTable->save($audit);
     }
     
+
+    public function advertisementGenrateFile()
+    {
+        $this->Authorization->skipAuthorization();
+        $this->request->allowMethod(['post', 'ajax']);
+        $data = $this->request->getData();
+        $appId = (int)($data['app_id'] ?? 0);
+
+        if ($appId <= 0) {
+            return $this->response
+                ->withStatus(400)
+                ->withType('application/json')
+                ->withStringBody(json_encode([
+                    'success' => false,
+                    'message' => 'Application ID is required',
+                ]));
+        }
+
+        $fileName = $this->generateAdvertisementApprovalPdf($appId);
+        if ($fileName === null) {
+            return $this->response
+                ->withStatus(500)
+                ->withType('application/json')
+                ->withStringBody(json_encode([
+                    'success' => false,
+                    'message' => 'Unable to generate the approval document',
+                ]));
+        }
+
+        $basePath = $this->request->getAttribute('base') ?? '';
+        $pdfUrl = $this->request->scheme() . '://' . $this->request->host()
+            . $basePath . '/' . ltrim($fileName, '/');
+
+        return $this->response
+            ->withType('application/json')
+            ->withStringBody(json_encode([
+                'success' => true,
+                'url' => $pdfUrl,
+                'staffId' => $appId,
+            ]));
+    }
+
+     private function generateAdvertisementApprovalPdf($appId): ?string
+    {
+        $this->autoRender = false;
+
+        try {
+            $appId = (int)$appId;
+            if ($appId <= 0) {
+                throw new \InvalidArgumentException('Invalid application ID');
+            }
+
+            $staffName = 'श्री. अमोल रमेश पाटील';
+            $orderDate = '24-08-2026';
+            $post = 'सहाय्यक शिक्षक';
+            $proposalNumber = sprintf('NG2G-TRFR-%s-%06d', date('Y'), $appId);
+            $proposalDate = '15-08-2026';
+
+            $sansthaCode = '';
+            $sansthaName = '';
+            $schoolCode = '';
+            $sansthaName = 'श्री शिवाजी हायस्कूल व कनिष्ठ महाविद्यालय, कोल्हापूर';
+
+            $sourceAided = 'विना अनुदानित';
+            $targetAided = 'अंशतः अनुदानित (२० टक्के)';
+            $unaidedTimeFrame = 'विना अनुदान सेवा कालावधी';
+            $educationQualification = 'शैक्षणिक पात्रता';
+            $payScale = 'वेतनश्रेणी';
+            $unaidedOrderDate = 'अनुदानित वरील नेमणुक दिनांक';
+            $remark = 'शेरा';
+            $status = 'मान्य';
+
+            $refNo = 'जा.क्र.: शिसंमा-' . date('Y') . "/विना-अनु बदली आदेश/" . $staffName . "/" . sprintf('%06d', $appId);
+            $letterData = [
+                'ref_no' => $refNo,
+                'letter_date' => $orderDate,
+                'division_name' => 'पुणे',
+                'proposal_number' => $proposalNumber,
+                'proposal_date' => $proposalDate,
+                'teacher_name' => $staffName,
+                'designation' => $post,
+                'sanstha_code' => $sansthaCode,
+                'sanstha_name' => $sansthaName,
+                'school_code' => $schoolCode,
+                'school_name' => $sansthaName,
+                'source_aided' => $sourceAided,
+                'target_aided' => $targetAided,
+                'unaided_time_frame' => $unaidedTimeFrame,
+                'education_qualification' => $educationQualification,
+                'pay_scale' => $payScale,
+                'unaided_order_date' => $unaidedOrderDate,
+                'remark' => $remark,
+                'status' => $status,
+            ];
+
+            $uploadDir = WWW_ROOT . 'uploads' . DS . 'staffonboarding' . DS . 'advtapprove' . DS;
+            $qrcodeDir = $uploadDir . 'qrcodes' . DS;
+
+            if (!is_dir($uploadDir)) {
+                mkdir($uploadDir, 0777, true);
+            }
+
+            if (!is_dir($qrcodeDir)) {
+                mkdir($qrcodeDir, 0777, true);
+            }
+
+            $endPoint = 'uploads/staffonboarding/advtapprove/advt_dyd_order_' . $appId . '.pdf';
+            $outputPath = WWW_ROOT . $endPoint;
+            $tempHtmlPath = $uploadDir . 'temp_advt_dyd_approval_letter.html';
+
+            $basePath = $this->request->getAttribute('base') ?? '';
+            $fullUrl = $this->request->scheme() . '://' . $this->request->host() . $basePath . '/' . $endPoint;
+
+            $vacancyData = $this->fetchTable('PostAdvertisementVacancies')
+                    ->getVacanciesByAdvertisement($appId);
+
+            $letterData['app_id'] = $appId;
+            $letterData['Datalist'] = $vacancyData;
+            $letterData['targetAppUrl'] = $fullUrl;
+            $letterData['targetQRUrl'] = $this->request->scheme() . '://' . $this->request->host() . $basePath . '/uploads/staffonboarding/advtapprove/qrcodes/advt_dyd_order_' . $appId . '.png';
+            $letterData['targetQRPath'] = $qrcodeDir . 'advt_dyd_order_' . $appId . '.png';
+
+            //$this->generateQRCode($fullUrl, $appId);
+            $html = $this->renderAdvertisementApprovalLetterViewContent($letterData);
+
+            $writeResult = file_put_contents($tempHtmlPath, $html);
+            if ($writeResult === false) {
+                throw new \RuntimeException('Unable to write temporary approval letter HTML.');
+            }
+
+            $wkhtmltopdfBinary = $this->findWkhtmltopdfBinary();
+            if ($wkhtmltopdfBinary === null) {
+                throw new \RuntimeException('wkhtmltopdf is not installed or not available in PATH.');
+            }
+
+            $cmd = sprintf(
+                '%s --enable-local-file-access --encoding UTF-8 --page-size A4 %s %s',
+                escapeshellarg($wkhtmltopdfBinary),
+                escapeshellarg($tempHtmlPath),
+                escapeshellarg($outputPath)
+            );
+
+            exec($cmd . ' 2>&1', $output, $statusCode);
+
+            if ($statusCode !== 0 || !file_exists($outputPath)) {
+                $error = implode("\n", $output);
+                throw new \RuntimeException('PDF generation failed: ' . $error);
+            }
+
+            return $endPoint;
+            
+        } catch (\Throwable $e) {
+            error_log('generateApprovalLetter failed: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+
+     private function renderAdvertisementApprovalLetterViewContent($data): string
+    {
+        $base64ImageQR = '';
+        if (!empty($data['targetQRPath']) && file_exists($data['targetQRPath'])) {
+            $imageDataQR = base64_encode(file_get_contents($data['targetQRPath']));
+            $base64ImageQR = 'data:image/png;base64,' . $imageDataQR;
+        }
+
+        $base64Image = $this->getActiveHeaderImageDataUri((int)$this->user_id);
+        $todate = date('d-m-Y', time());
+
+        $html = '<!DOCTYPE html>
+                <html lang="mr">
+                <head>
+                    <meta charset="UTF-8">
+                    <style>
+                        @page {
+                            size: A4 portrait;
+                            margin: 12mm;
+                        }
+                        body {
+                            font-family: "DejaVu Sans", "Nirmala UI", "Mangal", "Arial Unicode MS", sans-serif;
+                            font-size: 20px;
+                            line-height: 1.7;
+                            margin: 0;
+                            padding: 0;
+                            color: #111;
+                        }
+                        .letter-page {
+                            width: 100%;
+                            box-sizing: border-box;
+                        }
+                        .header-wrap {
+                            text-align: center;
+                            margin: 0 auto 12px auto;
+                        }
+                        .header-img {
+                            display: block;
+                            width: 100%;
+                            height: auto;
+                            margin: 0 auto 8px auto;
+                        }
+                        .letter-title {
+                            font-size: 20px;
+                            font-weight: 700;
+                            text-align: center;
+                            margin-top: 6px;
+                            letter-spacing: 0.5px;
+                        }
+                        .qrcode-img {
+                            width: 300px;
+                            border:2px solid #1da5bd;
+                        }
+                        .meta-table {
+                            width: 100%;
+                            border-collapse: collapse;
+                            margin-bottom: 15px;
+                        }
+                        .meta-table td {
+                            vertical-align: top;
+                            padding: 2px 0;
+                        }
+                        .text-right {
+                            text-align: right;
+                        }
+                        .recipient {
+                            margin: 15px 0;
+                            line-height: 1.6;
+                        }
+                        .subject-box {
+                            font-weight: bold;
+                            margin: 15px 0;
+                            padding: 6px 10px;
+                            background-color: #f4f4f4;
+                            border-left: 3px solid #666;
+                        }
+                        .reference {
+                            margin-bottom: 15px;
+                        }
+                        .content {
+                            text-align: justify;
+                            text-indent: 30px;
+                            margin-top: 15px;
+                            line-height: 1.8;
+                        }
+                        .content p {
+                            margin: 10px 0;
+                        }
+                        .signature-table {
+                            width: 100%;
+                            margin-top: 50px;
+                            border-collapse: collapse;
+                            page-break-inside: avoid;
+                        }
+                        .copy-section {
+                            margin-top: 40px;
+                            padding-top: 10px;
+                            border-top: 1px dashed #aaa;
+                            font-size: 13px;
+                            page-break-inside: avoid;
+                        }
+                        .right {
+                            float:right;
+                        }
+                        .signature-wrap {
+                            width: 100%;
+                            margin-top: 40px;
+                            clear: both;
+                        }
+                        .signature-block {
+                            float: right;
+                            width: 260px;
+                            text-align: right;
+                            margin-top: 10px;
+                            margin-bottom: 10px;
+                        }
+                        .signature {
+                            text-align: right;
+                            margin: 0;
+                        }
+                        .copy-to {
+                            margin-top: 70px;
+                            clear: both;
+                            font-weight: 600;
+                        }
+                        table {
+                            border-collapse: collapse;
+                            width: 100%;
+                            table-layout: fixed;
+                        }
+                        th, td {
+                            border: 1px solid #000;
+                            padding: 6px 4px;
+                            vertical-align: top;
+                            text-align: center;
+                            word-wrap: break-word;
+                        }
+                    </style>
+                </head>
+                <body>
+                <div class="letter-page">
+                    ' . (!empty($base64Image) ? '<div class="header-wrap"><img class="header-img" src="' . $base64Image . '"></div>' : '') . '
+            
+                    <div>
+                        आदेश :-
+                    </div>
+            <br>
+               
+        प्रति,
+                <div>
+                    <span class="indent">अध्यक्ष / सचिव, संबंधित संस्था,</span>                    
+                </div>
+                
+               <br>
+                <div class="subject">
+                    विषय :- कनिष्ठ लिपिक प्रयोगशाळा सहाय्यक / ग्रंथपाल / भरतीसाठी जाहीरात परवानगी बाबत.
+                </div>
+                <br>
+                <div>
+                    संदर्भ :-
+                    <br>
+                    ' . $this->transliterateToMarathi("१. शासन निर्णय दिनांक ११/०८/२०२६ व अधिसूचना दि.१६/०८/२०२६ नंतर.
+                    <br>
+                    २. आपल्या  संस्थेची  जाहीरात  परवानगी  मागणी  दि १६/०८/२०२६ ") . ' </div>
+
+                <div class="content">
+                    <p>संस्थेने दि. १६/०८/२०२६ रोजी सादर केलेल्या प्रस्तावाची पडताळणी केली असता,शिक्षकेतर पदभरतीची मागणी खालीलप्रमाणे आहे.</p>
+                    <table style="width:100%;border:1px solid green;">
+                        <tr>
+                            <th>अ.क्र.</th>
+                            <th>संस्थेचे नाव </th>
+                            <th>संस्था कोड</th>
+                            <th>पदभरतीच्या पदांचा तपशील</th>
+                            <th>संवर्ग</th>
+                            <th>पदसंख्या</th>
+                             <th>वेतनश्रेणी</th>
+                        </tr>';
+                    $i = 1;
+                     foreach ($data['Datalist'] as $item) {
+                        $html .= '<tr>
+                            <td>' . h($i) . '.</td>
+                            <td>' . h($item['school_name']) . '</td>
+                            <td>' . h($item['school_udise_code']) . '</td>
+                            <td>' . h($item['post_name']) . '</td>
+                            <td>' . h($item['category']) . '</td>
+                            <td>' . h($item['vacancy_count']) . '</td>
+                            <td>' . h($item['pay_scale']) . '</td>
+                        </tr>';
+                        $i++;
+                     }   
+                   
+                      
+                  $html .='  </table>
+
+                    <p>जाहिरात परवानगी बाबत अटी व शर्ती.</p>
+                    <p>१.  संस्थेने  मागणी केलेले  व या कार्यालयाकडून  बिंदुनामावली  पडताळणी  अंती  मंजूर  करून दिलेल्या संवर्गातील पदे भरणे बंधनकारक राहील.</p>
+                    <p>२. शासन निर्णय दिनांक ११/०८/२०२६ आणि अधिसूचना दि. १६/०८/२०२६ मधील  तरतुदी  नुसार  शैक्षणिक अर्हता असणे  बंधनकारक राहील.</p>
+                    <p>३. सदरची  भरती प्रक्रियेची  जाहीरात  स्थानिक व जादा  खपाच्या किमान २ वृत्तपत्रामध्ये प्रसारित करणे बंधनकारक राहील.</p>
+                    <p>४. जाहिरात परवानगीमध्ये  दिलेल्या अटी  शर्ती पेक्षा अन्य पदे / संवर्ग  बदल केल्यास वै. मान्यता  व अनुषंगिक  कार्यवाहीसाठी  प्रस्ताव  स्वीकारला जाणार नाही.</p>
+                    <p>५. सदर जिल्हा/विभागामध्ये शिक्षकेतर पद अतिरिक्त नसल्याचे प्रमाणित केले आहे.</p>
+                    <p>६. संस्था अंतर्गत अनुकंपा पदभरती प्रतीक्षा यादीमध्ये नाव समाविष्ट नाही, तथापि त्याबाबत तक्रार उपलब्ध झाल्यास पदभरतीस  परवानगी रद्द केली जाईल.</p> 
+                    <p></p>
+                    <p>वरील अटी व शर्तींच्या अधीन राहून पदभरती जाहिरात परवानगी देण्यात येत आहे.</p>
+                </div>
+
+        
+
+                <div>
+                        <p class="right" style="text-align:right; margin:0;">
+                            स्वाक्षरी/-
+                        </p>
+
+                
+                       
+                    </div>
+
+
+                <div style="clear:both;"></div>
+                </div>
+            </body>
+            </html>';
+
+        return $html; 
+    
+    }
 
   }

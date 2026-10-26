@@ -1713,7 +1713,7 @@ $(document).ready(function(){
                             $('#saActionButtons').hide();
 
                             // Show only when status is pending
-                            if (status && status.toLowerCase() === 'forwarded') {
+                            if (status && status.toLowerCase() === 'pending') {
                                 $('#saActionButtons').show();
                             }
 
