@@ -15,6 +15,7 @@ use Cake\Routing\Router;
 use Cake\Core\Configure;
 use Laminas\Diactoros\UploadedFile;
 use App\Service\EsdlStorageService;
+use App\Service\SmsNotificationService;
 
 //App\Controller\stdClass
 
@@ -117,27 +118,9 @@ class SansthaController extends AppController
         $staffTransfersTable = TableRegistry::getTableLocator()->get('StaffTransfers');
 
 
-        
-       
-
-        /*$ng2gCount = $staffTransfersTable->find()
-            ->innerJoin(
-                ['Schools' => 'schools'],
-                'Schools.udise_code = StaffTransfers.udise_number'
-            )
-            ->matching('Clusters', function ($q) {
-                return $q->where(['Clusters.block_code' => $this->username]);
-            })
-            ->count();*/
-
-
-            $blockCode = $this->username;
+          $blockCode = $this->username;
             
 
-                /*echo "<pre>";
-
-                print_r($statusCounts);
-                exit;*/
             $ng2gCount = $staffTransfersTable->find()//->where(['sanstha_code' => $this->username])
              ->join([
                 'Schools' => [
@@ -154,84 +137,7 @@ class SansthaController extends AppController
             ->where(['schools.sanstha_code' => $this->username])
                 ->count();
 
-        /*$staffsTable = TableRegistry::getTableLocator()->get('Staffs');
-
-        $query = $staffsTable->find()
-            ->select([
-                'current_post_aid_type',
-                'emp_type',
-                'count' => $staffsTable->find()->func()->count('*')
-            ])
-            ->join([
-                'Schools' => [
-                    'table' => 'schools',
-                    'type' => 'INNER',
-                    'conditions' => 'Schools.udise_code = Staffs.udise_code'
-                ],
-                 'Sansthas' => [
-                    'table' => 'sansthas',
-                    'type' => 'INNER',
-                    'conditions' => 'Sansthas.code = Schools.sanstha_code'
-                ]
-            ])
-            ->where(['schools.sanstha_code' => $this->username])
-            ->group([
-                'current_post_aid_type',
-                'emp_type'
-            ]);
-          
-        $result = [];
-
-        foreach ($query as $row) {
-            $adType = 'self';
-            if('100%_AIDED' == $row->current_post_aid_type){
-                $adType = 'full';
-            }else if('PARTIALLY AIDED' == $row->current_post_aid_type){
-                $adType = 'part';
-            }
-            $result[$adType][$row->emp_type] = $row->count;
-        }
-
-
         
-        //pending','in_progress','completed
-        //$updateStatus = array('p' => array('t'=>0,'n'=>0,'s'=>0),'i' => array('t'=>0,'n'=>0,'s'=>0),'c' => array('t'=>0,'n'=>0,'s'=>0));
-
-        $onboard = $staffsTable->find()
-            ->select([                
-                'staff_update_status','emp_type',
-                'count' => $staffsTable->find()->func()->count('*')
-            ])
-            ->join([
-                'Schools' => [
-                    'table' => 'schools',
-                    'type' => 'INNER',
-                    'conditions' => 'Schools.udise_code = Staffs.udise_code'
-                ],
-                 'Sansthas' => [
-                    'table' => 'sansthas',
-                    'type' => 'INNER',
-                    'conditions' => 'Sansthas.code = Schools.sanstha_code'
-                ]
-            ])
-           ->where(['schools.sanstha_code' => $this->username])     
-            ->group(['staff_update_status','emp_type']);
-
-            
-
-        
-        foreach ($onboard as $row) {
-            $updateStatus[$row->staff_update_status][$row->emp_type] =  $row->count;           
-        }
-        
-        */
-       // pending
-       //  $sanchPostSanctionWorkingTable = TableRegistry::getTableLocator()->get('SanchPostSanctionWorking');
-
-       /* echo "<pre>";
-        print_r($updateStatus);
-        exit;*/
-
        
 
         $this->set('cluster_code', $this->username);
@@ -241,11 +147,6 @@ class SansthaController extends AppController
         $this->set('closeSchools', $closeSchools);
          $this->set('ng2gCount', $ng2gCount);
 
-        
-       // $this->set('staffsType', $result);
-
-
-        //$this->render('/Headmaster/dashboard');
     }
     public function staffSeniorityList()
     {
@@ -256,9 +157,7 @@ class SansthaController extends AppController
         $districts = $districtTable->find()->all();
         $regionTable = TableRegistry::getTableLocator()->get('Regions');
         $regions = $regionTable->find()->all();
-        /*echo "<pre>";
-        print_r($regions);
-        exit;*/
+       
         $this->Authorization->skipAuthorization();
         $this->viewBuilder()->setLayout('recruit-sanstha');
 
@@ -322,7 +221,7 @@ class SansthaController extends AppController
             'Divorced',
         ] ;                   
 
-       //echo "<pre>"; print_r($ng2g);  exit;
+    
         $postKey = 'junior_clerk';
 
         $this->set('ng2g', $ng2g);
@@ -627,30 +526,7 @@ class SansthaController extends AppController
 
     
 
-    public function ngtogTransfer()
-    {
-        $this->viewBuilder()->setLayout('cluster');
     
-        $staffTransfersTable = TableRegistry::getTableLocator()->get('StaffTransfers');
-
-        $ng2g = $staffTransfersTable->find()
-            ->innerJoin(
-                ['Schools' => 'schools'],
-                'Schools.udise_code = StaffTransfers.udise_number'
-            )
-            ->where([
-                'Schools.cluster_code' => $this->username
-            ])
-            ->all();
-
-
-       
-                    
-        $this->set('ng2g', $ng2g);
-
-        
-
-    }
 
     public function processIndividualApprovalOrder()
     {
@@ -1200,9 +1076,7 @@ class SansthaController extends AppController
         $districts = $districtTable->find()->all();
         $regionTable = TableRegistry::getTableLocator()->get('Regions');
         $regions = $regionTable->find()->all();
-        /*echo "<pre>";
-        print_r($regions);
-        exit;*/
+       
         $this->Authorization->skipAuthorization();
         $this->viewBuilder()->setLayout('recruit-sanstha');
 
@@ -1229,9 +1103,6 @@ class SansthaController extends AppController
 
         $postAdvertisementTable = TableRegistry::getTableLocator()->get('PostAdvertisement');
 
-        //echo "<pre>"; print_r($user); exit;
-
-       // echo "<pre>"; print_r($sanstha_code); exit;
         $ng2g = $postAdvertisementTable->getAdvertisementListWithSansthaCode($sanstha_code);
                 
         $PostAdvertisementVacanciesTable = TableRegistry::getTableLocator()->get('PostAdvertisementVacancies');
@@ -1242,7 +1113,6 @@ class SansthaController extends AppController
         $ddovacantTable = TableRegistry::getTableLocator()->get('DdoVacantMaster');                   
         $ddovacant = $ddovacantTable->getAvailableVacancies($usedPostIds, $sanstha_code);
 
-        //echo "<pre>"; print_r($ddovacant->toarray()); exit;
         $approvedLogDocuments = [];
          $rejectLogDocuments = [];
         $applicationIds = array_map(static function ($post): int {
@@ -1964,6 +1834,28 @@ class SansthaController extends AppController
                 )) {
                     throw new \RuntimeException('Unable to save the advertisement audit entry.');
                 }
+
+                $dataSMSLog = [
+                        'sms_template_id' => 1,
+                        'text' => 'Your application has been approved.',
+                        'sender' => 'SYSTEM',
+                        'status' => 'pending',
+                        'created_by' => $this->request->getAttribute('identity')?->getIdentifier(),
+                        'application_id' => $application->id,
+                        'module_name' => 'advertisement',
+                    ]; 
+                    
+                $smsService = new SmsNotificationService();
+                $result = $smsService->logSms($dataSMSLog);
+
+                if ($result['success']) {
+                        $smsLogId = $result['id'];
+                    } else {
+                        $this->log(
+                            'SMS log failed: ' . $result['message'],
+                            'error'
+                        );
+                    }    
 
                 $consumedCount = $uploadTokensTable->updateAll(
                     [
