@@ -2960,17 +2960,7 @@ class SansthaController extends AppController
             $data['vacancies'] ?? [];
         $schoolLevel = $data['school_level'] ?? null;
             
-        if (!$postAdvertisementId) {
-
-            return $this->response
-                ->withType('application/json')
-                ->withStatus(400)
-                ->withStringBody(json_encode([
-                    'success' => false,
-                    'message' => 'Advertisement ID is required'
-                ]));
-        }
-
+       
           if (empty($vacancies)) {
 
                 return $this->response
@@ -3002,9 +2992,9 @@ class SansthaController extends AppController
                 'created_at'   => $stTime,
                 'remarks' => $data['remarks'] ?? null,
                 'is_direct_approved' => 1,
-                'is_primary' => $schoolLevel === 'primary',
-                'secondary' => $schoolLevel === 'secondary',
-                'higher_secondary' => $schoolLevel === 'higher_secondary'
+                'is_primary' => $schoolLevel === 'primary'? 1 : 0,
+                'secondary' => $schoolLevel === 'secondary'? 1 : 0,
+                'higher_secondary' => $schoolLevel === 'higher_secondary'? 1 : 0
             ];
 
          $PostAdvertisementTable = TableRegistry::getTableLocator()->get('PostAdvertisement'); 
