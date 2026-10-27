@@ -753,6 +753,7 @@
             <tbody>                        
                 <?php 
                 $idx =1;
+                
                foreach ($ng2g as $request): 
                 
                 ?>

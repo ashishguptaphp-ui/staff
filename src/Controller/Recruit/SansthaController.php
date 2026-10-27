@@ -1780,9 +1780,9 @@ class SansthaController extends AppController
                     'status' => 'pending',
                     'created_by' => $this->user_id,
                     'created_at' => $createdAt,
-                    'is_primary' => $schoolLevel === 'primary',
-                    'secondary' => $schoolLevel === 'secondary',
-                    'higher_secondary' => $schoolLevel === 'higher_secondary',
+                    'is_primary' => $schoolLevel === 'primary' ? 1 : 0,
+                    'secondary' => $schoolLevel === 'secondary' ? 1 : 0,
+                    'higher_secondary' => $schoolLevel === 'higher_secondary' ? 1 : 0,
                     'approval_letter' => $fileKeys['advApprovelFile:'],
                     'resolutionfile' => $fileKeys['resolutionFile:'],
                     'cadetails' => $caDetails,
@@ -1844,17 +1844,14 @@ class SansthaController extends AppController
                         'application_id' => $application->id,
                         'module_name' => 'advertisement',
                     ]; 
-                    
+
                 $smsService = new SmsNotificationService();
                 $result = $smsService->logSms($dataSMSLog);
 
                 if ($result['success']) {
                         $smsLogId = $result['id'];
                     } else {
-                        $this->log(
-                            'SMS log failed: ' . $result['message'],
-                            'error'
-                        );
+                        $this->log('SMS log failed: ' . $result['message'],'error');
                     }    
 
                 $consumedCount = $uploadTokensTable->updateAll(

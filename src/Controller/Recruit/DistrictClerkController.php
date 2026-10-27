@@ -867,7 +867,7 @@ class DistrictClerkController extends AppController
         $postAdvertisementTable = $this->fetchTable('PostAdvertisement');
         $ng2g = $postAdvertisementTable->getAdvertisementList();
 
-        
+      
        
        
 
