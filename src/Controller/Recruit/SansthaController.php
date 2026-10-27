@@ -3216,15 +3216,17 @@ class SansthaController extends AppController
                 ['PostAdvertisement' => 'post_advertisement'],
                 'PostAdvertisement.id = PostAdvertisementVacancies.post_advertisement_id'
                 )
-                   ->innerJoin(
-                       ['PostAdvertisementAuditLogs' => 'post_advertisement_audit_logs'],
-                       'PostAdvertisementAuditLogs.post_advertisement_id = PostAdvertisement.id'
-                   )
-                   ->where([
-                       'PostAdvertisement.status' => 'approved',
-                       'PostAdvertisement.institution_code' => $this->username,
-                       'PostAdvertisementAuditLogs.new_status' => 'approved'
-                   ])    
+                ->leftJoin(
+                    ['PostAdvertisementAuditLogs' => 'post_advertisement_audit_logs'],
+                    [
+                        'PostAdvertisementAuditLogs.post_advertisement_id = PostAdvertisement.id',
+                        'PostAdvertisementAuditLogs.new_status' => 'approved',   // moved here
+                    ]
+                )
+                ->where([
+                    'PostAdvertisement.status' => 'approved',
+                    'PostAdvertisement.institution_code' => $this->username,
+                ])    
                 ->where(['PostAdvertisementVacancies.id' => (int)$staff_id])
                     ->first();
 
