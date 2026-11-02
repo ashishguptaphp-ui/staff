@@ -741,6 +741,8 @@ public function getStaffOnboardingDetails()
                 ->first();
         }
 
+        $matrimonialStatus = $appointmentData['matrimonial_status'] ?? null;
+
         $payScaleName = ($appointmentData['pay_scale']!=null)? $appointmentData['pay_scale'] : '-';
 
         $html ='<div class="row mb-3">
@@ -774,7 +776,7 @@ public function getStaffOnboardingDetails()
                         </div>
                        <div class="col-md-3">
                             <label for="matrimonial_status " class="form-label marathi-label ">अविवाहित/विवाहित
-                             <span class="txtval">'.$appointmentData['matrimonial_status'].'</span></label>                             
+                             <span class="txtval">'.$matrimonialStatus.'</span></label>                             
                         </div>
                     </div>';             
         $html .='<div class="row mb-3">

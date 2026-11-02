@@ -52,8 +52,8 @@ class PostAdvertisementTable extends Table
             ])
             ->where(function ($exp) {
                     return $exp->or([
-                        'PostAdvertisement.is_primary' => 1,
-                        'PostAdvertisement.secondary' => 1,
+                        'PostAdvertisement.is_primary' => '1',
+                        'PostAdvertisement.secondary' => '1',
                     ]);
                 })      
             ->all();

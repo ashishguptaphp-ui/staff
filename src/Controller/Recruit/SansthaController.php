@@ -16,6 +16,7 @@ use Cake\Core\Configure;
 use Laminas\Diactoros\UploadedFile;
 use App\Service\EsdlStorageService;
 use App\Service\SmsNotificationService;
+use App\Service\SmsService;
 
 //App\Controller\stdClass
 
@@ -129,7 +130,7 @@ class SansthaController extends AppController
                     'conditions' => 'Schools.udise_code = StaffTransfers.udise_number'
                 ],
                 'Sansthas' => [
-                    'table' => 'sansthas',
+                    'table' => 'Sansthas',
                     'type' => 'INNER',
                     'conditions' => 'Sansthas.code = Schools.sanstha_code'
                 ]
@@ -749,16 +750,26 @@ class SansthaController extends AppController
     public function fetchSanchWorkingDetails($schoolId)
     {
     
-        $workingAPI = 'http://115.124.116.194:8083/restApp/empinfo/brands/' . $schoolId;
+       /* 
+       $webUrl = Configure::read('WEB_SHALARTH_URL');
+       $webKey = Configure::read('WEB_SHALARTH_KEY');
+
+       $workingAPI = $webUrl . '/empinfo/brands/' . $schoolId;
 
         $http = new Client([
             'timeout' => 60.0,
             'connect_timeout' => 10.0,
         ]);
 
-        $responseWorking = $http->get($workingAPI);
-        $bodyWorking = $responseWorking->getJson();
+        $responseWorking = $http->get($workingAPI, [], [
+                                            'headers' => [
+                                                'X-API-KEY' => $webKey,
+                                            ],
+                                        ]);
 
+
+        $bodyWorking = $responseWorking->getJson();
+*/
         $tableWorking = TableRegistry::getTableLocator()->get('DdoMaster', [
             'table' => 'ddo_master',
             'className' => \Cake\ORM\Table::class,
@@ -917,15 +928,24 @@ class SansthaController extends AppController
 
     public function fetchDDOVacancyWorkingDetails($schoolId,$ddo_code){
 
-        $workingAPI = 'http://115.124.116.194:8083/restApp/empinfo/getdata/app/' . $ddo_code;
+       /* 
+       $webUrl = Configure::read('WEB_SHALARTH_URL');
+       $webKey = Configure::read('WEB_SHALARTH_KEY');
+
+       $workingAPI = $webUrl . '/empinfo/getdata/app/' . $ddo_code;
 
         $http = new Client([
             'timeout' => 60.0,
             'connect_timeout' => 10.0,
         ]);
 
-        $responseWorking = $http->get($workingAPI);
-        $bodyWorking = $responseWorking->getJson();
+        $responseWorking = $http->get($workingAPI, [], [
+                                            'headers' => [
+                                                'X-API-KEY' => $webKey,
+                                            ],
+                                        ]);
+       
+        $bodyWorking = $responseWorking->getJson();*/
 
         $tableWorking = TableRegistry::getTableLocator()->get('DdoVacantMaster', [
             'table' => 'ddo_vacant_master',
@@ -1515,11 +1535,17 @@ class SansthaController extends AppController
     {
         $this->request->allowMethod(['post', 'ajax']);
         $data = $this->request->getData();
+
+        \Cake\Log\Log::debug('Request Data: ' . print_r($data, true));
         $identity = $this->request->getAttribute('identity');
         $sansthaCode = (string)$identity->Sanstha->code;
         $sansthaName = (string)$identity->Sanstha->name;
         $userId = (string)$this->user_id;
-        $schoolLevel = (string)($data['school_level'] ?? '');
+       
+        $schoolLevel = strtolower(trim(
+                            (string) ($data['school_level'] ?? '')
+                        ));
+        \Cake\Log\Log::debug('School Level: ' . $schoolLevel);
         $submissionKey = strtolower(trim((string)($data['submission_key'] ?? '')));
         $postAdvertisementId = trim((string)($data['post_advertisement_id'] ?? ''));
         $vacancies = $data['vacancies'] ?? null;
@@ -1797,11 +1823,31 @@ class SansthaController extends AppController
                     'submission_fingerprint' => $fingerprint,
                 ];
 
-                $application = $postAdvertisementTable->newEntity($postData);
-                if (!$postAdvertisementTable->save($application)) {
-                    throw new \RuntimeException('Unable to save advertisement application: ' . json_encode($application->getErrors()));
-                }
+              
+                \Cake\Log\Log::debug('Post Data: ' . print_r($postData, true));
 
+                $application = $postAdvertisementTable->newEntity($postData);
+              
+
+                if (!$postAdvertisementTable->save($application)) {
+                        \Cake\Log\Log::error(
+                            'Save errors: ' . json_encode($application->getErrors())
+                        );
+                   } else {
+                        $savedRecord = $postAdvertisementTable->get($application->id);
+
+                        $schoolLevelData = [
+                                'is_primary' => $schoolLevel === 'primary' ? 1 : 0,
+                                'secondary' => $schoolLevel === 'secondary' ? 1 : 0,
+                                'higher_secondary' => $schoolLevel === 'higher_secondary' ? 1 : 0,
+                            ];
+                          $postAdvertisementTable->updateAll(
+                            $schoolLevelData,
+                            ['id' => $savedRecord->id]
+                        );    
+
+                       
+                    }
                 $postAdvertisementVacanciesTable = $this->fetchTable('PostAdvertisementVacancies');
                 foreach ($vacancyPayload as $vacancyInput) {
                     $vacancy = $ddoById[$vacancyInput['vacancy_id']];
@@ -1843,10 +1889,13 @@ class SansthaController extends AppController
                         'created_by' => $this->request->getAttribute('identity')?->getIdentifier(),
                         'application_id' => $application->id,
                         'module_name' => 'advertisement',
+                        'application_date'=> FrozenTime::now(),
                     ]; 
 
                 $smsService = new SmsNotificationService();
                 $result = $smsService->logSms($dataSMSLog);
+                $this->sendSmsNotificationSave($application->id,$result['id'],'advertisement');
+                
 
                 if ($result['success']) {
                         $smsLogId = $result['id'];
@@ -2594,7 +2643,7 @@ class SansthaController extends AppController
          $payScaleName = ($appointmentData['pay_scale']!=null)? $appointmentData['pay_scale'] : '-';
 
          $username = $this->request->getSession()->read('Auth.User.username');
-            $sansthasTable = TableRegistry::getTableLocator()->get('sansthas');
+            $sansthasTable = TableRegistry::getTableLocator()->get('Sansthas');
          $Sanstha = $sansthasTable->find()->where(['code' => $username])
             ->first();
   
@@ -3336,4 +3385,341 @@ class SansthaController extends AppController
                     'periodDiv' => $periodDiv
                 ]));
          }
+
+
+      
+
+
+public function sendSmsNotificationSave(
+    $application_id,
+    $sms_notify_id,
+    $app_type = 'advertisement'
+) {
+    $this->disableAutoRender();
+
+    $PostAdvertisementTable = TableRegistry::getTableLocator()
+        ->get('PostAdvertisement');
+
+    $UserTable = TableRegistry::getTableLocator()
+        ->get('Users');
+
+    $SmsNotificationRecipients = TableRegistry::getTableLocator()
+        ->get('SmsNotificationRecipients');
+
+    $SmsNotificationLog = TableRegistry::getTableLocator()
+        ->get('SmsNotificationLog');
+
+    // Fetch advertisement details
+    $dataArr = $PostAdvertisementTable->find()
+        ->select([
+            'id',
+            'institution_code',
+            'is_primary',
+            'secondary',
+            'higher_secondary'
+        ])
+        ->where(['id' => $application_id])
+        ->first();
+
+    if (!$dataArr) {
+        $this->log(
+            'Advertisement not found: ' . $application_id,
+            'error'
+        );
+
+        return false;
+    }
+
+    // Determine school level
+    if ((int)$dataArr->secondary === 1) {
+        $medium = 'Secondary';
+    } elseif ((int)$dataArr->higher_secondary === 1) {
+        $medium = 'Higher_Secondary';
+    } elseif ((int)$dataArr->is_primary === 1) {
+        $medium = 'Primary';
+    } else {
+        $medium = 'Not specified';
+    }
+
+    // Institution code: first 4 characters
+    $institutionCode = substr(
+        (string)$dataArr->institution_code,
+        0,
+        4
+    );
+
+    $userList = [];
+
+    /*
+     * SECONDARY
+     */
+    if ($medium === 'Secondary') {
+
+        // Replace with your actual institution code if required.
+        $institutionCode = '2707EO02';
+
+        $userList = $UserTable->find()
+            ->select([
+                'id',
+                'username',
+                'role',
+                'mobile',
+                'email'
+            ])
+            ->where([
+                'role' => 'district',
+                'username LIKE' => $institutionCode . '%'
+            ])
+            ->all()
+            ->toArray();
+
+        foreach ($userList as $user) {
+
+            $userName = (string)$user->username;
+
+            // Skip SU users
+            if (str_ends_with($userName, 'SU')) {
+                continue;
+            }
+
+            if (str_ends_with($userName, 'CLR')) {
+                $role = 'CLR';
+                $type = 1;
+            } elseif (str_ends_with($userName, 'SUP')) {
+                $role = 'SUP';
+                $type = 2;
+            } else {
+                $role = 'EO';
+                $type = 3;
+            }
+
+            $this->saveSmsRecipient(
+                $SmsNotificationRecipients,
+                $user,
+                $application_id,
+                $sms_notify_id,
+                $role,
+                $type
+            );
+        }
+
+    /*
+     * HIGHER SECONDARY
+     */
+    } elseif ($medium === 'Higher_Secondary') {
+
+        $DistrictsTable = TableRegistry::getTableLocator()
+            ->get('Districts');
+
+        $RegionsTable = TableRegistry::getTableLocator()
+            ->get('Regions');
+
+        // Get region ID from district code
+        $district = $DistrictsTable->find()
+            ->select(['region_id'])
+            ->where(['code' => $institutionCode])
+            ->first();
+
+        $regionId = $district?->region_id;
+
+        // Get region code
+        $region = $regionId
+            ? $RegionsTable->find()
+                ->select(['code'])
+                ->where(['id' => $regionId])
+                ->first()
+            : null;
+
+        if (!$region) {
+            $this->log(
+                'Region not found for institution: ' . $institutionCode,
+                'error'
+            );
+
+            return false;
+        }
+
+        $institutionCode = $region->code . 'DD';
+
+        $userList = $UserTable->find()
+            ->select([
+                'id',
+                'username',
+                'role',
+                'mobile',
+                'email'
+            ])
+            ->where([
+                'role' => 'division',
+                'username LIKE' => $institutionCode . '%'
+            ])
+            ->all()
+            ->toArray();
+
+        foreach ($userList as $user) {
+
+            $userName = (string)$user->username;
+
+            // Skip unrelated users
+            $skipSuffixes = [
+                'CLR',
+                'SUP',
+                'CLRP',
+                'CLRS',
+                'EIP',
+                'EIS',
+                'SUPS'
+            ];
+
+            $skipUser = false;
+
+            foreach ($skipSuffixes as $suffix) {
+                if (str_ends_with($userName, $suffix)) {
+                    $skipUser = true;
+                    break;
+                }
+            }
+
+            if ($skipUser) {
+                continue;
+            }
+
+            // Identify role
+            if (str_ends_with($userName, 'CLRH')) {
+                $role = 'CLR';
+                $type = 1;
+            } elseif (str_ends_with($userName, 'ADIH')) {
+                $role = 'ADIH';
+                $type = 2;
+            } elseif (str_ends_with($userName, 'ADH')) {
+                $role = 'ADH';
+                $type = 3;
+            } elseif ($userName === $institutionCode) {
+                $role = 'DD';
+                $type = 4;
+            } else {
+                // Unknown user suffix
+                continue;
+            }
+
+            $this->saveSmsRecipient(
+                $SmsNotificationRecipients,
+                $user,
+                $application_id,
+                $sms_notify_id,
+                $role,
+                $type
+            );
+        }
+
+    } else {
+        $this->log(
+            'Unsupported school level: ' . $medium,
+            'debug'
+        );
+    }
+
+    /*
+ * SEND SMS TO RECIPIENTS
+ */
+
+// Get recipients for this application
+$recipients = $SmsNotificationRecipients->find()
+    ->select([
+        'id',
+        'mobile_number'
+    ])
+    ->where([
+        'app_id' => $application_id,
+        'sms_notify_id' => $sms_notify_id
+    ])
+    ->all();
+
+$smsService = new SmsService();
+
+foreach ($recipients as $recipient) {
+
+    $mobileNumber = $recipient->mobile_number;
+
+    if (empty($mobileNumber)) {
+        continue;
+    }
+
+    try {
+
+        /*$result = $smsService->sendSMS(
+            'otp',
+            $mobileNumber,
+            $message
+        );
+
+        // Update SMS recipient status if required
+        $this->log(
+            'SMS sent to ' . $mobileNumber .
+            ': ' . json_encode($result),
+            'debug'
+        );*/
+
+    } catch (\Throwable $e) {
+
+        $this->log(
+            'SMS sending failed for ' . $mobileNumber .
+            ': ' . $e->getMessage(),
+            'error'
+        );
+    }
+}
+
+
+    return true;
+}
+
+
+private function saveSmsRecipient(
+    $SmsNotificationRecipients,
+    $user,
+    $application_id,
+    $sms_notify_id,
+    $role,
+    $type
+) {
+    // Avoid duplicate recipients for the same application
+    $existingRecipient = $SmsNotificationRecipients->find()
+        ->where([
+            'app_id' => $application_id,
+            'sms_notify_id' => $sms_notify_id,
+            'userid' => $user->id,
+            'role' => $role,
+        ])
+        ->first();
+
+    if ($existingRecipient) {
+        return true;
+    }
+
+    $smsRecipient = $SmsNotificationRecipients->newEntity([
+        'mobile_number' => $user->mobile,
+        'email' => $user->email,
+        'app_id' => $application_id,
+        'sms_notify_id' => $sms_notify_id,
+        'role' => $role,
+        'role_type' => $type,
+        'userid' => $user->id,
+        'created_at' => FrozenTime::now(),
+    ]);
+
+    if (!$SmsNotificationRecipients->save($smsRecipient)) {
+        $this->log(
+            'SMS recipient save failed: ' .
+            json_encode($smsRecipient->getErrors()),
+            'error'
+        );
+
+        return false;
+    }
+
+    return true;
+}
+
+
   }
