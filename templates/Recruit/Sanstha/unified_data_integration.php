@@ -290,7 +290,7 @@
                     if(response.response.status=='error'){
                          element.innerHTML = '<i class="fa-solid fa-circle-xmark text-danger"></i><span class="text-danger">Sync Error</span>';
                      //alert("Data syn successfully!")
-                        alert(response.response.message);
+                        //alert(response.response.message);
                     }else{
                          element.innerHTML = '<i class="fa-solid fa-check-circle text-info"></i> <span class="text-info">Successful.</span>';
                      //alert("Data syn successfully!")

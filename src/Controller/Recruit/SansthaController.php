@@ -750,7 +750,7 @@ class SansthaController extends AppController
     public function fetchSanchWorkingDetails($schoolId)
     {
     
-       /* 
+       
        $webUrl = Configure::read('WEB_SHALARTH_URL');
        $webKey = Configure::read('WEB_SHALARTH_KEY');
 
@@ -769,7 +769,8 @@ class SansthaController extends AppController
 
 
         $bodyWorking = $responseWorking->getJson();
-*/
+
+    
         $tableWorking = TableRegistry::getTableLocator()->get('DdoMaster', [
             'table' => 'ddo_master',
             'className' => \Cake\ORM\Table::class,
@@ -778,9 +779,9 @@ class SansthaController extends AppController
         $connection = ConnectionManager::get('default');
 
     
-        //$dataWorking = $bodyWorking;
+        $dataWorking = $bodyWorking;
 
-        $dataWorking = [[
+        /*$dataWorking = [[
                             6570792,
                             "02111100002",
                             "ganesh trainee School,andheri",
@@ -793,7 +794,7 @@ class SansthaController extends AppController
                             "2014-01-17T16:44:22.292Z[UTC]"
                             ]
                         ];
-
+*/
         //print_r($dataWorking);
         //exit;
         // debug removed — was halting execution before the save
@@ -868,7 +869,7 @@ class SansthaController extends AppController
                     $updated++;
 
                     // Fetch vacancy details
-                    $this->fetchDDOVacancyWorkingDetails(
+                   $this->fetchDDOVacancyWorkingDetails(
                         $schoolId,
                         $row1[1] ?? null
                     );
@@ -928,11 +929,11 @@ class SansthaController extends AppController
 
     public function fetchDDOVacancyWorkingDetails($schoolId,$ddo_code){
 
-       /* 
-       $webUrl = Configure::read('WEB_SHALARTH_URL');
-       $webKey = Configure::read('WEB_SHALARTH_KEY');
+       
+       $webUrl1 = Configure::read('WEB_SHALARTH_URL');
+       $webKey1 = Configure::read('WEB_SHALARTH_KEY');
 
-       $workingAPI = $webUrl . '/empinfo/getdata/app/' . $ddo_code;
+       $workingAPI = $webUrl1 . '/empinfo/getdata/app/' . $ddo_code;
 
         $http = new Client([
             'timeout' => 60.0,
@@ -941,11 +942,11 @@ class SansthaController extends AppController
 
         $responseWorking = $http->get($workingAPI, [], [
                                             'headers' => [
-                                                'X-API-KEY' => $webKey,
+                                                'X-API-KEY' => $webKey1,
                                             ],
                                         ]);
        
-        $bodyWorking = $responseWorking->getJson();*/
+        $bodyWorking = $responseWorking->getJson();
 
         $tableWorking = TableRegistry::getTableLocator()->get('DdoVacantMaster', [
             'table' => 'ddo_vacant_master',
@@ -954,16 +955,17 @@ class SansthaController extends AppController
 
         $connection = ConnectionManager::get('default');
 
-        //$dataWorking = $bodyWorking;
+        $dataWorking = $bodyWorking;
 
         $payScalesDetails = [
                         'librarian'             => 14000,
-                        'laboratory_assistant'  => 12000,
-                        'junior_clerk'          => 10000
+                        'laboratory assistant'  => 12000,
+                        'junior clerk'          => 10000,
+                        'Assistant Teacher'        => 12000,
                     ];
 
 
-        $dataWorking = [   [
+        /*$dataWorking = [   [
                             random_int(10000000, 99999999),
                             "librarian_77200438713"
                             ],
@@ -974,13 +976,13 @@ class SansthaController extends AppController
                             [
                             random_int(10000000, 99999999),
                             "junior_clerk_77200717411"
-                            ]];
+                            ]];*/
 
         foreach ($dataWorking as &$row) {
                 $payScale = null;
 
                 foreach ($payScalesDetails as $postName => $scale) {
-                    if (str_starts_with($row[1], $postName . '_')) {
+                    if (str_starts_with($row[1], $postName)) {
                         $payScale = $scale;
                         break;
                     }
@@ -3414,6 +3416,7 @@ public function sendSmsNotificationSave(
         ->select([
             'id',
             'institution_code',
+            'institution_name',
             'is_primary',
             'secondary',
             'higher_secondary'
@@ -3440,6 +3443,8 @@ public function sendSmsNotificationSave(
     } else {
         $medium = 'Not specified';
     }
+
+    $sanstha_name = $dataArr->institution_name;
 
     // Institution code: first 4 characters
     $institutionCode = substr(
@@ -3640,14 +3645,14 @@ $smsService = new SmsService();
 foreach ($recipients as $recipient) {
 
     $mobileNumber = $recipient->mobile_number;
-
+    $message = $sanstha_name.' संस्थेचा जाहिरात परवानगी प्रस्ताव प्राप्त झाला आहे. प्रस्तावावर आवश्यक कार्यवाही करावी.';
     if (empty($mobileNumber)) {
         continue;
     }
 
     try {
-
-        /*$result = $smsService->sendSMS(
+        $mobileNumber = '9891824962';
+        $result = $smsService->sendSMS(
             'otp',
             $mobileNumber,
             $message
@@ -3655,16 +3660,14 @@ foreach ($recipients as $recipient) {
 
         // Update SMS recipient status if required
         $this->log(
-            'SMS sent to ' . $mobileNumber .
-            ': ' . json_encode($result),
+            'SMS sent to ' . $sanstha_name . ' (' . $mobileNumber . '): ' . json_encode($result),
             'debug'
-        );*/
+        );
 
     } catch (\Throwable $e) {
 
         $this->log(
-            'SMS sending failed for ' . $mobileNumber .
-            ': ' . $e->getMessage(),
+            'SMS sending failed for ' . $mobileNumber . ': ' . $e->getMessage(),
             'error'
         );
     }
