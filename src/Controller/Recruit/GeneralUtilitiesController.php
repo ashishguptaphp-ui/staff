@@ -162,6 +162,42 @@ class GeneralUtilitiesController extends AppController
               $storage = new EsdlStorageService();
               $resolutionfile = $storage->signedUrl($ng2g->resolutionfile);    
         }
+
+        $resolutionDiv = ' <div class="pdf-field">
+                        <h3 class="section-title">Roster</h3>
+                        <div class="row mt-1">
+                            <div class="col-md-3 mt-2">
+                                <label for="advApprovelFile" class="form-label english-label">
+                                    रोस्टर
+                                </label>                                
+                            </div>    
+                            <div class="col-md-3" id="">
+                                '.$this->getdocumentFileALink($resolutionfile).'
+                            </div>      
+                        </div>   
+                        <div class="row mt-1">
+                            <div class="col-md-3 mt-2">
+                                <label for="advsanctions_date" class="form-label english-label">
+                                      मंजुरीची तारीख
+                                </label>                                
+                            </div>    
+                            <div class="col-md-3" id="">
+                                '.$ng2g->sanctions_date->format('d-m-Y').'
+                            </div>      
+                        </div>   
+                        <div class="row mt-1">
+                            <div class="col-md-3 mt-2">
+                                <label for="advoutward_number" class="form-label english-label">
+                                    जावक क्रमांक
+                                </label>                                
+                            </div>    
+                            <div class="col-md-3" id="">
+                               '.$ng2g->outward_number.'
+                            </div>      
+                        </div>                    
+                        <hr/>                        
+                    </div> ';
+
         
         $period2324file = null;
          if ($ng2g && !empty($ng2g->period2324_file)) {
@@ -298,6 +334,7 @@ class GeneralUtilitiesController extends AppController
                         'periodDivShow' => $periodDiv,
                         'cadetailsDivShow' => $cadetailsDiv,
                         'smDetails' => $smDetails,
+                        'resolutionDivShow' => $resolutionDiv,
                         'minority_sanstha' => $sansthaRecord['minority_sanstha'] ?? null,
                      ],
                     'html'=> $html,
@@ -3339,6 +3376,20 @@ private function onBoardingAuditHistoryHtml(iterable $auditLogs): string
     return $html;
 }
 
+
+ public function getdocumentFileALink($documents)
+    {
+       
+            if ($documents!== null || empty($documents)) {
+
+                $imageUrl =$documents;
+
+                return '<a class="" href="'.$imageUrl.'" target="_blank">कागदपत्र पहा  </a>';
+            }
+      
+
+        return 'कागदपत्र उपलब्ध नाही';
+    }
 
 
   }

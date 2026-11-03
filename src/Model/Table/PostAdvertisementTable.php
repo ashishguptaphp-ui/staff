@@ -138,6 +138,8 @@ class PostAdvertisementTable extends Table
                 'PostAdvertisement.cadetails',
                 'PostAdvertisement.cadetails_file',
                 'PostAdvertisement.sm_details',
+                'PostAdvertisement.sanctions_date',
+                'PostAdvertisement.outward_number',
             ])
             ->where([
                 'PostAdvertisement.id' => $id
