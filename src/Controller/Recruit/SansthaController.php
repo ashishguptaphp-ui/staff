@@ -3688,7 +3688,7 @@ $smsService = new SmsService();
 foreach ($recipients as $recipient) {
 
     $mobileNumber = $recipient->mobile_number;
-    $message = $sanstha_name.' संस्थेचा जाहिरात परवानगी प्रस्ताव प्राप्त झाला आहे. प्रस्तावावर आवश्यक कार्यवाही करावी.';
+    $message = $sanstha_name.' संस्थेचा कर्मचारी मान्यता प्रस्ताव प्राप्त झाला आहे. प्रस्तावावर आवश्यक कार्यवाही करावी.';
     if (empty($mobileNumber)) {
         continue;
     }
