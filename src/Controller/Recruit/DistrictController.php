@@ -1867,7 +1867,7 @@ private function generateAdvertisementRejectPdf($appId, $rejectReason): ?string
             //$this->generateQRCode($fullUrl, $appId);
             $html = $this->renderAdvertisementRejectLetterViewContent($letterData);
 
-            $writeResult = file_put_contents($tempHtmlPath, $html);
+             $writeResult = file_put_contents($tempHtmlPath, $html);
             if ($writeResult === false) {
                 throw new \RuntimeException('Unable to write temporary reject letter HTML.');
             }
@@ -2212,6 +2212,8 @@ private function generateAdvertisementRejectPdf($appId, $rejectReason): ?string
 
             //$this->generateQRCode($fullUrl, $appId);
             $html = $this->renderAdvertisementApprovalLetterViewContent($letterData);
+
+            
 
             $writeResult = file_put_contents($tempHtmlPath, $html);
             if ($writeResult === false) {
@@ -3297,6 +3299,7 @@ $postAdvertisementVacancy = $postAdvertisementVacanciesTable->find()
         'C:\\Program Files\\wkhtmltopdf\\bin\\wkhtmltopdf.exe',
         'C:\\Program Files (x86)\\wkhtmltopdf\\bin\\wkhtmltopdf.exe',
         'wkhtmltopdf', 
+        '/usr/bin/wkhtmltopdf',
         'C:\\wkhtmltopdf\\bin\\wkhtmltopdf.exe',
     ];
 

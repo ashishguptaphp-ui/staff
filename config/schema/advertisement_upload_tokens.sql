@@ -1,6 +1,8 @@
 ALTER TABLE post_advertisement
     ADD COLUMN IF NOT EXISTS submission_key UUID,
-    ADD COLUMN IF NOT EXISTS submission_fingerprint CHAR(64);
+    ADD COLUMN IF NOT EXISTS submission_fingerprint CHAR(64),
+    ADD COLUMN IF NOT EXISTS sanctions_date DATE,
+    ADD COLUMN IF NOT EXISTS outward_number TEXT;
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_post_advertisement_submission_key
     ON post_advertisement (submission_key)

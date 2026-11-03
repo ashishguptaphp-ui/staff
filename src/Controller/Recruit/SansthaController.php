@@ -1214,6 +1214,8 @@ class SansthaController extends AppController
                         'PostAdvertisement.period_file',
                         'PostAdvertisement.cadetails',
                         'PostAdvertisement.cadetails_file',
+                        'PostAdvertisement.sanctions_date',
+                        'PostAdvertisement.outward_number',
                      ])  
                    ->where(['id' => $post_advertisement_id])
                    ->first();
@@ -1229,6 +1231,41 @@ class SansthaController extends AppController
               $storage = new EsdlStorageService();
               $resolutionfile = $storage->signedUrl($ng2g->resolutionfile);    
         }
+
+        $resolutionDiv = ' <div class="pdf-field">
+                        <h3 class="section-title">Roster</h3>
+                        <div class="row mt-1">
+                            <div class="col-md-3 mt-2">
+                                <label for="advApprovelFile" class="form-label english-label">
+                                    रोस्टर
+                                </label>                                
+                            </div>    
+                            <div class="col-md-3" id="">
+                                '.$this->getdocumentFileALink($resolutionfile).'
+                            </div>      
+                        </div>   
+                        <div class="row mt-1">
+                            <div class="col-md-3 mt-2">
+                                <label for="advsanctions_date" class="form-label english-label">
+                                      मंजुरीची तारीख
+                                </label>                                
+                            </div>    
+                            <div class="col-md-3" id="">
+                                '.$ng2g->sanctions_date->format('d-m-Y').'
+                            </div>      
+                        </div>   
+                        <div class="row mt-1">
+                            <div class="col-md-3 mt-2">
+                                <label for="advoutward_number" class="form-label english-label">
+                                    जावक क्रमांक
+                                </label>                                
+                            </div>    
+                            <div class="col-md-3" id="">
+                               '.$ng2g->outward_number.'
+                            </div>      
+                        </div>                    
+                        <hr/>                        
+                    </div> ';
 
          $period2324file = null;
          if ($ng2g && !empty($ng2g->period2324_file)) {
@@ -1341,7 +1378,8 @@ class SansthaController extends AppController
                         'sanchManyataUrls' => $sanchManyataUrls,
                         'smDetails' => $smDetails,
                         'periodDivShow' => $periodDiv,
-                        'cadetailsDivShow' => $cadetailsDiv
+                        'cadetailsDivShow' => $cadetailsDiv,
+                        'resolutionDivShow' => $resolutionDiv
                     ],
                     'html'=> $html,
                     'message' => 'Application forwarded successfully'
@@ -1552,6 +1590,23 @@ class SansthaController extends AppController
         $postAdvertisementId = trim((string)($data['post_advertisement_id'] ?? ''));
         $vacancies = $data['vacancies'] ?? null;
         $uploadTokens = $data['upload_tokens'] ?? null;
+        $sanctions_date = $data['sanctions_date'] ?? null;
+        $outward_number = $data['outward_number'] ?? null;
+
+        if (
+            !is_string($sanctions_date) ||
+            !preg_match('/^\d{4}-\d{2}-\d{2}$/D', $sanctions_date) ||
+            !checkdate(
+                (int)substr($sanctions_date, 5, 2),
+                (int)substr($sanctions_date, 8, 2),
+                (int)substr($sanctions_date, 0, 4)
+            ) ||
+            !is_string($outward_number) ||
+            trim($outward_number) === ''
+        ) {
+            return $this->advertisementJsonResponse(['success' => false, 'message' => 'Enter a valid sanctions date and outward number.'], 400);
+        }
+        $outward_number = trim($outward_number);
 
         if ($postAdvertisementId === '') {
             return $this->advertisementJsonResponse(['success' => false, 'message' => 'Advertisement ID is required'], 400);
@@ -1718,6 +1773,8 @@ class SansthaController extends AppController
             'period' => $period,
             'period2324' => $period2324,
             'cadetails' => $caDetails,
+            'sanctions_date' => $sanctions_date,
+            'outward_number' => $outward_number,
             'minority_sanstha' => (string)($data['minority_sanstha'] ?? ''),
             'smdetails' => $normalizedChoices,
             'upload_tokens' => $flatTokens,
@@ -1756,7 +1813,9 @@ class SansthaController extends AppController
                 $period,
                 $period2324,
                 $caDetails,
-                $createdAt
+                $createdAt,
+                $sanctions_date,
+                $outward_number
             ) {
                 $tokenRows = $uploadTokensTable->find()
                     ->where(['token IN' => $tokenValues])
@@ -1823,6 +1882,8 @@ class SansthaController extends AppController
                     'sm_details' => json_encode($smDetails, JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR),
                     'submission_key' => $submissionKey,
                     'submission_fingerprint' => $fingerprint,
+                    'sanctions_date' => $sanctions_date,
+                    'outward_number' => $outward_number,
                 ];
 
               
@@ -1832,24 +1893,21 @@ class SansthaController extends AppController
               
 
                 if (!$postAdvertisementTable->save($application)) {
-                        \Cake\Log\Log::error(
-                            'Save errors: ' . json_encode($application->getErrors())
-                        );
-                   } else {
-                        $savedRecord = $postAdvertisementTable->get($application->id);
+                    throw new \RuntimeException(
+                        'Unable to save the advertisement application: ' . json_encode($application->getErrors())
+                    );
+                }
 
-                        $schoolLevelData = [
-                                'is_primary' => $schoolLevel === 'primary' ? 1 : 0,
-                                'secondary' => $schoolLevel === 'secondary' ? 1 : 0,
-                                'higher_secondary' => $schoolLevel === 'higher_secondary' ? 1 : 0,
-                            ];
-                          $postAdvertisementTable->updateAll(
-                            $schoolLevelData,
-                            ['id' => $savedRecord->id]
-                        );    
+                $schoolLevelData = [
+                    'is_primary' => $schoolLevel === 'primary' ? 1 : 0,
+                    'secondary' => $schoolLevel === 'secondary' ? 1 : 0,
+                    'higher_secondary' => $schoolLevel === 'higher_secondary' ? 1 : 0,
+                ];
+                $postAdvertisementTable->updateAll(
+                    $schoolLevelData,
+                    ['id' => $application->id]
+                );
 
-                       
-                    }
                 $postAdvertisementVacanciesTable = $this->fetchTable('PostAdvertisementVacancies');
                 foreach ($vacancyPayload as $vacancyInput) {
                     $vacancy = $ddoById[$vacancyInput['vacancy_id']];
@@ -3012,6 +3070,22 @@ class SansthaController extends AppController
 
         return 'कागदपत्र उपलब्ध नाही';
     }
+
+
+    public function getdocumentFileALink($documents)
+    {
+       
+            if ($documents!== null || empty($documents)) {
+
+                $imageUrl =$documents;
+
+                return '<a class="" href="'.$imageUrl.'" target="_blank">कागदपत्र पहा  </a>';
+            }
+      
+
+        return 'कागदपत्र उपलब्ध नाही';
+    }
+
 
     public function processVacacyPublish(){
         $this->request->allowMethod(['post', 'ajax']);

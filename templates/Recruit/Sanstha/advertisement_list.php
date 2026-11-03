@@ -901,16 +901,39 @@ $schoolLevelLabels = [
                         <h3 class="section-title">Roster </h3>
                         <div class="row mt-1">
                             <div class="col-md-3 mt-2">
-                                <label for="advApprovelFile" class="form-label english-label required-field">
-                                     Upload Roster 
+                                <label for="advApprovelFile" class="form-label marathi-label required-field">
+                                     रोस्टर अपलोड करा
                                 </label>                                
-                            </div>    
+                            </div>
                             <div class="col-md-3">
-                                <input type="file" id="advApprovelFile" name="advApprovelFile" class="form-control file-upload-check" accept=".pdf" required>      
-                            </div>      
-                        </div>                    
-                        <hr/>                        
-                    </div> 
+                                <input type="file" id="advApprovelFile" name="advApprovelFile" class="form-control file-upload-check" accept=".pdf" required>
+                            </div>
+                        </div>
+
+                          <div class="row mt-1">
+                            <div class="col-md-3 mt-2">
+                                <label for="sanctions_date" class="form-label marathi-label required-field">
+                                    मंजुरीची तारीख
+                                </label>
+                            </div>
+                            <div class="col-md-3">
+                                <input type="date" id="sanctions_date" name="sanctions_date" class="form-control" required>
+                            </div>
+                         </div>
+
+                         <div class="row mt-1">
+                            <div class="col-md-3 mt-2">
+                                <label for="outward_number" class="form-label marathi-label required-field">
+                                    जावक क्रमांक
+                                </label>
+                            </div>
+                            <div class="col-md-3">
+                                <input type="text" id="outward_number" name="outward_number" class="form-control" required>
+                            </div>
+                         </div>
+
+                        <hr/>
+                    </div>
                     <?php //}?>
 
                      <div class="pdf-field">
@@ -1277,22 +1300,10 @@ $schoolLevelLabels = [
                      <div class="pdf-field">
                           <div id="periodDivShow"></div>           
                     </div>
-                    <?php //if (!in_array((string)$minority_sanstha, ['2', '3'], true)) { ?>             
-                    <div class="pdf-field">
-                        <h3 class="section-title">Roster</h3>
-                        <div class="row mt-1">
-                            <div class="col-md-3 mt-2">
-                                <label for="advApprovelFile" class="form-label english-label">
-                                     Roster
-                                </label>                                
-                            </div>    
-                            <div class="col-md-3" id="adv_post_approval_file">
-                                <a>View Document</a>
-                            </div>      
-                        </div>                    
-                        <hr/>                        
-                    </div> 
-                    <?php //}?> 
+                   
+
+                     <div id="resolutionDivShow"></div>
+
 
                        <div class="pdf-field">
                         <h3 class="section-title">संस्थेचा ठराव</h3>
@@ -1305,7 +1316,9 @@ $schoolLevelLabels = [
                             <div class="col-md-3" id="adv_resolution_file">
                                 <a>View Document</a>
                             </div>      
-                        </div>   
+                        </div> 
+                        
+                        
                         
                          <div id="cadetailsDivShow"></div>
                         <hr/>                        
@@ -1441,6 +1454,8 @@ $('#approvedOrderPdfModal').on('hidden.bs.modal', function () {
                             } else {
                                 $('#adv_resolution_file').html('<span class="text-muted">Document not available</span>');
                             }
+
+                            document.getElementById('resolutionDivShow').innerHTML = response.data.resolutionDivShow || '';
 
 
                             let sanchManyataHtml = '';
@@ -1935,8 +1950,15 @@ $('#approvedOrderPdfModal').on('hidden.bs.modal', function () {
                 const period2324 = $('#saFormStep2 input[name="period2324"]:checked').val() || '';
                 const caDetails = $('#saFormStep2 input[name="cadetails"]:checked').val();
                 const schoolLevel = $('#saFormStep1 .row-select:checked').first().data('school-level');
+                const sanctionsDate = $('#sanctions_date').val();
+                const outwardNumber = String($('#outward_number').val() || '').trim();
                 const schoolDetails = {};
                 const descriptors = [];
+
+                if (!sanctionsDate || !outwardNumber) {
+                    alert('Enter the sanctions date and outward number.');
+                    return;
+                }
 
                 $('#saFormStep2 input[name^="smdetails["]:checked').each(function() {
                     const udiseCode = this.name.match(/^smdetails\[([^\]]+)\]$/)?.[1];
@@ -2134,6 +2156,8 @@ $('#approvedOrderPdfModal').on('hidden.bs.modal', function () {
                     period: period,
                     cadetails: caDetails,
                     period2324: period2324,
+                    sanctions_date: sanctionsDate,
+                    outward_number: outwardNumber,
                     minority_sanstha: $('#minority_sanstha').val(),
                     smdetails: schoolDetails,
                     upload_tokens: tokenReferences,
@@ -2498,9 +2522,6 @@ $('#approvedOrderPdfModal').on('hidden.bs.modal', function () {
     } 
 
 </script>
-
-
-
 
 
 
