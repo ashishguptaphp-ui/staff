@@ -2461,6 +2461,22 @@ class SansthaController extends AppController
             });
 
 
+            $dataSMSLog = [
+                        'sms_template_id' => 1,
+                        'text' => 'Your application has been approved.',
+                        'sender' => 'SYSTEM',
+                        'status' => 'pending',
+                        'created_by' => $this->request->getAttribute('identity')?->getIdentifier(),
+                        'application_id' => $appointment->id,
+                        'module_name' => 'application',
+                        'application_date'=> FrozenTime::now(),
+                    ]; 
+
+                $smsService = new SmsNotificationService();
+                $result = $smsService->logSms($dataSMSLog);
+                $this->sendSmsNotificationSaveonboarding($appointment->id,$appointment->staff_id,$result['id'],'application');
+                
+
             /*
             * -----------------------------------------
             * Success Response
@@ -3390,6 +3406,320 @@ class SansthaController extends AppController
 
 
       
+public function sendSmsNotificationSaveonboarding(
+    $application_id,
+    $staff_id,
+    $sms_notify_id,
+    $app_type = 'application'
+){
+
+$this->disableAutoRender();
+
+
+
+            $PostAdvertisementVacanciesTable = TableRegistry::getTableLocator()->get('PostAdvertisementVacancies');
+          /*  $dataArr = $PostAdvertisementVacanciesTable->find()
+                ->select([
+                'id' => 'PostAdvertisementVacancies.id',
+                'post_id' => 'PostAdvertisementVacancies.post_id',
+                'institution_code' => 'PostAdvertisement.institution_code',
+                'institution_name' => 'PostAdvertisement.institution_name',
+                'is_primary'=> 'PostAdvertisement.is_primary',
+                'secondary'=> 'PostAdvertisement.secondary',
+                'higher_secondary'=> 'PostAdvertisement.higher_secondary'           
+                               
+            ])
+               ->innerJoin(
+                ['PostAdvertisement' => 'post_advertisement'],
+                'PostAdvertisement.id = PostAdvertisementVacancies.post_advertisement_id'
+                )
+                    
+                ->where(['PostAdvertisementVacancies.id' => (int)$staff_id])
+                    ->first();*/
+
+                    $dataArr = $PostAdvertisementVacanciesTable->getConnection()->execute(
+                                'SELECT
+                                    pav.id,
+                                    pav.post_id,
+                                    pa.institution_code,
+                                    pa.institution_name,
+                                    pa.is_primary,
+                                    pa.secondary,
+                                    pa.higher_secondary
+                                FROM post_advertisement_vacancies pav
+                                INNER JOIN post_advertisement pa
+                                    ON pa.id = pav.post_advertisement_id
+                                WHERE pa.institution_code = :institution_code
+                                AND pav.id = :staff_id
+                                LIMIT 1',
+                                [
+                                    'institution_code' => $this->username,
+                                    'staff_id' => (int)$staff_id,
+                                ]
+                            )->fetch('assoc');
+
+                 
+
+                $UserTable = TableRegistry::getTableLocator()
+                    ->get('Users');
+
+                $SmsNotificationRecipients = TableRegistry::getTableLocator()
+                    ->get('SmsNotificationRecipients');
+
+                $SmsNotificationLog = TableRegistry::getTableLocator()
+                    ->get('SmsNotificationLog');
+
+if (!$dataArr) {
+        $this->log(
+            'Advertisement not found: ' . $application_id,
+            'error'
+        );
+
+        return false;
+    }
+
+    // Determine school level
+    if ((int)$dataArr['secondary'] === 1) {
+        $medium = 'Secondary';
+    } elseif ((int)$dataArr['higher_secondary'] === 1) {
+        $medium = 'Higher_Secondary';
+    } elseif ((int)$dataArr['is_primary'] === 1) {
+        $medium = 'Primary';
+    } else {
+        $medium = 'Not specified';
+    }
+
+    $sanstha_name = $dataArr['institution_name'];
+
+    // Institution code: first 4 characters
+    $institutionCode = substr(
+        (string)$dataArr['institution_code'],
+        0,
+        4
+    );
+
+    $userList = [];
+
+    /*
+     * SECONDARY
+     */
+    if ($medium === 'Secondary') {
+
+        // Replace with your actual institution code if required.
+        $institutionCode = '2707EO02';
+
+        $userList = $UserTable->find()
+            ->select([
+                'id',
+                'username',
+                'role',
+                'mobile',
+                'email'
+            ])
+            ->where([
+                'role' => 'district',
+                'username LIKE' => $institutionCode . '%'
+            ])
+            ->all()
+            ->toArray();
+
+        foreach ($userList as $user) {
+
+            $userName = (string)$user->username;
+
+            // Skip SU users
+            if (str_ends_with($userName, 'SU')) {
+                continue;
+            }
+
+            if (str_ends_with($userName, 'CLR')) {
+                $role = 'CLR';
+                $type = 1;
+            } elseif (str_ends_with($userName, 'SUP')) {
+                $role = 'SUP';
+                $type = 2;
+            } else {
+                $role = 'EO';
+                $type = 3;
+            }
+
+            $this->saveSmsRecipient(
+                $SmsNotificationRecipients,
+                $user,
+                $application_id,
+                $sms_notify_id,
+                $role,
+                $type
+            );
+        }
+
+    /*
+     * HIGHER SECONDARY
+     */
+    } elseif ($medium === 'Higher_Secondary') {
+
+        $DistrictsTable = TableRegistry::getTableLocator()
+            ->get('Districts');
+
+        $RegionsTable = TableRegistry::getTableLocator()
+            ->get('Regions');
+
+        // Get region ID from district code
+        $district = $DistrictsTable->find()
+            ->select(['region_id'])
+            ->where(['code' => $institutionCode])
+            ->first();
+
+        $regionId = $district?->region_id;
+
+        // Get region code
+        $region = $regionId
+            ? $RegionsTable->find()
+                ->select(['code'])
+                ->where(['id' => $regionId])
+                ->first()
+            : null;
+
+        if (!$region) {
+            $this->log(
+                'Region not found for institution: ' . $institutionCode,
+                'error'
+            );
+
+            return false;
+        }
+
+        $institutionCode = $region->code . 'DD';
+
+        $userList = $UserTable->find()
+            ->select([
+                'id',
+                'username',
+                'role',
+                'mobile',
+                'email'
+            ])
+            ->where([
+                'role' => 'division',
+                'username LIKE' => $institutionCode . '%'
+            ])
+            ->all()
+            ->toArray();
+
+        foreach ($userList as $user) {
+
+            $userName = (string)$user->username;
+
+            // Skip unrelated users
+            $skipSuffixes = [
+                'CLR',
+                'SUP',
+                'CLRP',
+                'CLRS',
+                'EIP',
+                'EIS',
+                'SUPS'
+            ];
+
+            $skipUser = false;
+
+            foreach ($skipSuffixes as $suffix) {
+                if (str_ends_with($userName, $suffix)) {
+                    $skipUser = true;
+                    break;
+                }
+            }
+
+            if ($skipUser) {
+                continue;
+            }
+
+            // Identify role
+            if (str_ends_with($userName, 'CLRH')) {
+                $role = 'CLR';
+                $type = 1;
+            } elseif (str_ends_with($userName, 'ADIH')) {
+                $role = 'ADIH';
+                $type = 2;
+            } elseif (str_ends_with($userName, 'ADH')) {
+                $role = 'ADH';
+                $type = 3;
+            } elseif ($userName === $institutionCode) {
+                $role = 'DD';
+                $type = 4;
+            } else {
+                // Unknown user suffix
+                continue;
+            }
+
+            $this->saveSmsRecipient(
+                $SmsNotificationRecipients,
+                $user,
+                $application_id,
+                $sms_notify_id,
+                $role,
+                $type
+            );
+        }
+
+    } else {
+        $this->log(
+            'Unsupported school level: ' . $medium,
+            'debug'
+        );
+    }
+
+
+    
+// Get recipients for this application
+$recipients = $SmsNotificationRecipients->find()
+    ->select([
+        'id',
+        'mobile_number'
+    ])
+    ->where([
+        'app_id' => $application_id,
+        'sms_notify_id' => $sms_notify_id
+    ])
+    ->all();
+
+$smsService = new SmsService();
+
+foreach ($recipients as $recipient) {
+
+    $mobileNumber = $recipient->mobile_number;
+    $message = $sanstha_name.' संस्थेचा जाहिरात परवानगी प्रस्ताव प्राप्त झाला आहे. प्रस्तावावर आवश्यक कार्यवाही करावी.';
+    if (empty($mobileNumber)) {
+        continue;
+    }
+
+    try {
+        $mobileNumber = '9891824962';
+        $result = $smsService->sendSMS(
+            'otp',
+            $mobileNumber,
+            $message
+        );
+
+        // Update SMS recipient status if required
+        $this->log(
+            'SMS sent to ' . $sanstha_name . ' (' . $mobileNumber . '): ' . json_encode($result),
+            'debug'
+        );
+
+    } catch (\Throwable $e) {
+
+        $this->log(
+            'SMS sending failed for ' . $mobileNumber . ': ' . $e->getMessage(),
+            'error'
+        );
+    }
+}
+
+
+    return true;
+
+}
 
 
 public function sendSmsNotificationSave(
@@ -3723,6 +4053,8 @@ private function saveSmsRecipient(
 
     return true;
 }
+
+
 
 
   }
