@@ -20,16 +20,6 @@ use Cake\I18n\FrozenTime;
  */
 class RecruitController extends AppController
 {
-     public function initialize(): void
-    {
-        parent::initialize();
-
-       $this->Users = $this->fetchTable('Users');
-        
-    }
-    
-
-   
     public function beforeFilter(\Cake\Event\EventInterface $event)
     {
         parent::beforeFilter($event);
@@ -54,7 +44,7 @@ class RecruitController extends AppController
             //echo $hashedPassword;
             //exit;
 
-            $user = $this->Users->find()
+            $user = $this->fetchTable('Users')->find()
                 ->where(['username' => $username])
                 ->first();
                 /*echo "<pre>";
@@ -370,7 +360,7 @@ class RecruitController extends AppController
                 $userOtpsTable->save($otpRecord);
                  $loggedInUser = $this->request->getSession()->read('loggedInUser');
               
-                $user = $this->Users->find()
+                $user = $this->fetchTable('Users')->find()
                     ->where(['username' => $loggedInUser])
                     ->first();
 

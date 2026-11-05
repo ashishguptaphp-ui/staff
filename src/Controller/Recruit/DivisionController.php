@@ -9,6 +9,7 @@ use Cake\Http\Client;
 use Cake\Http\Exception\BadRequestException;
 use Cake\Http\Response;
 use Cake\I18n\FrozenTime;
+use Cake\Log\Log;
 use DateTime;
 use stdClass;
 use Cake\Routing\Router;
@@ -50,6 +51,7 @@ class DivisionController extends AppController
             'advertisementVacancyAjax',
             'advertisementList',
             'staffOnboardApprove',
+            'addShalarthEmployeeRecord',
             'staffOnboardReject',
             'staffOnboardForward',
             'headerUpload',
@@ -1391,6 +1393,7 @@ class DivisionController extends AppController
 
     }
 
+   
 
     
     public function staffOnboardApprove()
@@ -3654,8 +3657,210 @@ private function generateAdvertisementRejectPdf($appId, $rejectReason): ?string
             </body>
             </html>';
 
-        return $html; 
-    
+        return $html;
     }
 
-  }
+     public function addShalarthEmployeeRecord()
+    {
+        $this->Authorization->skipAuthorization();
+        $this->request->allowMethod(['get','post']);
+
+          
+    $appId = 32;//$this->request->getData('app_id');
+
+    $appointmentsTable = TableRegistry::getTableLocator()->get('StaffOnboardingAppointments');
+
+    $appointment = $appointmentsTable->find()
+    ->contain(['StaffOnboardingDocuments'])
+    ->where(['id' => (int)$appId])
+    ->first();
+
+    
+    $employeeData = [];
+    $employeeData['APPLICANT_FULL_NAME'] = $appointment->candidate_name;
+
+    $genderMap = [
+        'm' => 'M',
+        'male' => 'M',
+        'f' => 'F',
+        'female' => 'F',
+        't' => 'T',
+        'third_gender' => 'T',
+        'third gender' => 'T',
+        'transgender' => 'T',
+        'o' => 'O',
+        'other' => 'O',
+    ];
+    $gender = $genderMap[strtolower(trim((string)$appointment->gender))] ?? null;
+
+    $maritalStatusMap = [
+        'single' => 'F',
+        'married' => 'T',
+        'divorced' => 'F',
+    ];
+    $maritalStatus = $maritalStatusMap[strtolower(trim((string)$appointment->matrimonial_status))] ?? null;
+
+    if ($gender === null || $maritalStatus === null) {
+        return $this->response
+            ->withStatus(400)
+            ->withType('application/json')
+            ->withStringBody(json_encode([
+                'status' => 400,
+                'message' => 'The appointment has an unsupported gender or marital status.',
+            ]));
+    }
+
+    $employeeData['GENDER'] = $gender;
+    $employeeData['MARITAL_STATUS'] = $maritalStatus;
+    $employeeData['DOB'] = $appointment->dob_date;
+    $employeeData['UID_NO'] = $appointment->aadhar_number;
+    $employeeData['EMAIL'] = $appointment->candidateemail;
+    $employeeData['PAN_NO'] = $appointment->pan_number;
+    $employeeData['EMPLOYEE_PHOTO_URL'] = null; 
+    $employeeData['EMPLOYEE_SIGNATURE_URL'] = null; 
+    $employeeData['CELL_NO'] = $appointment->candidatemobile;
+    $employeeData['TEL_NO'] = 0;
+    $employeeData['ACAD_QUAL'] = $appointment->graduate_degree.', '.$appointment->post_graduate_degree;
+    $employeeData['PROF_QUAL'] = NULL;
+
+    $employeeData['APPLICATION_ID'] = "211000765199";
+    $employeeData['MGMT_CODE'] = "270715SC999";
+    $employeeData['SCHL_ID'] = "27040212999";
+    $employeeData['DDO_CODE'] = "04630100999";
+    $employeeData['DDO_NAME'] = "04630100999";
+    $employeeData['SALUTATION'] = "700075";
+    $employeeData['EMP_FATHER_MIDDLE_NAME'] = "SURESH GANPAT PATIL";
+    $employeeData['FIRST_NAME_AS_UID'] = "RAMESH";
+    $employeeData['MIDDLE_NAME_AS_UID'] = "SURESH";
+    $employeeData['LAST_NAME_AS_UID'] = "PATIL";
+    $employeeData['JOINING_DT'] = "2024-09-26T00:00:00";
+    $employeeData['STATE_CD'] = 27;
+    $employeeData['DISTRICT_CD'] = 354;
+    $employeeData['ADDRESS_LINE_1'] = "AT SAMPLEWADI";
+    $employeeData['ADDRESS_LINE_2'] = "POST SAMPLE TQ SAMPLE";
+    $employeeData['LANDMARK'] = "NEAR SAMPLE TEMPLE";
+    $employeeData['LOCALITY'] = "SAMPLEWADI";
+    $employeeData['VILLAGE'] = "SAMPLEWADI";
+    $employeeData['PIN_CODE'] = 431000;
+    $employeeData['CADRE'] = "1344";
+    $employeeData['SHIKSHAN_SEVAK'] = "Y";
+    $employeeData['NEW_RECRUIT_POST_DESC'] = "Graduate Teacher std(9-10)";
+    $employeeData['NEW_RECRUIT_POST'] = 431000;
+    $employeeData['PAY_COMMISSION'] = 2500347;
+    $employeeData['NEW_PAY_SCALE_CD'] = 101;
+    $employeeData['BASIC_PAY_SCALE'] = 18000;
+    $employeeData['CURRENT_POST'] = 1624823;
+    $employeeData['sanchManyataPostType'] = 1;
+    $employeeData['sanchManyataPostId'] = 1;
+    $employeeData['INITIAL_APPT_DT'] = "2024-11-26T00:00:00";
+    $employeeData['AIDED'] = "N";
+    $employeeData['CURRENT_POST_DT'] = "2024-11-26T00:00:00";
+    $employeeData['EMP_TYPE'] = "T";
+    $employeeData['ORD_FILE_NAME'] = "https://files.example.org/orders/211000765099";
+    $employeeData["ORDER_DT"] = "2024-09-21T00:00:00";
+    $employeeData["BRANCH_NAME"] = "44405";
+    $employeeData["BANK_AC_NO"] = "00000000000";
+    $employeeData["IFSC_CODE"] = "SBIN0000000";
+    $employeeData["NPS_APPLICABLE"] = "N";
+    $employeeData["NPS_AC_MAINTAIN_BY"] = null;
+    $employeeData["PF_AC_MAINTAIN_BY"] = null;
+    $employeeData["PF_AC_NUMBER"] = null;
+    $employeeData["GIS_APPLICABLE"] = "2";
+    $employeeData["GIS_GROUP"] = 0;
+    $employeeData["MEMBERSHIP_DT"] = "1911-01-01T00:00:00";
+    $employeeData["NOMINEE_NAME_1"] = "SURESH GANPAT PATIL";
+    $employeeData["NOMINEE_ADDRESS_1"] = "AT SAMPLEWADI";
+    $employeeData["NOMINEE_DOB_1"] = "1970-02-09T00:00:00";
+    $employeeData["RELATIONSHIP_1"] = "FATHER";
+    $employeeData["PERCENTAGE_1"] = 100;
+    $employeeData["NOMINEE_NAME_2"] = null;
+    $employeeData["NOMINEE_ADDRESS_2"] = null;
+    $employeeData["NOMINEE_DOB_2"] = "1911-01-01T00:00:00";
+    $employeeData["RELATIONSHIP_2"] = null;
+    $employeeData["PERCENTAGE_2"] = 0;
+    $employeeData["NOMINEE_NAME_3"] = null;
+    $employeeData["NOMINEE_ADDRESS_3"] = null;
+    $employeeData["NOMINEE_DOB_3"] = "1911-01-01T00:00:00";
+    $employeeData["RELATIONSHIP_3"] = null;
+    $employeeData["PERCENTAGE_3"] = 0;
+    $employeeData["ASST_FLAG"] = "E";
+    $employeeData["ENTRY_AUTH"] = "2706DD";
+    $employeeData["SYSTEM_IP_ENTRY"] = "203.0.113.10/Chrome/Win10/N";
+    $employeeData["ENTRY_DTTS"] = "2025-02-20T00:00:00";
+    $employeeData["PH_YES_NO"] = "N";
+    $employeeData["ORD_NO"] = "3036";
+    $employeeData["BANK_NAME"] = "7920";
+    $employeeData["VERIF_AUTH"] = "N";
+
+
+
+        if (
+            !is_array($employeeData) ||
+            !isset($employeeData['APPLICATION_ID']) ||
+            !is_scalar($employeeData['APPLICATION_ID']) ||
+            trim((string)$employeeData['APPLICATION_ID']) === '' ||
+            !array_key_exists('CURRENT_POST', $employeeData) ||
+            $employeeData['CURRENT_POST'] === null ||
+            !is_scalar($employeeData['CURRENT_POST']) ||
+            $employeeData['CURRENT_POST'] === ''
+        ) {
+            return $this->response
+                ->withStatus(400)
+                ->withType('application/json')
+                ->withStringBody(json_encode([
+                    'status' => 400,
+                    'message' => 'APPLICATION_ID and the selected CURRENT_POST are required.',
+                ]));
+        }
+
+        $baseUrl = Configure::read('WEB_SHALARTH_URL');
+        $apiKey = Configure::read('WEB_SHALARTH_KEY');
+        if (!is_string($baseUrl) || trim($baseUrl) === '' || !is_string($apiKey) || trim($apiKey) === '') {
+            Log::error('Shalarth employee API URL or API key is not configured.');
+
+            return $this->response
+                ->withStatus(500)
+                ->withType('application/json')
+                ->withStringBody(json_encode([
+                    'status' => 500,
+                    'message' => 'Shalarth employee API is not configured.',
+                ]));
+        }
+
+        try {
+            $http = new Client([
+                'timeout' => 30.0,
+                'connect_timeout' => 10.0,
+            ]);
+            $shalarthResponse = $http->post(
+                rtrim($baseUrl, '/') . '/empinfo/getdata/shm',
+                json_encode($employeeData, JSON_THROW_ON_ERROR),
+                [
+                    'type' => 'json',
+                    'headers' => [
+                        'X-API-KEY' => $apiKey,
+                        'Content-Type' => 'application/json',
+                    ],
+                ]
+            );
+        } catch (\Throwable $exception) {
+            Log::error('Shalarth employee API request failed: ' . $exception->getMessage());
+
+            return $this->response
+                ->withStatus(502)
+                ->withType('application/json')
+                ->withStringBody(json_encode([
+                    'status' => 502,
+                    'message' => 'Unable to reach the Shalarth employee API.',
+                ]));
+        }
+
+        $contentType = $shalarthResponse->getHeaderLine('Content-Type');
+
+        return $this->response
+            ->withStatus($shalarthResponse->getStatusCode())
+            ->withType($contentType !== '' ? $contentType : 'application/json')
+            ->withStringBody($shalarthResponse->getStringBody());
+    }
+
+}

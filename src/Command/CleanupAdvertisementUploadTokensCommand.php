@@ -14,6 +14,12 @@ use Throwable;
 
 class CleanupAdvertisementUploadTokensCommand extends Command
 {
+
+    public static function defaultName(): string
+    {
+        return 'cleanup_advertisement_upload_tokens';
+    }
+
     public function execute(Arguments $args, ConsoleIo $io): ?int
     {
         $table = TableRegistry::getTableLocator()->get('PostAdvertisementUploadTokens');

@@ -1941,7 +1941,7 @@ $('#approvedOrderPdfModal').on('hidden.bs.modal', function () {
               });
 
 
-             async function submitVacancyCategories(selectedData)
+             async function submitVacancyCategories(selectedData, retryingStaleUploads = false)
              {
                 const button = $('#saSubmitBtn_step6');
                 const baseButtonHtml = '<i class="bi bi-send-check"></i> अर्ज सबमिट करा';
@@ -2191,6 +2191,21 @@ $('#approvedOrderPdfModal').on('hidden.bs.modal', function () {
                         const message = xhr.responseJSON && xhr.responseJSON.message
                             ? xhr.responseJSON.message
                             : 'Unable to submit application. Retry without re-uploading successful PDFs.';
+                        if (xhr.responseJSON && xhr.responseJSON.code === 'UPLOAD_TOKENS_STALE') {
+                            saAdvertisementUploadCache.forEach(function(state) {
+                                state.clientUploadId = createAdvertisementUuid();
+                                state.token = null;
+                            });
+                            persistAdvertisementDraft();
+                            if (!retryingStaleUploads) {
+                                button.prop('disabled', false).html(baseButtonHtml);
+                                $('#saFormStep2 .file-upload-check').prop('disabled', false);
+                                progress.append($('<div class="text-warning small"></div>').text('PDF uploads expired. Re-uploading selected PDFs and retrying once...'));
+                                submitVacancyCategories(selectedData, true);
+                                return;
+                            }
+                            progress.append($('<div class="text-warning small"></div>').text('Some PDF upload tokens are no longer valid. Submit again to upload the selected PDFs again.'));
+                        }
                         progress.append($('<div class="text-danger small"></div>').text(message));
                         button.prop('disabled', false).html(baseButtonHtml);
                         $('#saFormStep2 .file-upload-check').prop('disabled', false);
@@ -2522,9 +2537,6 @@ $('#approvedOrderPdfModal').on('hidden.bs.modal', function () {
     } 
 
 </script>
-
-
-
 
 
 

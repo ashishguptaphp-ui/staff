@@ -701,7 +701,7 @@ class SansthaController extends AppController
         $this->request->allowMethod(['post', 'ajax']);
         $data = $this->request->getData();
         $schoolId = $data['school_id'];
-        $this->errorMsg = '';
+        $errorMsg = '';
         $sanchDataStatus = $this->fetchSanchWorkingDetails($schoolId);
        
         if ($sanchDataStatus == 1) {
@@ -715,10 +715,10 @@ class SansthaController extends AppController
         } else {
             $msg = 'There seems to be an issue. Please coordinate with the technical team for assistance.';
             if($sanchDataStatus == -101){
-                if(empty($this->errorMsg)){
+                if(empty($errorMsg)){
                     $msg = 'There was an issue while fetching data from Sanch Manayta. Please try again.';
                 }else{
-                    $msg = $this->errorMsg;
+                    $msg = $errorMsg;
                 }
                 
             }else if($sanchDataStatus == -1){
@@ -1251,7 +1251,7 @@ class SansthaController extends AppController
                                 </label>                                
                             </div>    
                             <div class="col-md-3" id="">
-                                '.$ng2g->sanctions_date->format('d-m-Y').'
+                                '.$ng2g->sanctions_date?->format('d-m-Y').'
                             </div>      
                         </div>   
                         <div class="row mt-1">
@@ -1945,16 +1945,18 @@ class SansthaController extends AppController
                         'sms_template_id' => 1,
                         'text' => 'Your application has been approved.',
                         'sender' => 'SYSTEM',
-                        'status' => 'pending',
+                        'status' => '0',
                         'created_by' => $this->request->getAttribute('identity')?->getIdentifier(),
                         'application_id' => $application->id,
+                        'institution_name' => $sansthaName,
+                        'institution_code' => $sansthaCode,
                         'module_name' => 'advertisement',
                         'application_date'=> FrozenTime::now(),
                     ]; 
 
                 $smsService = new SmsNotificationService();
                 $result = $smsService->logSms($dataSMSLog);
-                $this->sendSmsNotificationSave($application->id,$result['id'],'advertisement');
+                //$this->sendSmsNotificationSave($application->id,$result['id'],'advertisement');
                 
 
                 if ($result['success']) {
@@ -1985,7 +1987,19 @@ class SansthaController extends AppController
                 return $this->existingAdvertisementSubmissionResponse($existingApplication, $userId, $sansthaCode, $fingerprint);
             }
             if ($exception instanceof \DomainException) {
-                return $this->advertisementJsonResponse(['success' => false, 'message' => $exception->getMessage()], 409);
+                $message = $exception->getMessage();
+                $response = ['success' => false, 'message' => $message];
+                if (in_array($message, [
+                    'One or more PDF upload tokens are invalid or expired.',
+                    'A PDF upload token has expired or was already used.',
+                    'A PDF token does not belong to the logged-in Sanstha.',
+                    'A PDF token is for a different document or school.',
+                    'A PDF token was consumed by another submission. Please retry.',
+                ], true)) {
+                    $response['code'] = 'UPLOAD_TOKENS_STALE';
+                }
+
+                return $this->advertisementJsonResponse($response, 409);
             }
 
             \Cake\Log\Log::error('Advertisement application transaction failed: ' . $exception->getMessage());
@@ -2518,21 +2532,27 @@ class SansthaController extends AppController
                 return $appointment;
             });
 
+            $identity = $this->request->getAttribute('identity');
+            $sansthaName = (string)$identity->Sanstha->name;
+            $sansthaCode = (string)$identity->Sanstha->code;
 
             $dataSMSLog = [
                         'sms_template_id' => 1,
                         'text' => 'Your application has been approved.',
                         'sender' => 'SYSTEM',
-                        'status' => 'pending',
+                        'status' => '0',
                         'created_by' => $this->request->getAttribute('identity')?->getIdentifier(),
                         'application_id' => $appointment->id,
+                        'institution_code' => $sansthaCode,
+                        'institution_name' => $sansthaName,
+                        'post_id' => $appointment->staff_id,
                         'module_name' => 'application',
                         'application_date'=> FrozenTime::now(),
                     ]; 
 
                 $smsService = new SmsNotificationService();
                 $result = $smsService->logSms($dataSMSLog);
-                $this->sendSmsNotificationSaveonboarding($appointment->id,$appointment->staff_id,$result['id'],'application');
+                //$this->sendSmsNotificationSaveonboarding($appointment->id,$appointment->staff_id,$result['id'],'application');
                 
 
             /*
@@ -3479,6 +3499,8 @@ class SansthaController extends AppController
          }
 
 
+
+
       
 public function sendSmsNotificationSaveonboarding(
     $application_id,
@@ -3769,11 +3791,11 @@ foreach ($recipients as $recipient) {
 
     try {
         $mobileNumber = '9891824962';
-        $result = $smsService->sendSMS(
+        /*$result = $smsService->sendSMS(
             'otp',
             $mobileNumber,
             $message
-        );
+        );*/
 
         // Update SMS recipient status if required
         $this->log(
@@ -4056,11 +4078,11 @@ foreach ($recipients as $recipient) {
 
     try {
         $mobileNumber = '9891824962';
-        $result = $smsService->sendSMS(
+        /*$result = $smsService->sendSMS(
             'otp',
             $mobileNumber,
             $message
-        );
+        );*/
 
         // Update SMS recipient status if required
         $this->log(

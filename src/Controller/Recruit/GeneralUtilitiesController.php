@@ -182,7 +182,7 @@ class GeneralUtilitiesController extends AppController
                                 </label>                                
                             </div>    
                             <div class="col-md-3" id="">
-                                '.$ng2g->sanctions_date->format('d-m-Y').'
+                                '.$ng2g->sanctions_date?->format('d-m-Y').'
                             </div>      
                         </div>   
                         <div class="row mt-1">
