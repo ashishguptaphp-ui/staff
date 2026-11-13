@@ -17,7 +17,7 @@ use Laminas\Diactoros\UploadedFile;
 use App\Service\EsdlStorageService;
 use App\Service\SmsNotificationService;
 use App\Service\SmsService;
-
+use Cake\Log\Log;
 //App\Controller\stdClass
 
 
@@ -878,7 +878,7 @@ class SansthaController extends AppController
 
                     $failed++;
 
-                    \Cake\Log\Log::error(
+                    Log::error(
                         'Failed to update DDO: ' . ($row1[1] ?? 'Unknown')
                     );
                 }
@@ -904,7 +904,7 @@ class SansthaController extends AppController
 
                     $failed++;
 
-                    \Cake\Log\Log::error(
+                    Log::error(
                         'Failed to insert DDO: ' . ($row1[1] ?? 'Unknown')
                     );
                 }
@@ -1036,7 +1036,7 @@ class SansthaController extends AppController
                  
                     
                 if (!$tableWorking->save($entity, ['checkRules' => false])) {
-                    \Cake\Log\Log::error('Failed to save vacant post entity for Post ID: ' . $postId);
+                    Log::error('Failed to save vacant post entity for Post ID: ' . $postId);
                 }
                     
             }
@@ -1232,7 +1232,21 @@ class SansthaController extends AppController
               $resolutionfile = $storage->signedUrl($ng2g->resolutionfile);    
         }
 
-        $resolutionDiv = ' <div class="pdf-field">
+        $sanctionsDate = $ng2g?->sanctions_date;
+        $formattedSanctionsDate = '';
+        if ($sanctionsDate) {
+            $formattedSanctionsDate = $sanctionsDate->format('d-m-Y');
+        } elseif (is_string($sanctionsDate)) {
+            $parsedSanctionsDate = \DateTimeImmutable::createFromFormat('!Y-m-d', $sanctionsDate);
+            if (
+                $parsedSanctionsDate !== false &&
+                $parsedSanctionsDate->format('Y-m-d') === $sanctionsDate
+            ) {
+                $formattedSanctionsDate = $parsedSanctionsDate->format('d-m-Y');
+            }
+        }
+
+          $resolutionDiv = ' <div class="pdf-field">
                         <h3 class="section-title">Roster</h3>
                         <div class="row mt-1">
                             <div class="col-md-3 mt-2">
@@ -1251,7 +1265,7 @@ class SansthaController extends AppController
                                 </label>                                
                             </div>    
                             <div class="col-md-3" id="">
-                                '.$ng2g->sanctions_date?->format('d-m-Y').'
+                                '.$formattedSanctionsDate.'
                             </div>      
                         </div>   
                         <div class="row mt-1">
@@ -1528,7 +1542,7 @@ class SansthaController extends AppController
                 try {
                     $storage->delete($storageKey);
                 } catch (\Throwable $cleanupException) {
-                    \Cake\Log\Log::error('Unable to remove unregistered advertisement PDF: ' . $cleanupException->getMessage());
+                   Log::error('Unable to remove unregistered advertisement PDF: ' . $cleanupException->getMessage());
                 }
             }
 
@@ -1554,7 +1568,7 @@ class SansthaController extends AppController
                 ]);
             }
 
-            \Cake\Log\Log::error('Advertisement PDF upload failed: ' . $exception->getMessage());
+            Log::error('Advertisement PDF upload failed: ' . $exception->getMessage());
             return $this->advertisementJsonResponse(['success' => false, 'message' => 'PDF upload failed. Please retry.'], 500);
         }
 
@@ -1576,7 +1590,7 @@ class SansthaController extends AppController
         $this->request->allowMethod(['post', 'ajax']);
         $data = $this->request->getData();
 
-        \Cake\Log\Log::debug('Request Data: ' . print_r($data, true));
+        Log::debug('Request Data: ' . print_r($data, true));
         $identity = $this->request->getAttribute('identity');
         $sansthaCode = (string)$identity->Sanstha->code;
         $sansthaName = (string)$identity->Sanstha->name;
@@ -1585,7 +1599,7 @@ class SansthaController extends AppController
         $schoolLevel = strtolower(trim(
                             (string) ($data['school_level'] ?? '')
                         ));
-        \Cake\Log\Log::debug('School Level: ' . $schoolLevel);
+        Log::debug('School Level: ' . $schoolLevel);
         $submissionKey = strtolower(trim((string)($data['submission_key'] ?? '')));
         $postAdvertisementId = trim((string)($data['post_advertisement_id'] ?? ''));
         $vacancies = $data['vacancies'] ?? null;
@@ -1652,6 +1666,7 @@ class SansthaController extends AppController
             ->where(['id IN' => $vacancyIds])
             ->all()
             ->toArray();
+        Log::debug('Retrieved DDO Vacancies: ' . count($ddoVacancies));
         if (count($ddoVacancies) !== count($vacancyIds)) {
             return $this->advertisementJsonResponse(['success' => false, 'message' => 'One or more selected vacancies are no longer available.'], 409);
         }
@@ -1781,7 +1796,7 @@ class SansthaController extends AppController
         ];
         $fingerprint = hash('sha256', json_encode($canonicalPayload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
 
-        $postAdvertisementTable = $this->fetchTable('PostAdvertisement');
+        $postAdvertisementTable = TableRegistry::getTableLocator()->get('PostAdvertisement');
         $existingApplication = $postAdvertisementTable->find()
             ->where(['submission_key' => $submissionKey])
             ->first();
@@ -1789,7 +1804,7 @@ class SansthaController extends AppController
             return $this->existingAdvertisementSubmissionResponse($existingApplication, $userId, $sansthaCode, $fingerprint);
         }
 
-        $uploadTokensTable = $this->fetchTable('PostAdvertisementUploadTokens');
+        $uploadTokensTable = TableRegistry::getTableLocator()->get('PostAdvertisementUploadTokens');
         $connection = ConnectionManager::get('default');
         $createdAt = time();
 
@@ -1862,51 +1877,93 @@ class SansthaController extends AppController
                 }
 
                 $postData = [
-                    'institution_code' => $sansthaCode,
-                    'institution_name' => $sansthaName,
-                    'status' => 'pending',
-                    'created_by' => $this->user_id,
-                    'created_at' => $createdAt,
-                    'is_primary' => $schoolLevel === 'primary' ? 1 : 0,
-                    'secondary' => $schoolLevel === 'secondary' ? 1 : 0,
-                    'higher_secondary' => $schoolLevel === 'higher_secondary' ? 1 : 0,
-                    'approval_letter' => $fileKeys['advApprovelFile:'],
-                    'resolutionfile' => $fileKeys['resolutionFile:'],
-                    'cadetails' => $caDetails,
-                    'cadetails_file' => $fileKeys['CADetailsFile:'],
-                    'period' => $period,
-                    'period_file' => $period === '1' ? $fileKeys['periodFile:'] : null,
-                    'period2324' => $period === '2' ? $period2324 : null,
-                    'period2324_file' => $period === '2' && $period2324 === '1' ? $fileKeys['period2324File:'] : null,
-                    'sanch_manyata' => json_encode($sanchManyataFiles, JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR),
-                    'sm_details' => json_encode($smDetails, JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR),
-                    'submission_key' => $submissionKey,
-                    'submission_fingerprint' => $fingerprint,
-                    'sanctions_date' => $sanctions_date,
-                    'outward_number' => $outward_number,
-                ];
+    'institution_code' => $sansthaCode,
+    'institution_name' => $sansthaName,
+    'status' => 'pending',
+    'created_by' => $userId,
+    'created_at' => date('Y-m-d H:i:s', $createdAt),
+
+    'is_primary' => $schoolLevel === 'primary' ? 1 : 0,
+    'secondary' => $schoolLevel === 'secondary' ? 1 : 0,
+    'higher_secondary' => $schoolLevel === 'higher_secondary' ? 1 : 0,
+
+    'approval_letter' => $fileKeys['advApprovelFile:'],
+    'resolutionfile' => $fileKeys['resolutionFile:'],
+
+    'cadetails' => $caDetails,
+    'cadetails_file' => $fileKeys['CADetailsFile:'],
+
+    'period' => $period,
+    'period_file' => $period === '1'
+        ? $fileKeys['periodFile:']
+        : null,
+
+    'period2324' => $period === '2'
+        ? $period2324
+        : null,
+
+    'period2324_file' => ($period === '2' && $period2324 === '1')
+        ? $fileKeys['period2324File:']
+        : null,
+
+    'sanch_manyata' => json_encode(
+        $sanchManyataFiles,
+        JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR
+    ),
+
+    'sm_details' => json_encode(
+        $smDetails,
+        JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR
+    ),
+
+    'submission_key' => $submissionKey,
+    'submission_fingerprint' => $fingerprint,
+
+    'sanctions_date' => $sanctions_date,
+    'outward_number' => $outward_number,
+];
 
               
-                \Cake\Log\Log::debug('Post Data: ' . print_r($postData, true));
+                Log::debug('Post Data: ' . print_r($postData, true));
+        $application = $postAdvertisementTable->newEmptyEntity();
 
-                $application = $postAdvertisementTable->newEntity($postData);
+        foreach ($postData as $field => $value) {
+            $application->set($field, $value);
+        }
+Log::debug(
+    'ENTITY BEFORE SAVE: ' .
+    json_encode($application->toArray())
+);
+
+Log::debug(
+    'ENTITY ERRORS: ' .
+    json_encode($application->getErrors())
+);
+
+Log::debug(
+    'DIRTY FIELDS: ' .
+    json_encode($application->getDirty())
+);
+
+if (!$postAdvertisementTable->save($application)) {
+
+    Log::error(
+        'SAVE FAILED: ' .
+        json_encode($application->getErrors())
+    );
+
+    throw new \RuntimeException(
+        'Unable to save: ' .
+        json_encode($application->getErrors())
+    );
+}
+
+Log::debug(
+    'SAVED ENTITY: ' .
+    json_encode($application->toArray())
+);
+
               
-
-                if (!$postAdvertisementTable->save($application)) {
-                    throw new \RuntimeException(
-                        'Unable to save the advertisement application: ' . json_encode($application->getErrors())
-                    );
-                }
-
-                $schoolLevelData = [
-                    'is_primary' => $schoolLevel === 'primary' ? 1 : 0,
-                    'secondary' => $schoolLevel === 'secondary' ? 1 : 0,
-                    'higher_secondary' => $schoolLevel === 'higher_secondary' ? 1 : 0,
-                ];
-                $postAdvertisementTable->updateAll(
-                    $schoolLevelData,
-                    ['id' => $application->id]
-                );
 
                 $postAdvertisementVacanciesTable = $this->fetchTable('PostAdvertisementVacancies');
                 foreach ($vacancyPayload as $vacancyInput) {
@@ -2002,7 +2059,7 @@ class SansthaController extends AppController
                 return $this->advertisementJsonResponse($response, 409);
             }
 
-            \Cake\Log\Log::error('Advertisement application transaction failed: ' . $exception->getMessage());
+            Log::error('Advertisement application transaction failed: ' . $exception->getMessage());
             return $this->advertisementJsonResponse(['success' => false, 'message' => 'Unable to submit application. Please retry.'], 500);
         }
 
@@ -2235,14 +2292,23 @@ class SansthaController extends AppController
 
                 $rosterValue = $data['courtRoster'] ?? null;
                 $courtOrderValue = $data['courtOrder'] ?? null;
+                $candidateName = trim((string)($data['candidate_firstname'] ?? '') . ' ' . trim((string)($data['candidate_middlename'] ?? '')) . ' ' . trim((string)($data['candidate_lastname'] ?? '')));
 
                 $roster = in_array((string)$rosterValue, ['1', 'true', 'yes', 'on'], true);
                 $courtOrder = in_array((string)$courtOrderValue, ['1', 'true', 'yes', 'on'], true);
 
                 $appointment = $appointmentsTable->newEntity([
                     'staff_id' => $data['staffId'] ?? null,
+                    'candidate_firstname' => $data['candidate_firstname'] ?? null,
+                    'candidate_lastname' => $data['candidate_lastname'] ?? null,
+                    'candidate_middlename' => $data['candidate_middlename'] ?? null,   
+                    'candidate_name' => $candidateName,
+                    'nominee_name_1' => $data['nominee_name_1'] ?? null,
+                    'nominee_address_1' => $data['nominee_address_1'] ?? null,    
+                    'nominee_dob_1' => $data['nominee_dob_1'] ?? null,
+                    'relationship_1' => $data['relationship_1'] ?? null,
+                    'percentage_1' => 100,
 
-                    'candidate_name' => $data['candidateName'] ?? null,
 
                     'appointment_date' => !empty($data['appointmentDate'])
                         ? date(
@@ -2260,7 +2326,7 @@ class SansthaController extends AppController
                     'gender' => $data['gender'] ?? null,
                     'dob_date' => $data['dob_date'] ?? null,
                     'gender' => $data['gender'] ?? null,
-                    'candidate_name' => $data['candidatename'] ?? null,
+                    'candidate_name' => $candidateName,
                     'candidateemail' => $data['candidateemail'] ?? null,
                     'candidatemobile' => $data['candidatemobile'] ?? null,
                     'pay_scale' => $data['pay_scale'] ?? null,
@@ -2285,6 +2351,7 @@ class SansthaController extends AppController
                     'court_order' => $courtOrder,
                     'court_order_petition_number' => $data['courtOrderPetitionNumber'] ?? null,
                     'court_order_date' => $data['courtOrderDate']?? null,
+                    
                 ]);
 
 

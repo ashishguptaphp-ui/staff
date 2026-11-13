@@ -3660,25 +3660,31 @@ private function generateAdvertisementRejectPdf($appId, $rejectReason): ?string
         return $html;
     }
 
-     public function addShalarthEmployeeRecord()
+    public function addShalarthEmployeeRecord()
     {
         $this->Authorization->skipAuthorization();
-        $this->request->allowMethod(['get','post']);
+        $this->request->allowMethod(['get','post','ajax']);
 
           
-    $appId = 32;//$this->request->getData('app_id');
+    $appId = $this->request->getData('app_id');
 
     $appointmentsTable = TableRegistry::getTableLocator()->get('StaffOnboardingAppointments');
 
     $appointment = $appointmentsTable->find()
-    ->contain(['StaffOnboardingDocuments'])
     ->where(['id' => (int)$appId])
     ->first();
 
-    
-    $employeeData = [];
-    $employeeData['APPLICANT_FULL_NAME'] = $appointment->candidate_name;
 
+    $vacanciesTable = TableRegistry::getTableLocator()->get('PostAdvertisementVacancies');
+
+    $vacancies = $vacanciesTable->find()
+    ->where(['id' => $appointment->staff_id])
+    ->first();
+
+
+    //NTR_year_000001
+
+    
     $genderMap = [
         'm' => 'M',
         'male' => 'M',
@@ -3710,6 +3716,21 @@ private function generateAdvertisementRejectPdf($appId, $rejectReason): ?string
             ]));
     }
 
+    $employeeData = [];
+   // $employeeData['APPLICANT_FULL_NAME'] = $appointment->candidate_name;
+
+    $employeeData['APPLICATION_ID'] = $this->generateApplicationNumber($appointment->id);
+    $employeeData['CURRENT_POST'] = $vacancies->post_code;
+    $employeeData['FIRST_NAME_AS_UID'] = $appointment->candidate_firstname;
+    $employeeData['MIDDLE_NAME_AS_UID'] = $appointment->candidate_middlename;
+    $employeeData['LAST_NAME_AS_UID'] = $appointment->candidate_lastname;
+    $employeeData["PERCENTAGE_1"] = (int)$appointment->percentage_1;
+    $employeeData["NOMINEE_NAME_1"] = $appointment->nominee_name_1;
+    $employeeData["NOMINEE_ADDRESS_1"] = $appointment->nominee_address_1;
+    $employeeData["NOMINEE_DOB_1"] = $appointment->nominee_dob_1;
+    $employeeData["RELATIONSHIP_1"] = $appointment->relationship_1;
+    $employeeData["PERCENTAGE_2"] = 0;
+    $employeeData["PERCENTAGE_3"] = 0;
     $employeeData['GENDER'] = $gender;
     $employeeData['MARITAL_STATUS'] = $maritalStatus;
     $employeeData['DOB'] = $appointment->dob_date;
@@ -3718,21 +3739,21 @@ private function generateAdvertisementRejectPdf($appId, $rejectReason): ?string
     $employeeData['PAN_NO'] = $appointment->pan_number;
     $employeeData['EMPLOYEE_PHOTO_URL'] = null; 
     $employeeData['EMPLOYEE_SIGNATURE_URL'] = null; 
-    $employeeData['CELL_NO'] = $appointment->candidatemobile;
+
+    //echo json_encode($employeeData); exit;
+    /*  $employeeData['CELL_NO'] = $appointment->candidatemobile;
     $employeeData['TEL_NO'] = 0;
     $employeeData['ACAD_QUAL'] = $appointment->graduate_degree.', '.$appointment->post_graduate_degree;
-    $employeeData['PROF_QUAL'] = NULL;
+    $employeeData['PROF_QUAL'] = NULL;*/
 
-    $employeeData['APPLICATION_ID'] = "211000765199";
-    $employeeData['MGMT_CODE'] = "270715SC999";
+    
+   /* $employeeData['MGMT_CODE'] = "270715SC999";
     $employeeData['SCHL_ID'] = "27040212999";
     $employeeData['DDO_CODE'] = "04630100999";
     $employeeData['DDO_NAME'] = "04630100999";
     $employeeData['SALUTATION'] = "700075";
     $employeeData['EMP_FATHER_MIDDLE_NAME'] = "SURESH GANPAT PATIL";
-    $employeeData['FIRST_NAME_AS_UID'] = "RAMESH";
-    $employeeData['MIDDLE_NAME_AS_UID'] = "SURESH";
-    $employeeData['LAST_NAME_AS_UID'] = "PATIL";
+
     $employeeData['JOINING_DT'] = "2024-09-26T00:00:00";
     $employeeData['STATE_CD'] = 27;
     $employeeData['DISTRICT_CD'] = 354;
@@ -3749,7 +3770,7 @@ private function generateAdvertisementRejectPdf($appId, $rejectReason): ?string
     $employeeData['PAY_COMMISSION'] = 2500347;
     $employeeData['NEW_PAY_SCALE_CD'] = 101;
     $employeeData['BASIC_PAY_SCALE'] = 18000;
-    $employeeData['CURRENT_POST'] = 1624823;
+    
     $employeeData['sanchManyataPostType'] = 1;
     $employeeData['sanchManyataPostId'] = 1;
     $employeeData['INITIAL_APPT_DT'] = "2024-11-26T00:00:00";
@@ -3768,21 +3789,18 @@ private function generateAdvertisementRejectPdf($appId, $rejectReason): ?string
     $employeeData["GIS_APPLICABLE"] = "2";
     $employeeData["GIS_GROUP"] = 0;
     $employeeData["MEMBERSHIP_DT"] = "1911-01-01T00:00:00";
-    $employeeData["NOMINEE_NAME_1"] = "SURESH GANPAT PATIL";
-    $employeeData["NOMINEE_ADDRESS_1"] = "AT SAMPLEWADI";
-    $employeeData["NOMINEE_DOB_1"] = "1970-02-09T00:00:00";
-    $employeeData["RELATIONSHIP_1"] = "FATHER";
-    $employeeData["PERCENTAGE_1"] = 100;
+    
+   
     $employeeData["NOMINEE_NAME_2"] = null;
     $employeeData["NOMINEE_ADDRESS_2"] = null;
     $employeeData["NOMINEE_DOB_2"] = "1911-01-01T00:00:00";
     $employeeData["RELATIONSHIP_2"] = null;
-    $employeeData["PERCENTAGE_2"] = 0;
+   
     $employeeData["NOMINEE_NAME_3"] = null;
     $employeeData["NOMINEE_ADDRESS_3"] = null;
     $employeeData["NOMINEE_DOB_3"] = "1911-01-01T00:00:00";
     $employeeData["RELATIONSHIP_3"] = null;
-    $employeeData["PERCENTAGE_3"] = 0;
+    
     $employeeData["ASST_FLAG"] = "E";
     $employeeData["ENTRY_AUTH"] = "2706DD";
     $employeeData["SYSTEM_IP_ENTRY"] = "203.0.113.10/Chrome/Win10/N";
@@ -3790,7 +3808,7 @@ private function generateAdvertisementRejectPdf($appId, $rejectReason): ?string
     $employeeData["PH_YES_NO"] = "N";
     $employeeData["ORD_NO"] = "3036";
     $employeeData["BANK_NAME"] = "7920";
-    $employeeData["VERIF_AUTH"] = "N";
+    $employeeData["VERIF_AUTH"] = "N";*/
 
 
 
@@ -3846,6 +3864,7 @@ private function generateAdvertisementRejectPdf($appId, $rejectReason): ?string
         } catch (\Throwable $exception) {
             Log::error('Shalarth employee API request failed: ' . $exception->getMessage());
 
+
             return $this->response
                 ->withStatus(502)
                 ->withType('application/json')
@@ -3857,10 +3876,25 @@ private function generateAdvertisementRejectPdf($appId, $rejectReason): ?string
 
         $contentType = $shalarthResponse->getHeaderLine('Content-Type');
 
+        //$appointment->shalarth_application_id = $shalarthApplicationId;
+        //$appointmentsTable->save($appointment);
+
         return $this->response
             ->withStatus($shalarthResponse->getStatusCode())
             ->withType($contentType !== '' ? $contentType : 'application/json')
             ->withStringBody($shalarthResponse->getStringBody());
     }
 
+
+    private function generateApplicationNumber($appId): string
+    {
+        $year = date('Y');
+
+        return 'NTR_' . $year . '_' . str_pad(
+            (string)$appId,
+            8,
+            '0',
+            STR_PAD_LEFT
+        );
+    }
 }

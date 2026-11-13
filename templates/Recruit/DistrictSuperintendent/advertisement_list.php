@@ -1076,20 +1076,9 @@
                         <hr/>                        
                     </div>
 
-                    <div class="pdf-field" id="">
-                        <h3 class="section-title">Roster</h3>
-                        <div class="row mt-1">
-                            <div class="col-md-3 mt-2">
-                                <label for="advApprovelFile" class="form-label english-label">
-                                     Roster file
-                                </label>                                
-                            </div>    
-                            <div class="col-md-3" id="adv_post_approval_file">
-                                <a>View Document</a>
-                            </div>      
-                        </div>                    
-                        <hr/>                        
-                    </div> 
+                     <div id="resolutionDivShow"></div>  
+
+                
 
                     <div class="pdf-field">
                         <h3 class="section-title">संच मान्यता दस्तऐवज</h3>
@@ -1783,7 +1772,8 @@ console.log('startApplication-open-view');
                             document.getElementById("saApplicationDetails_history").innerHTML = response.data.sansthaRecordDiv;
                             document.getElementById("adv_post_list").innerHTML = response.html;
                             document.getElementById("periodDivShow").innerHTML = response.data.periodDivShow;
-                           document.getElementById("cadetailsDivShow").innerHTML = response.data.cadetailsDivShow;
+                            document.getElementById("cadetailsDivShow").innerHTML = response.data.cadetailsDivShow;
+                            document.getElementById("resolutionDivShow").innerHTML = response.data.resolutionDivShow;
 
                             //document.getElementById("saAuditTableBody").innerHTML = response.audithtml;   
                             document.getElementById("saTimelineContainer").innerHTML = response.data.auditLogsHistory || '<div class="timeline-item left"><div class="card"><div class="card-body p-4"><h3 class="text-center">No audit history found.</h3></div></div></div>';                          

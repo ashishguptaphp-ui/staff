@@ -782,6 +782,23 @@
                             </a><br/>";
                              }
 
+                            if($post->status == 'approved_dyd'){ 
+                            echo "<a href='javascript:void(0);'
+                                    style='text-decoration:none;'
+                                    class='infoApplication-open-transfer'
+                                    data-staffObject='" . htmlspecialchars(
+                                        json_encode($post, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP),
+                                        ENT_QUOTES,
+                                        'UTF-8'
+                                    ) . "'
+                                    data-mode='1'
+                                    data-id='" . $post->soa_id . "'>
+
+                                    <i class='fa-solid fa-arrow-trend-down'></i>
+                                    शालार्थला माहिती पाठवा
+                                </a><br/>";
+                            }
+
                              }else{
                                  echo "";
                             }                         
@@ -3627,6 +3644,60 @@ var initConfig = {
 							
     });
 
+
+
+
+    $(document).on('click', '.infoApplication-open-transfer', function (e) {
+    e.preventDefault();
+
+    let button = $(this);
+
+    let staffId = button.data('id');
+    let mode = button.data('mode');
+
+    let csrfToken = $('meta[name="csrfToken"]').attr('content');
+
+    if (!confirm('तुम्हाला उमेदवाराची माहिती शालार्थ प्रणालीमध्ये पाठवायची आहे का?')) {
+        return;
+    }
+
+    button.addClass('disabled').css('pointer-events', 'none');
+
+    $.ajax({
+        url: '<?= $this->Url->build(["controller" => "Division", "action" => "addShalarthEmployeeRecord"]); ?>',
+        type: 'POST',
+        dataType: 'json',
+          headers: {
+            'X-CSRF-Token': csrfToken
+        },
+
+        data: {
+            app_id: staffId,
+            mode: mode,
+        },
+        success: function (response) {
+
+            if (response.status === 200) {
+                alert(response.message || 'शालार्थ प्रणालीमध्ये माहिती यशस्वीरित्या पाठविण्यात आली.');
+
+                // Optional: reload page
+                location.reload();
+            }else if (response.status === 409) {
+                alert(response.message || 'शालार्थ प्रणालीमध्ये माहिती पाठविताना त्रुटी आली.');
+                location.reload();
+            } else {
+                alert(response.message || 'शालार्थ माहिती पाठविताना त्रुटी आली.');
+            }
+        },
+        error: function (xhr) {
+            console.log(xhr.responseText);
+            alert('शालार्थ प्रणालीशी संपर्क साधताना त्रुटी आली.');
+        },
+        complete: function () {
+            button.removeClass('disabled').css('pointer-events', 'auto');
+        }
+    });
+});
 
 
 </script>

@@ -39,5 +39,15 @@ class StaffOnboardingAppointment extends Entity
         'period2324' => true,
         'period2324_file' => true,
         'period_file'=> true,
+        'candidate_firstname' => true,
+        'candidate_middlename' => true,
+        'candidate_lastname' => true,
+        'nominee_name_1' => true,
+        'nominee_relation_1' => true,
+        'nominee_address_1' => true,
+        'relationship_1' => true,
+        'percentage_1' => true,
+        'nominee_dob_1' => true,
+
     ];
 }

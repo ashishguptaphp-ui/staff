@@ -2517,9 +2517,7 @@ private function generateAdvertisementRejectPdf($appId, $rejectReason): ?string
         $districts = $districtTable->find()->all();
         $regionTable = TableRegistry::getTableLocator()->get('Regions');
         $regions = $regionTable->find()->all();
-        /*echo "<pre>";
-        print_r($regions);
-        exit;*/
+     
         $this->Authorization->skipAuthorization();
         $this->viewBuilder()->setLayout('recruit-district');
 
@@ -2537,6 +2535,8 @@ private function generateAdvertisementRejectPdf($appId, $rejectReason): ?string
  
               
         $postAdvertisementVacanciesTable = $this->fetchTable('PostAdvertisementVacancies');
+
+     
 
         $ng2g = $postAdvertisementVacanciesTable->find()
             ->select([
@@ -2573,6 +2573,7 @@ private function generateAdvertisementRejectPdf($appId, $rejectReason): ?string
             ])
             ->all();
 
+     
 
         $approvedLogDocuments = [];
         $rejectLogDocuments = [];
@@ -2581,8 +2582,11 @@ private function generateAdvertisementRejectPdf($appId, $rejectReason): ?string
             return (int)$post->id;
         }, $ng2g->toArray());
 
+
+      
+
          if ($applicationIds !== []) {
-            $logsTable = TableRegistry::getTableLocator()->get('staffOnboardApplicationLogs');
+            $logsTable = TableRegistry::getTableLocator()->get('StaffOnboardApplicationLogs');
             $approvedLogs = $logsTable->find()
                 ->select(['app_id', 'stage_doc', 'created_at'])
                 ->where([
@@ -2593,6 +2597,7 @@ private function generateAdvertisementRejectPdf($appId, $rejectReason): ?string
                 ->order(['created_at' => 'DESC'])
                 ->all();
 
+                 // echo "<pre>"; print_r($logsTable);  exit;
             foreach ($approvedLogs as $approvedLog) {
                 $approvedLogDocuments[(int)$approvedLog->app_id] ??= $approvedLog->stage_doc;
             }
@@ -2629,7 +2634,7 @@ private function generateAdvertisementRejectPdf($appId, $rejectReason): ?string
 
         }
 
-       //echo "<pre>"; print_r($ng2g);  exit;
+
                     
         $this->set('ng2g', $ng2g);
         $this->set('schools', $schools);

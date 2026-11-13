@@ -754,14 +754,33 @@
                     </div> 
                    
                     <div class="row mb-3">
-                         <div class="col-md-3">
-                            <label for="candidatename " class="form-label marathi-label required-field">उमेदवाराचे नाव </label>
+                        <div class="col-md-3">
+                            <label for="candidate_firstname" class="form-label marathi-label required-field">उमेदवाराचे पहिले नाव </label>
                             <input type="text"
                                 class="form-control"
-                                id="candidatename"
-                                name="candidatename"
+                                id="candidate_firstname"
+                                name="candidate_firstname"
                                 required>
                         </div>
+                         <div class="col-md-3">
+                            <label for="candidate_middlename" class="form-label marathi-label">उमेदवाराचे वडिलांचे नाव </label>
+                            <input type="text"
+                                class="form-control"
+                                id="candidate_middlename"
+                                name="candidate_middlename"
+                                required>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="candidate_lastname" class="form-label marathi-label required-field">उमेदवाराचे आडनाव</label>
+                            <input type="text"
+                                class="form-control"
+                                id="candidate_lastname"
+                                name="candidate_lastname"
+                                required>
+                        </div>
+                     </div>
+                        <div class="row mb-3">
+
                         <div class="col-md-3">
                             <label for="gender" class="form-label marathi-label required-field">लिंग </label>
                             <select name="gender" class="form-select">
@@ -846,6 +865,48 @@
                         </div>
                       
                     </div>
+
+
+                    <div class="row mb-3">
+                       <div class="col-md-3">
+                            <label for="nominee_name_1" class="form-label marathi-label required-field">नामनिर्देशित व्यक्तीचे पूर्ण नाव</label>
+                            <input type="text"
+                                class="form-control"
+                                id="nominee_name_1"
+                                name="nominee_name_1"
+                                required>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label for="nominee_dob_1" class="form-label marathi-label required-field">नामनिर्देशित व्यक्तीची जन्मतारीख</label>
+                            <input type="date"
+                                class="form-control"
+                                id="nominee_dob_1"
+                                name="nominee_dob_1"
+                                required>
+                        </div>
+
+                         <div class="col-md-3">
+                            <label for="nominee_address_1" class="form-label marathi-label required-field">नामनिर्देशित व्यक्तीचा संपूर्ण पत्ता</label>
+                            <input type="text"
+                                class="form-control"
+                                id="nominee_address_1"
+                                name="nominee_address_1"
+                                required>
+                        </div>
+                        
+
+                        <div class="col-md-3">
+                            <label for="relationship_1" class="form-label marathi-label required-field">उमेदवाराशी नाते</label>
+                            <input type="text"
+                                class="form-control"
+                                id="relationship_1"
+                                name="relationship_1"
+                                required>
+                        </div>
+
+                    </div>
+
                     
                     <div class="row mb-3" id="casteCategoryBox">
 
