@@ -767,9 +767,10 @@
                     <td id="actionBtns111_<?= h($request->id) ?>">
                         <?php
 
-                           echo "<button class='btn btn-primary badge bg-purple text-light action-ud startApplication-open-view me-2' data-mode='2' app-step='1'  data-staffObject='". json_encode($request, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ."' data-id='".$request->id."'> <i class='fa-solid fa-address-card'></i> अर्ज पहा</button>";
-                           echo "<button class='btn btn-primary badge bg-purple text-light action-ud startApplicationHistory-open-view me-2' data-mode='2' app-step='1'  data-staffObject='". json_encode($request, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ."' data-id='".$request->id."'> <i class='fa-solid fa-history'></i> अर्ज इतिहास पहा</button>";
                          
+                           echo "<a href='#' style='text-decoration:none;'  class='startApplication-open-view me-2' data-mode='2' app-step='1'  data-staffObject='". json_encode($request, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ."' data-id='".$request->id."'> <i class='fa-solid fa-address-card'></i> अर्ज पहा</a><br>";
+                           echo "<a href='#' style='text-decoration:none;'  class='startApplicationHistory-open-view me-2' data-mode='2' app-step='1'  data-staffObject='". json_encode($request, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ."' data-id='".$request->id."'> <i class='fa-solid fa-history'></i> टिप्पणी</a><br>";
+                          
                         ?>                    
                          
                     </td>

@@ -518,6 +518,7 @@ class SansthaController extends AppController
         $schools = $schoolsTable->find()->where(['sanstha_code' => $this->username])
             ->all();
 
+
         $this->set('schools', $schools);
      
 
@@ -1919,8 +1920,7 @@ class SansthaController extends AppController
     'submission_key' => $submissionKey,
     'submission_fingerprint' => $fingerprint,
 
-    'sanctions_date' => $sanctions_date,
-    'outward_number' => $outward_number,
+   
 ];
 
               
@@ -1956,6 +1956,20 @@ if (!$postAdvertisementTable->save($application)) {
         'Unable to save: ' .
         json_encode($application->getErrors())
     );
+}else{
+      $savedRecord = $postAdvertisementTable->get($application->id);
+
+                        $schoolLevelData = [
+                                'is_primary' => $schoolLevel === 'primary' ? 1 : 0,
+                                'secondary' => $schoolLevel === 'secondary' ? 1 : 0,
+                                'higher_secondary' => $schoolLevel === 'higher_secondary' ? 1 : 0,
+                                'sanctions_date' => $sanctions_date,
+                                'outward_number' => $outward_number,
+                            ];
+                          $postAdvertisementTable->updateAll(
+                            $schoolLevelData,
+                            ['id' => $savedRecord->id]
+                        );
 }
 
 Log::debug(

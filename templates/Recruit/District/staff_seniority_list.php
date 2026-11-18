@@ -757,8 +757,8 @@
                         continue;
                     }
 
-                $approvedLogDocument = $approvedLogDocuments[$post->id] ?? null;
-                   
+                $approvedLogDocument = $approvedLogDocuments[$post->soa_id] ?? null;
+                  
                 $approvedLogUrl = null;
                 if (!empty($approvedLogDocument)) {
                     $approvedLogUrl = preg_match('/^https?:\/\//i', $approvedLogDocument)
@@ -3752,9 +3752,13 @@ $(document).ready(function() {
             e.preventDefault();
             let formData = new FormData(this);
             let approvalId = $("#app_id").text().trim();
+            let signedPdfData = $('#signedPdfData').val();
             $('#approve_form_id').val(approvalId);
             $('#approve_form_remark').val($('#app_remark').val().trim());
-            formData = new FormData(this);
+            let reason = $.trim($('#app_remark').val());
+            formData.append('remark', reason);
+            formData.append('signed_pdf_data', signedPdfData);
+
             $.ajax({
                 url: '<?= $this->Url->build(["controller" => "District", "action" => "staffOnboardApprove"]); ?>',
                 type: 'POST',
@@ -4068,7 +4072,6 @@ var initConfig = {
             return true;
         },
         "postSignCallback" : function(alias, sign, key) {
-            $('#signedPdfData').val(sign);
             $('#lblEncryptedKey').val(key);
             // Implement signed pdf upload and pdf Download here
             var requestData = {
@@ -4100,6 +4103,13 @@ var initConfig = {
                                         $('#downloadDiv').addClass('btn btn-info');
                                         //get pdf data
                                         var pdfData = jsonData.sig;
+                                        try {
+                                            base64ToPdfFile(pdfData, 'staff_order_signed.pdf');
+                                        } catch (error) {
+                                            alert(error.message);
+                                            return;
+                                        }
+                                        $('#signedPdfData').val(pdfData);
                                         var dlnk = document.getElementById('downloadDiv');
                                         dlnk.href = 'data:application/pdf;base64,'+ pdfData;
                                         $("#downloadDiv").text("Download Signed PDF File");

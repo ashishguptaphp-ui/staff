@@ -59,7 +59,8 @@ class DistrictController extends AppController
             'staffOnboardReject',
             'headerUpload',
             'headerDelete',
-            'advertisementPostApprovelEO'
+            'advertisementPostApprovelEO',
+            'staffOnboardApprove'
         ]);
 
 
@@ -2579,10 +2580,9 @@ private function generateAdvertisementRejectPdf($appId, $rejectReason): ?string
         $rejectLogDocuments = [];
         $returnLogDocuments = [];
          $applicationIds = array_map(static function ($post): int {
-            return (int)$post->id;
+            return (int)$post->soa_id;
         }, $ng2g->toArray());
-
-
+   
       
 
          if ($applicationIds !== []) {
@@ -2597,12 +2597,12 @@ private function generateAdvertisementRejectPdf($appId, $rejectReason): ?string
                 ->order(['created_at' => 'DESC'])
                 ->all();
 
-                 // echo "<pre>"; print_r($logsTable);  exit;
+                  
             foreach ($approvedLogs as $approvedLog) {
                 $approvedLogDocuments[(int)$approvedLog->app_id] ??= $approvedLog->stage_doc;
             }
 
-             $rejectLogs = $logsTable->find()
+            $rejectLogs = $logsTable->find()
                 ->select(['app_id', 'stage_doc', 'created_at'])
                 ->where([
                     'app_id IN' => $applicationIds,
@@ -2657,7 +2657,12 @@ private function generateAdvertisementRejectPdf($appId, $rejectReason): ?string
         $this->Authorization->skipAuthorization();
         $this->request->allowMethod(['post', 'ajax']);
         $data = $this->request->getData();
-        $files = $this->request->getUploadedFiles();
+        
+        $forwardReason = trim($data['remark'] ?? '');
+        $signed_pdf_data = $data['signed_pdf_data'] ?? null;
+
+       
+
         $identity = $this->request->getAttribute('identity');
         $userId = $identity ? $identity->getIdentifier() : null;  
         $connection = ConnectionManager::get('default');
@@ -2693,77 +2698,69 @@ private function generateAdvertisementRejectPdf($appId, $rejectReason): ?string
                 'status'            => 'Approved'        
 
             ];
-            $config = Configure::read('ESDL');
-            
-            $bucketPath = $config['mode'].'/staff/onboarding/'.$onboard->id;        
-
-            $generatedDocument = WWW_ROOT . 'uploads' . DS . 'staffonboarding' . DS
-                . 'approve' . DS . 'staff_order_' . $onboard->id . '.pdf';
-            /*if (!is_file($generatedDocument)) {
+           
+$action = 'approve';
+             $signedPdfPath = null;
+        if ($action === 'approve') {
+            if (!is_string($signed_pdf_data) || trim($signed_pdf_data) === '') {
                 $connection->rollback();
                 return $this->response
-                    ->withStatus(400)
                     ->withType('application/json')
+                    ->withStatus(400)
                     ->withStringBody(json_encode([
                         'success' => false,
-                        'message' => 'Generate the work order before uploading its signed copy.'
-                    ]));
-            }*/
-
-            $file = $data['app_doc'] ?? null;
-            /*if (
-                !$file instanceof \Psr\Http\Message\UploadedFileInterface
-                || $file->getError() !== UPLOAD_ERR_OK
-            ) {
-                $connection->rollback();
-                return $this->response
-                    ->withStatus(400)
-                    ->withType('application/json')
-                    ->withStringBody(json_encode([
-                        'success' => false,
-                        'message' => 'Upload the PDF signed with your DSC before approving.'
+                        'message' => 'Signed PDF data is required',
                     ]));
             }
 
-            $tmpPath = $file->getStream()->getMetadata('uri');
-            $fileSize = $file->getSize() ?? filesize($tmpPath);
-            if (!is_int($fileSize) || $fileSize < 5 || $fileSize > (10 * 1024 * 1024)) {
-                $connection->rollback();
-                return $this->response
-                    ->withStatus(400)
-                    ->withType('application/json')
-                    ->withStringBody(json_encode([
-                        'success' => false,
-                        'message' => 'The signed PDF must be smaller than 10 MB.'
-                    ]));
-            }
-
-            $fileInfo = new \finfo(FILEINFO_MIME_TYPE);
-            if (
-                $fileInfo->file($tmpPath) !== 'application/pdf'
-                || file_get_contents($tmpPath, false, null, 0, 5) !== '%PDF-'
-            ) {
-                $connection->rollback();
-                return $this->response
-                    ->withStatus(400)
-                    ->withType('application/json')
-                    ->withStringBody(json_encode([
-                        'success' => false,
-                        'message' => 'The signed document must be a valid PDF.'
-                    ]));
-            }
-
-            $renamedFile = new UploadedFile(
-                $tmpPath,
-                $fileSize,
-                $file->getError(),
-                'staff_order_' . $onboard->id . '_signed.pdf',
-                'application/pdf'
+            $base64Pdf = preg_replace(
+                '/^data:application\/pdf;base64,/i',
+                '',
+                trim($signed_pdf_data)
             );
-            $storage = new EsdlStorageService();
-            $fileName = $storage->upload($renamedFile, $bucketPath);
-    
-            */
+            $pdfBytes = base64_decode($base64Pdf, true);
+            if (
+                $pdfBytes === false
+                || strlen($pdfBytes) > 10 * 1024 * 1024
+                || substr($pdfBytes, 0, 5) !== '%PDF-'
+            ) {
+                $connection->rollback();
+                return $this->response
+                    ->withType('application/json')
+                    ->withStatus(400)
+                    ->withStringBody(json_encode([
+                        'success' => false,
+                        'message' => 'Signed PDF data is invalid or exceeds 10 MB',
+                    ]));
+            }
+
+            $signedPdfDirectory = WWW_ROOT . 'uploads' . DS . 'staffonboarding' . DS . 'approve' . DS;
+            if (!is_dir($signedPdfDirectory) && !mkdir($signedPdfDirectory, 0775, true) && !is_dir($signedPdfDirectory)) {
+                $connection->rollback();
+                return $this->response
+                    ->withType('application/json')
+                    ->withStatus(500)
+                    ->withStringBody(json_encode([
+                        'success' => false,
+                        'message' => 'Unable to create signed PDF directory',
+                    ]));
+            }
+
+            $signedPdfFileName = 'staff_order_sign_' . $onboard->id . '.pdf';
+            $signedPdfPath = 'uploads/staffonboarding/approve/' . $signedPdfFileName;
+            $bytesWritten = file_put_contents($signedPdfDirectory . $signedPdfFileName, $pdfBytes, LOCK_EX);
+            if ($bytesWritten !== strlen($pdfBytes)) {
+                $connection->rollback();
+                return $this->response
+                    ->withType('application/json')
+                    ->withStatus(500)
+                    ->withStringBody(json_encode([
+                        'success' => false,
+                        'message' => 'Unable to save signed PDF',
+                    ]));
+            }
+        }
+
             $onboard = $StaffOnboardingAppointmentsTable->patchEntity($onboard, $staffData);
 
             if ($onboard->hasErrors()) {
@@ -2791,7 +2788,7 @@ private function generateAdvertisementRejectPdf($appId, $rejectReason): ?string
                                     'Approved',
                                     $userId,
                                     $data['remark'] ?? null,
-                                    $fileName ?? null,
+                                    $signedPdfPath ?? null,
                                 )) {
                 throw new \RuntimeException('Unable to save approval document in application log');
             }
