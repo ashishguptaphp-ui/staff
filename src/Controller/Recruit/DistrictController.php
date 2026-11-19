@@ -54,6 +54,7 @@ class DistrictController extends AppController
             'advertisementVacancyAjax',
             'advertisementPostApprovel',
             'advertisementRejectPrepare',
+            'staffOnboardRejectPrepare',
             'addApplicationLog',
             'staffOnboardGenrateFile',
             'advertisementGenrateFile',
@@ -2859,226 +2860,299 @@ $action = 'approve';
         }
     }
  
+    public function staffOnboardRejectPrepare()
+    {
+        $this->Authorization->skipAuthorization();
+        $this->request->allowMethod(['post', 'ajax']);
+        $data = $this->request->getData();
+        $staffId = filter_var($data['reject_id'] ?? null, FILTER_VALIDATE_INT);
+
+        if (!$staffId) {
+            return $this->response
+                ->withStatus(400)
+                ->withType('application/json')
+                ->withStringBody(json_encode([
+                    'success' => false,
+                    'message' => 'Invalid staff application.',
+                ]));
+        }
+
+        $appointmentsTable = $this->fetchTable('StaffOnboardingAppointments');
+        $onboard = $appointmentsTable->find()
+            ->where(['staff_id' => $staffId])
+            ->order(['id' => 'DESC'])
+            ->first();
+
+        if (!$onboard) {
+            return $this->response
+                ->withStatus(404)
+                ->withType('application/json')
+                ->withStringBody(json_encode([
+                    'success' => false,
+                    'message' => 'Staff onboarding application not found.',
+                ]));
+        }
+
+        $rejectedDocuments = $this->getStaffOnboardRejectedDocuments($data);
+        $remark = trim((string)($data['reject_remark'] ?? ''));
+        if (!$rejectedDocuments && $remark === '') {
+            return $this->response
+                ->withStatus(400)
+                ->withType('application/json')
+                ->withStringBody(json_encode([
+                    'success' => false,
+                    'message' => 'Select a rejection reason or enter a remark.',
+                ]));
+        }
+
+        $pdfLines = [];
+        foreach ($rejectedDocuments as $index => $document) {
+            $pdfLines[] = ($index + 1) . '. ' . $document;
+        }
+        if ($remark !== '') {
+            $pdfLines[] = 'शेरा: ' . $remark;
+        }
+
+        $generatedDocument = 'uploads/staffonboarding/reject/staff_order_reject_' . $onboard->id . '.pdf';
+        $generation = $this->generateRejectLetter((int)$onboard->id, implode("\n", $pdfLines));
+        if (
+            !is_file(WWW_ROOT . $generatedDocument)
+            || (is_object($generation) && method_exists($generation, 'getStatusCode') && $generation->getStatusCode() >= 400)
+        ) {
+            return $this->response
+                ->withStatus(500)
+                ->withType('application/json')
+                ->withStringBody(json_encode([
+                    'success' => false,
+                    'message' => 'Unable to generate the rejection PDF.',
+                ]));
+        }
+
+        $basePath = $this->request->getAttribute('base') ?? '';
+        $pdfUrl = $this->request->scheme() . '://' . $this->request->host()
+            . $basePath . '/' . ltrim($generatedDocument, '/')
+            . '?v=' . filemtime(WWW_ROOT . $generatedDocument);
+
+        return $this->response
+            ->withType('application/json')
+            ->withStringBody(json_encode([
+                'success' => true,
+                'url' => $pdfUrl,
+                'staff_id' => $staffId,
+                'application_id' => $onboard->id,
+            ]));
+    }
+
     public function staffOnboardReject()
     {
         $this->Authorization->skipAuthorization();
         $this->request->allowMethod(['post', 'ajax']);
         $data = $this->request->getData();
-        $files = $this->request->getUploadedFiles();
-        $identity = $this->request->getAttribute('identity');
-        $userId = $identity ? $identity->getIdentifier() : null;            
-        $connection = ConnectionManager::get('default');
-        $connection->begin();
-        $fileName = null;            
-        try {
-           
-                    
-           
-            $StaffOnboardingAppointmentsTable = TableRegistry::getTableLocator()->get('StaffOnboardingAppointments');
-            
-            if (!empty($data['reject_id'])) {
-                $staffId = !empty($data['reject_id']) ? (int)$data['reject_id'] : 0;
-                $onboard = $StaffOnboardingAppointmentsTable->find()
-                            ->where(['staff_id' => $staffId])
-                            ->first();
-                                            
-            }else{
-                return $this->response
-                            ->withType('application/json')
-                            ->withStringBody(json_encode([
-                                'success' => false,
-                                'message' => 'Invalid Application'
-                            ]));
-            }
+        $staffId = filter_var($data['reject_id'] ?? null, FILTER_VALIDATE_INT);
+        $applicationId = filter_var($data['reject_application_id'] ?? null, FILTER_VALIDATE_INT);
+        $signedPdfData = $data['signed_pdf_data'] ?? null;
 
-            if($onboard->id < 1){
-                return $this->response
-                            ->withType('application/json')
-                            ->withStringBody(json_encode([
-                                'success' => false,
-                                'message' => 'Invalid Application'
-                            ]));
-            }
-        
-            
-            //'pending'::staff_update_statuses_enum
-            $staffData = [               
-                'status'            => 'Rejected', 
-                
-            ];
-            $insertData = [];
-            $config = Configure::read('ESDL');
-           
-            $bucketPath = $config['mode'].'/staff/onboarding/'.$onboard->id;
-
-            
-                
-
-            if (!empty($data['reject_doc']) && $data['reject_doc']->getError() === UPLOAD_ERR_OK) {
-
-                $file = $data['reject_doc'];
-                
-                if ($file->getClientMediaType() !== 'application/pdf') {
-                    return $this->response
-                        ->withType('application/json')
-                        ->withStringBody(json_encode([
-                            'success' => false,
-                            'message' => 'Must be a PDF File'
-                        ]));
-                }
-
-                if ($file->getSize() > (2 * 1024 * 1024)) {
-                    return $this->response
-                        ->withType('application/json')
-                        ->withStringBody(json_encode([
-                            'success' => false,
-                            'message' => 'Exceeds 2MB limit File'
-                        ]));
-                }
-
-                if (!$file || $file->getError() !== UPLOAD_ERR_OK) {
-                    return $this->response
-                        ->withType('application/json')
-                        ->withStringBody(json_encode([
-                            'success' => false,
-                            'message' => 'Invalid File'
-                        ]));
-                    //$this->Flash->error('Invalid file');
-                }
-
-
-                // Get temp path safely
-                $tmpPath = $file->getStream()->getMetadata('uri');
-
-                // Extract extension (safe)
-                $extension = pathinfo($file->getClientFilename(), PATHINFO_EXTENSION);
-
-                // New filename
-                $newFileName = 'replied_file.' . $extension;
-
-                // Create NEW UploadedFile object
-                $renamedFile = new UploadedFile(
-                    $tmpPath,
-                    $file->getSize(),
-                    $file->getError(),
-                    $newFileName,
-                    $file->getClientMediaType()
-                );
-
-                $storage = new EsdlStorageService();
-                $fileName = $storage->upload($renamedFile, $bucketPath);
-
-                // $staffData['eo_clk_replied_file'] = $fileName;
-            } 
-    
-            $rejectedDocumentFields = [
-                'ssc_doc_chk' => 'माध्यमिक (SSC)',
-                'hsc_doc_chk' => 'उच्च माध्यमिक (HSC)',
-                'graduate_doc_chk' => 'पदवी (Graduate Degree)',
-                'post_graduate_doc_chk' => 'पदव्युत्तर पदवी (Post Graduate Degree)',
-                'adv_approval_doc_chk' => 'जाहिरात मंजूरी पत्र',
-                'advertisement_doc_chk' => 'जाहिरात',
-                'signature_doc_chk' => 'उमेदवारांच्या स्वाक्षरीची यादी',
-                'marking_doc_chk' => 'उमेदवार गुणांकन',
-                'resolution_doc_chk' => 'संस्थेचा ठराव',
-                'order_doc_chk' => 'आदेश',
-                'court_roster_doc_chk' => 'रोस्टर (Roster)',
-                'no_post_vacant' => 'पद रिक्त नाही ',
-            ];
-
-            foreach ($rejectedDocumentFields as $checkboxName => $fieldName) {
-                if (!empty($data[$checkboxName])) {
-                    $insertData[] = ['rtn_field_name' => $fieldName];
-                }
-            }
-
-        $insertDataText = implode(', ', array_column($insertData, 'rtn_field_name'));
-
-        $insertDataText2 = implode('<br> ', array_map(
-                function ($item, $index) {
-                    return ($index + 1) . '.' . $item['rtn_field_name'];
-                },
-                $insertData,
-                array_keys($insertData)
-            ));
-
-        if (!empty($insertDataText)) {
-            if (!empty($data['reject_remark'])) {
-                $data['reject_remark'] .= "\nDocuments rejected: " . $insertDataText;
-            } else {
-                $data['reject_remark'] = 'Documents rejected: ' . $insertDataText;
-            }
-        }
-
-
-
-
-              if (empty($fileName)) {
-
-               $this->generateRejectLetter($onboard->id,$insertDataText2);
-
-                $generatedDocument = 'uploads/staffonboarding/reject/staff_order_reject_' . $onboard->id . '.pdf';
-                if (is_file(WWW_ROOT . $generatedDocument)) {
-                    $fileName = $generatedDocument;
-                }
-            }
-
-            $onboard = $StaffOnboardingAppointmentsTable->patchEntity($onboard, $staffData);
-
-            if ($onboard->hasErrors()) {
-                return $this->response
-                    ->withType('application/json')
-                    ->withStringBody(json_encode([
-                        'success' => false,
-                        'message' => 'Unable to upload file'
-                    ]));
-            }
-
-            if (!$StaffOnboardingAppointmentsTable->save($onboard)) {
-                return $this->response
-                    ->withType('application/json')
-                    ->withStringBody(json_encode([
-                        'success' => false,
-                        'message' => 'Unable to reject staff onboarding application'
-                    ]));
-            }
-
-            
-          $this->addApplicationLog(
-                                    $data['reject_id'],
-                                    'rejected',
-                                    $userId,
-                                    $data['reject_remark'] ?? null,
-                                    $fileName ?? null,
-                                );
-
-            $connection->commit();
-
-            /* ===============================
-            * 4. JSON Response
-            * =============================== */
+        if (!$staffId || !$applicationId || !is_string($signedPdfData) || trim($signedPdfData) === '') {
             return $this->response
+                ->withStatus(400)
                 ->withType('application/json')
                 ->withStringBody(json_encode([
-                    'success' => true,
-                    'id' => $onboard->id,
-                    'message' => 'Onboarding application rejected successfully'
+                    'success' => false,
+                    'message' => 'Sign the rejection PDF before submitting.',
                 ]));
+        }
 
-           
+        $base64Pdf = preg_replace('/^data:application\/pdf;base64,/i', '', trim($signedPdfData));
+        $pdfBytes = base64_decode($base64Pdf, true);
+        if (
+            $pdfBytes === false
+            || strlen($pdfBytes) > 10 * 1024 * 1024
+            || substr($pdfBytes, 0, 5) !== '%PDF-'
+        ) {
+            return $this->response
+                ->withStatus(400)
+                ->withType('application/json')
+                ->withStringBody(json_encode([
+                    'success' => false,
+                    'message' => 'Signed PDF data is invalid or exceeds 10 MB.',
+                ]));
+        }
 
-        } catch (\Throwable $e) {
-            $connection->rollback();
-            error_log('staffOnboardReject failed: ' . $e->getMessage());
+        $appointmentsTable = $this->fetchTable('StaffOnboardingAppointments');
+        $onboard = $appointmentsTable->find()
+            ->where([
+                'id' => $applicationId,
+                'staff_id' => $staffId,
+            ])
+            ->first();
+
+        if (!$onboard) {
+            return $this->response
+                ->withStatus(404)
+                ->withType('application/json')
+                ->withStringBody(json_encode([
+                    'success' => false,
+                    'message' => 'Staff onboarding application not found.',
+                ]));
+        }
+
+        $rejectedDocuments = $this->getStaffOnboardRejectedDocuments($data);
+        $remark = trim((string)($data['reject_remark'] ?? ''));
+        if (!$rejectedDocuments && $remark === '') {
+            return $this->response
+                ->withStatus(400)
+                ->withType('application/json')
+                ->withStringBody(json_encode([
+                    'success' => false,
+                    'message' => 'Select a rejection reason or enter a remark.',
+                ]));
+        }
+
+        $file = $data['reject_doc'] ?? null;
+        if ($file && $file->getError() !== UPLOAD_ERR_NO_FILE) {
+            if ($file->getError() !== UPLOAD_ERR_OK || $file->getClientMediaType() !== 'application/pdf') {
+                return $this->response
+                    ->withStatus(400)
+                    ->withType('application/json')
+                    ->withStringBody(json_encode([
+                        'success' => false,
+                        'message' => 'The uploaded response document must be a PDF.',
+                    ]));
+            }
+            if ($file->getSize() > 2 * 1024 * 1024) {
+                return $this->response
+                    ->withStatus(400)
+                    ->withType('application/json')
+                    ->withStringBody(json_encode([
+                        'success' => false,
+                        'message' => 'The uploaded response document exceeds 2 MB.',
+                    ]));
+            }
+
+            $config = Configure::read('ESDL');
+            $bucketPath = $config['mode'] . '/staff/onboarding/' . $onboard->id;
+            $temporaryPath = $file->getStream()->getMetadata('uri');
+            $renamedFile = new UploadedFile(
+                $temporaryPath,
+                $file->getSize(),
+                $file->getError(),
+                'replied_file.pdf',
+                $file->getClientMediaType()
+            );
+            (new EsdlStorageService())->upload($renamedFile, $bucketPath);
+        }
+
+        if ($rejectedDocuments) {
+            $documentRemark = 'Documents rejected: ' . implode(', ', $rejectedDocuments);
+            $remark = $remark === '' ? $documentRemark : $remark . "\n" . $documentRemark;
+        }
+
+        $signedPdfDirectory = WWW_ROOT . 'uploads' . DS . 'staffonboarding' . DS . 'reject' . DS;
+        if (!is_dir($signedPdfDirectory) && !mkdir($signedPdfDirectory, 0775, true) && !is_dir($signedPdfDirectory)) {
+            return $this->response
+                ->withStatus(500)
+                ->withType('application/json')
+                ->withStringBody(json_encode([
+                    'success' => false,
+                    'message' => 'Unable to save the signed rejection PDF.',
+                ]));
+        }
+
+        $signedPdfFileName = sprintf(
+            'staff_order_reject_%d_signed_%s.pdf',
+            $onboard->id,
+            bin2hex(random_bytes(4))
+        );
+        $signedPdfRelativePath = 'uploads/staffonboarding/reject/' . $signedPdfFileName;
+        $signedPdfAbsolutePath = $signedPdfDirectory . $signedPdfFileName;
+        if (file_put_contents($signedPdfAbsolutePath, $pdfBytes, LOCK_EX) !== strlen($pdfBytes)) {
+            return $this->response
+                ->withStatus(500)
+                ->withType('application/json')
+                ->withStringBody(json_encode([
+                    'success' => false,
+                    'message' => 'Unable to save the signed rejection PDF.',
+                ]));
+        }
+
+        $identity = $this->request->getAttribute('identity');
+        $userId = $identity ? (int)$identity->getIdentifier() : 0;
+        $connection = ConnectionManager::get('default');
+
+        try {
+            $connection->begin();
+            $onboard = $appointmentsTable->patchEntity($onboard, ['status' => 'Rejected']);
+            if ($onboard->hasErrors() || !$appointmentsTable->save($onboard)) {
+                throw new \RuntimeException('Unable to reject staff onboarding application.');
+            }
+
+            if (!$this->addApplicationLog(
+                (int)$onboard->id,
+                'rejected',
+                $userId,
+                $remark !== '' ? $remark : null,
+                $signedPdfRelativePath
+            )) {
+                throw new \RuntimeException('Unable to save the signed rejection PDF in application history.');
+            }
+
+            $connection->commit();
+        } catch (\Throwable $exception) {
+            if ($connection->inTransaction()) {
+                $connection->rollback();
+            }
+            if (is_file($signedPdfAbsolutePath)) {
+                unlink($signedPdfAbsolutePath);
+            }
+            error_log('staffOnboardReject failed: ' . $exception->getMessage());
 
             return $this->response
                 ->withStatus(422)
                 ->withType('application/json')
                 ->withStringBody(json_encode([
-                    'status' => false,
-                    'error' => $e->getMessage()
+                    'success' => false,
+                    'message' => 'Unable to save the signed rejection.',
                 ]));
         }
+
+        return $this->response
+            ->withType('application/json')
+            ->withStringBody(json_encode([
+                'success' => true,
+                'id' => $onboard->id,
+                'message' => 'Onboarding application rejected successfully.',
+            ]));
+    }
+
+    private function getStaffOnboardRejectedDocuments(array $data): array
+    {
+        $fields = [
+            'ssc_doc_chk' => 'माध्यमिक (SSC)',
+            'hsc_doc_chk' => 'उच्च माध्यमिक (HSC)',
+            'graduate_doc_chk' => 'पदवी (Graduate Degree)',
+            'post_graduate_doc_chk' => 'पदव्युत्तर पदवी (Post Graduate Degree)',
+            'horizontalcertificate_doc_chk' => 'समांतर आरक्षण प्रमाणपत्र',
+            'castecertificate_doc_chk' => 'जात प्रमाणपत्र',
+            'validcastecertificate_doc_chk' => 'जात वैधता प्रमाणपत्र',
+            'adv_approval_doc_chk' => 'जाहिरात मंजूरी पत्र',
+            'advertisement_doc_chk' => 'जाहिरात',
+            'signature_doc_chk' => 'उमेदवारांच्या स्वाक्षरीची यादी',
+            'marking_doc_chk' => 'उमेदवार गुणांकन',
+            'resolution_doc_chk' => 'संस्थेचा ठराव',
+            'order_doc_chk' => 'आदेश',
+            'court_roster_doc_chk' => 'रोस्टर (Roster)',
+            'court_order_doc_chk' => 'न्यायालयीन आदेश',
+            'no_post_vacant' => 'पद रिक्त नाही',
+        ];
+
+        $selected = [];
+        foreach ($fields as $field => $label) {
+            if (!empty($data[$field])) {
+                $selected[] = $label;
+            }
+        }
+
+        return $selected;
     }
 
 
@@ -3625,16 +3699,39 @@ $postAdvertisementVacancy = $postAdvertisementVacanciesTable->find()
                 throw new \InvalidArgumentException('Invalid application ID');
             }
 
-            $staffName = 'श्री. अमोल रमेश पाटील';
-            $orderDate = '24-08-2026';
-            $post = 'सहाय्यक शिक्षक';
-            $proposalNumber = sprintf('NG2G-TRFR-%s-%06d', date('Y'), $appId);
-            $proposalDate = '15-08-2026';
+            $appointment = $this->fetchTable('StaffOnboardingAppointments')->find()
+                ->where(['id' => $appId])
+                ->first();
+            if (!$appointment) {
+                throw new \RuntimeException('Staff onboarding application not found.');
+            }
 
-            $sansthaCode = '';
-            $sansthaName = '';
-            $schoolCode = '';
-            $sansthaName = 'श्री शिवाजी हायस्कूल व कनिष्ठ महाविद्यालय, कोल्हापूर';
+            $vacancy = $this->fetchTable('PostAdvertisementVacancies')->find()
+                ->where(['id' => $appointment->staff_id])
+                ->first();
+            if (!$vacancy) {
+                throw new \RuntimeException('Staff vacancy details not found.');
+            }
+
+            $postAdvertisement = $this->fetchTable('PostAdvertisement')->find()
+                ->where(['id' => $vacancy->post_advertisement_id])
+                ->first();
+            if (!$postAdvertisement) {
+                throw new \RuntimeException('Advertisement details not found.');
+            }
+
+            $staffName = (string)$appointment->candidate_name;
+            $orderDate = date('d-m-Y');
+            $post = (string)$vacancy->post_name;
+            $proposalNumber = sprintf('NG2G-TRFR-%s-%06d', date('Y'), $appId);
+            $createdAt = $appointment->created_at ?? null;
+            $proposalDate = $createdAt instanceof \DateTimeInterface
+                ? $createdAt->format('d-m-Y')
+                : date('d-m-Y');
+            $sansthaCode = (string)($postAdvertisement->institution_code ?? '');
+            $sansthaName = (string)($postAdvertisement->institution_name ?? '');
+            $schoolCode = (string)($vacancy->school_udise_code ?? '');
+            $schoolName = (string)($vacancy->school_name ?? $sansthaName);
 
             $sourceAided = 'विना अनुदानित';
             $targetAided = 'अंशतः अनुदानित (२० टक्के)';
@@ -3657,7 +3754,7 @@ $postAdvertisementVacancy = $postAdvertisementVacanciesTable->find()
                 'sanstha_code' => $sansthaCode,
                 'sanstha_name' => $sansthaName,
                 'school_code' => $schoolCode,
-                'school_name' => $sansthaName,
+                'school_name' => $schoolName,
                 'source_aided' => $sourceAided,
                 'target_aided' => $targetAided,
                 'unaided_time_frame' => $unaidedTimeFrame,
@@ -3690,7 +3787,7 @@ $postAdvertisementVacancy = $postAdvertisementVacanciesTable->find()
             $letterData['targetAppUrl'] = $fullUrl;
             $letterData['targetQRUrl'] = $this->request->scheme() . '://' . $this->request->host() . $basePath . '/uploads/staffonboarding/reject/qrcodes/staff_order_reject_' . $appId . '.png';
             $letterData['targetQRPath'] = $qrcodeDir . 'staff_order_reject_' . $appId . '.png';
-            $letterData['reject_text'] = $text;
+            $letterData['reject_text'] = nl2br(h((string)$text));
 
             //$this->generateQRCode($fullUrl, $appId);
             $html = $this->renderRejectLetterViewContent($letterData);
@@ -3878,12 +3975,11 @@ $postAdvertisementVacancy = $postAdvertisementVacanciesTable->find()
                 </div>
 
                 <div class="content">
-                    <p>उपरोक्त संदर्भाधिन पत्राानुसार निर्देशित करण्यांत येते की, संदर्भाधिन प्रस्तावामध्ये ............................ या शाळेतील/कनिष्ठ महाविदयालयातील नियुक्त शिक्षकेत्तर कर्मचारी (कनिष्ठ लिपिक,प्रयोगशाळा सहाय्यक,ग्रंथपाल) यांचे पदास मान्यता मिळणेबाबतचा प्रस्ताव सादर करण्यात आलेला होता..</p>
-                    <p>त्यास अनुसरुन...........................................स्तरावर करण्यात आलेल्या छाननीअंती आपल्या प्रस्तावात त्रुटी आढळून आल्या आहेत.</p>
-                     
+                    <p>उपरोक्त संदर्भाधिन पत्रानुसार <strong>' . h($data['school_name'] ?? '') . '</strong> येथील <strong>' . h($data['teacher_name'] ?? '') . '</strong> यांची <strong>' . h($data['designation'] ?? '') . '</strong> पदावर नियुक्ती मान्यतेसाठी प्रस्ताव सादर करण्यात आला होता.</p>
+                    <p>प्रस्तावाच्या छाननीअंती खालील त्रुटी आढळून आल्या आहेत.</p>
                 </div>
 
-                <div>'.$data['reject_text'].'</div>
+                <div>' . ($data['reject_text'] ?? '') . '</div>
         
 <div>
 <p>उपरोक्त प्रस्तावामध्ये वरील त्रुटी आढळून आल्याने सदर प्रस्ताव परत पाठविण्यात येत आहे. सदर प्रस्तावातील त्रुटींची पूर्तता करून १५ दिवसांच्या आत फेरसादर करावा.</p>

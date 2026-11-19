@@ -4450,4 +4450,24 @@ public function thridpartytest()
 }
 
 
+
+public function unifiedDataIntegrationTest()
+    {                
+        $this->Authorization->skipAuthorization();
+        $this->viewBuilder()->setLayout('recruit-sanstha');
+
+        $schoolsTable = TableRegistry::getTableLocator()->get('Schools');
+
+        $schools = $schoolsTable->find()->where(['sanstha_code' => $this->username])
+            ->all();
+
+         $sanchDataStatus = $this->fetchSanchWorkingDetails('27230100523');
+
+         print_r($sanchDataStatus);
+
+        $this->set('schools', $schools);
+     
+    }
+
+
   }
