@@ -758,7 +758,7 @@ class SansthaController extends AppController
        $workingAPI = $webUrl . '/empinfo/brands/' . $schoolId;
 
         $http = new Client([
-            'timeout' => 60.0,
+            'timeout' => 120,
             'connect_timeout' => 10.0,
         ]);
 
@@ -4325,6 +4325,129 @@ private function saveSmsRecipient(
 }
 
 
+
+public function thridpartytest()
+{
+    //$url = 'http://115.124.116.194:8083/restApp/empinfo/brands/27230400114';
+
+    $url = 'http://10.48.165.134:8083/restApp/empinfo/brands/27230400114';
+
+    $apiKey = '79d9d68451bbde0c532689655bfecc0cda5c72eca26e0cd0ec6744a187256fb6';
+
+    $curl = curl_init();
+
+    curl_setopt_array($curl, [
+        CURLOPT_URL => $url,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_ENCODING => '',
+        CURLOPT_MAXREDIRS => 10,
+
+        // Timeout settings
+        CURLOPT_CONNECTTIMEOUT => 10,
+        CURLOPT_TIMEOUT => 120,
+
+        CURLOPT_FOLLOWLOCATION => true,
+        CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+        CURLOPT_CUSTOMREQUEST => 'GET',
+
+        CURLOPT_HTTPHEADER => [
+            'X-API-KEY: ' . $apiKey,
+            'Accept: application/json',
+        ],
+    ]);
+
+    $response = curl_exec($curl);
+
+    // Get cURL information before closing
+    $curlErrorNo = curl_errno($curl);
+    $curlError = curl_error($curl);
+    $httpCode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+    $totalTime = curl_getinfo($curl, CURLINFO_TOTAL_TIME);
+
+    curl_close($curl);
+
+    // 1. cURL connection error
+    if ($response === false || $curlErrorNo !== 0) {
+
+        \Cake\Log\Log::error('Third Party API cURL Error: ' . $curlError);
+
+        $result = [
+            'status' => false,
+            'http_code' => $httpCode,
+            'error_code' => $curlErrorNo,
+            'message' => 'Unable to connect to third party API',
+            'error' => $curlError,
+            'response_time' => $totalTime,
+            'data' => null,
+        ];
+
+        $this->response = $this->response->withStatus(502);
+
+        return $this->response
+            ->withType('application/json')
+            ->withStringBody(json_encode($result));
+    }
+
+    // 2. HTTP error handling
+    if ($httpCode < 200 || $httpCode >= 300) {
+
+        \Cake\Log\Log::error(
+            'Third Party API HTTP Error: ' . $httpCode .
+            ' Response: ' . $response
+        );
+
+        $result = [
+            'status' => false,
+            'http_code' => $httpCode,
+            'message' => 'Third party API returned an HTTP error',
+            'data' => null,
+            'api_response' => $response,
+        ];
+
+        $this->response = $this->response->withStatus(502);
+
+        return $this->response
+            ->withType('application/json')
+            ->withStringBody(json_encode($result));
+    }
+
+    // 3. JSON validation
+    $jsonData = json_decode($response, true);
+
+    if (json_last_error() !== JSON_ERROR_NONE) {
+
+        \Cake\Log\Log::error(
+            'Third Party API Invalid JSON: ' . json_last_error_msg()
+        );
+
+        $result = [
+            'status' => false,
+            'http_code' => $httpCode,
+            'message' => 'Invalid JSON response from third party API',
+            'error' => json_last_error_msg(),
+            'data' => null,
+        ];
+
+        $this->response = $this->response->withStatus(502);
+
+        return $this->response
+            ->withType('application/json')
+            ->withStringBody(json_encode($result));
+    }
+
+    // 4. Success response
+    $result = [
+        'status' => true,
+        'http_code' => $httpCode,
+        'message' => 'API data fetched successfully',
+        'response_time' => $totalTime,
+        'data' => $jsonData,
+    ];
+
+    return $this->response
+        ->withType('application/json')
+        ->withStringBody(json_encode($result));
+}
 
 
   }

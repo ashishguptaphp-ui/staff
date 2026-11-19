@@ -1356,6 +1356,7 @@ class DivisionController extends AppController
             ->all();
 
         $approvedLogDocuments = [];
+		$approvedLogdydDocuments = [];
         $applicationIds = array_map(static function ($post): int {
             return (int)$post->soa_id;
         }, $ng2g->toArray());
@@ -1366,7 +1367,7 @@ class DivisionController extends AppController
                 ->select(['app_id', 'stage_doc', 'created_at'])
                 ->where([
                     'app_id IN' => $applicationIds,
-                    'app_stage' => 'Approved',
+                    'app_stage IN' => ['Approved'],
                     'stage_doc IS NOT' => null,
                 ])
                 ->order(['created_at' => 'DESC'])
@@ -1375,6 +1376,20 @@ class DivisionController extends AppController
             foreach ($approvedLogs as $approvedLog) {
                 $approvedLogDocuments[(int)$approvedLog->app_id] ??= $approvedLog->stage_doc;
             }
+
+            $approvedLogsdyd = $logsTable->find()
+                ->select(['app_id', 'stage_doc', 'created_at'])
+                ->where([
+                    'app_id IN' => $applicationIds,
+                    'app_stage IN' => ['Approved_dyd'],
+                    'stage_doc IS NOT' => null,
+                ])
+                ->order(['created_at' => 'DESC'])
+                ->all();
+
+              foreach ($approvedLogsdyd as $approvedLogdyd) {
+                $approvedLogdydDocuments[(int)$approvedLogdyd->app_id] ??= $approvedLogdyd->stage_doc;
+            }  
         }
 
 
@@ -1383,6 +1398,7 @@ class DivisionController extends AppController
                     
         $this->set('ng2g', $ng2g);
         $this->set('approvedLogDocuments', $approvedLogDocuments);
+        $this->set('approvedLogdydDocuments', $approvedLogdydDocuments);
         $this->set('schools', $schools);
         $this->set('casteCategories', $casteCategoriesDetails); 
         $this->set('horizontalCategories', $horizontalCategoriesDetails);  
@@ -1395,8 +1411,7 @@ class DivisionController extends AppController
 
    
 
-    
-    public function staffOnboardApprove()
+     public function staffOnboardApprove()
     {
         $this->Authorization->skipAuthorization();
         $this->request->allowMethod(['post', 'ajax']);
@@ -1407,13 +1422,14 @@ class DivisionController extends AppController
         $connection = ConnectionManager::get('default');
         $connection->begin();
         $fileName = null;
+        $forwardReason = trim($data['remark'] ?? '');
+        $signedPdfUpload = $data['signed_order_pdf'] ?? null;
+
 
         try {
             $StaffOnboardingAppointmentsTable = TableRegistry::getTableLocator()->get('StaffOnboardingAppointments');            
             if (!empty($data['app_id'])) {
-                $onboard = $StaffOnboardingAppointmentsTable->find()
-                            ->where(['staff_id' => $data['app_id']])
-                            ->first();
+                $onboard = $StaffOnboardingAppointmentsTable->get($data['app_id']);
             }else{
                 return $this->response
                             ->withType('application/json')
@@ -1436,81 +1452,92 @@ class DivisionController extends AppController
             
             //'pending'::staff_update_statuses_enum
             $staffData = [               
-                'status'            => 'Approved'        
+                'status'            => 'Approved_dyd'        
 
             ];
-            $config = Configure::read('ESDL');
-            
-            $bucketPath = $config['mode'].'/staff/onboarding/'.$onboard->id;        
-
-            if (!empty($data['app_doc']) && $data['app_doc']->getError() === UPLOAD_ERR_OK) {
-
-                $file = $data['app_doc'];
-                
-                if ($file->getClientMediaType() !== 'application/pdf') {
-                    $connection->rollback();
-                    return $this->response
-                        ->withType('application/json')
-                        ->withStringBody(json_encode([
-                            'success' => false,
-                            'message' => 'Must be a PDF File'
-                        ]));
-                }
-
-                if ($file->getSize() > (2 * 1024 * 1024)) {
-                    $connection->rollback();
-                    return $this->response
-                        ->withType('application/json')
-                        ->withStringBody(json_encode([
-                            'success' => false,
-                            'message' => 'Exceeds 2MB limit File'
-                        ]));
-                }
-
-                if (!$file || $file->getError() !== UPLOAD_ERR_OK) {
-                    $connection->rollback();
-                    return $this->response
-                        ->withType('application/json')
-                        ->withStringBody(json_encode([
-                            'success' => false,
-                            'message' => 'Invalid File'
-                        ]));
-                    //$this->Flash->error('Invalid file');
-                }
 
 
-                // Get temp path safely
-                $tmpPath = $file->getStream()->getMetadata('uri');
-
-
-                // Extract extension (safe)
-                $extension = pathinfo($file->getClientFilename(), PATHINFO_EXTENSION);
-
-                // New filename
-                $newFileName = 'approved_file.' . $extension;
-
-                // Create NEW UploadedFile object
-                $renamedFile = new UploadedFile(
-                    $tmpPath,
-                    $file->getSize(),
-                    $file->getError(),
-                    $newFileName,
-                    $file->getClientMediaType()
-                );
-
-                $storage = new EsdlStorageService();
-                $fileName = $storage->upload($renamedFile, $bucketPath);
-
-               
-            } 
-
-            if (empty($fileName)) {
-                $generatedDocument = 'uploads/ng2gtransfers/approve/staff_order_' . $onboard->id . '.pdf';
-                if (is_file(WWW_ROOT . $generatedDocument)) {
-                    $fileName = $generatedDocument;
-                }
+            $action = 'approve';
+             $signedPdfPath = null;
+        if ($action === 'approve') {
+                if (
+                    !$signedPdfUpload instanceof \Psr\Http\Message\UploadedFileInterface
+                    || $signedPdfUpload->getError() !== UPLOAD_ERR_OK
+                ) {
+                $connection->rollback();
+                return $this->response
+                    ->withType('application/json')
+                    ->withStatus(400)
+                    ->withStringBody(json_encode([
+                        'success' => false,
+                            'message' => 'Signed PDF upload is required',
+                    ]));
             }
-    
+
+                $pdfStream = $signedPdfUpload->getStream();
+                $pdfStream->rewind();
+                $pdfBytes = $pdfStream->getContents();
+                if (!is_string($pdfBytes)) {
+                $connection->rollback();
+                return $this->response
+                    ->withType('application/json')
+                    ->withStatus(400)
+                    ->withStringBody(json_encode([
+                        'success' => false,
+                            'message' => 'Unable to read the signed PDF upload',
+                    ]));
+            }
+
+            if (strlen($pdfBytes) > 30 * 1024 * 1024) {
+                $connection->rollback();
+                return $this->response
+                    ->withType('application/json')
+                    ->withStatus(400)
+                    ->withStringBody(json_encode([
+                        'success' => false,
+                        'message' => 'Signed PDF exceeds the 30 MB limit',
+                    ]));
+            }
+
+            if (strpos(substr($pdfBytes, 0, 1024), '%PDF-') === false) {
+                $connection->rollback();
+                return $this->response
+                    ->withType('application/json')
+                    ->withStatus(400)
+                    ->withStringBody(json_encode([
+                        'success' => false,
+                        'message' => 'Decoded signed data does not contain a PDF header',
+                    ]));
+            }
+
+            $signedPdfDirectory = WWW_ROOT . 'uploads' . DS . 'staffonboarding' . DS . 'approve' . DS;
+            if (!is_dir($signedPdfDirectory) && !mkdir($signedPdfDirectory, 0775, true) && !is_dir($signedPdfDirectory)) {
+                $connection->rollback();
+                return $this->response
+                    ->withType('application/json')
+                    ->withStatus(500)
+                    ->withStringBody(json_encode([
+                        'success' => false,
+                        'message' => 'Unable to create signed PDF directory',
+                    ]));
+            }
+
+            $signedPdfFileName = 'staff_order_dyd_sign_' . $onboard->id . '.pdf';
+            $signedPdfPath = 'uploads/staffonboarding/approve/' . $signedPdfFileName;
+            $bytesWritten = file_put_contents($signedPdfDirectory . $signedPdfFileName, $pdfBytes, LOCK_EX);
+            if ($bytesWritten !== strlen($pdfBytes)) {
+                $connection->rollback();
+                return $this->response
+                    ->withType('application/json')
+                    ->withStatus(500)
+                    ->withStringBody(json_encode([
+                        'success' => false,
+                        'message' => 'Unable to save signed PDF',
+                    ]));
+            }
+        }
+
+            
             
             $onboard = $StaffOnboardingAppointmentsTable->patchEntity($onboard, $staffData);
 
@@ -1535,11 +1562,11 @@ class DivisionController extends AppController
             }
 
             if (!$this->addApplicationLog(
-                                    $data['app_id'],
-                                    'Approved',
+                                    (int)$onboard->id,
+                                    'Approved_dyd',
                                     $userId,
                                     $data['remark'] ?? null,
-                                    $fileName ?? null,
+                                    $signedPdfPath ?? null,
                                 )) {
                 throw new \RuntimeException('Unable to save approval document in application log');
             }
@@ -1551,7 +1578,7 @@ class DivisionController extends AppController
                 ->withStringBody(json_encode([
                     'success' => true,
                     'id' => $onboard->id,
-                    'file' => $fileName,
+                    'file' => $signedPdfPath,
                     'message' => 'Staff Onboarding application approved successfully'
                 ]));
 
@@ -1569,7 +1596,6 @@ class DivisionController extends AppController
                 ]));
         }
     }
-
 
      public function staffOnboardReject()
     {

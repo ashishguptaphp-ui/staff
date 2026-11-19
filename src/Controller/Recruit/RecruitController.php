@@ -20,6 +20,18 @@ use Cake\I18n\FrozenTime;
  */
 class RecruitController extends AppController
 {
+
+//private UsersTable $Users;
+    //private \App\Model\Table\UsersTable $Users;
+    
+    public function initialize(): void
+    {
+        parent::initialize();
+
+      // $this->Users = $this->fetchTable('Users');
+        
+    }
+    
     public function beforeFilter(\Cake\Event\EventInterface $event)
     {
         parent::beforeFilter($event);
