@@ -808,7 +808,7 @@ $schoolLevelLabels = [
                                 <th>शाळेचे नाव</th> 
                                 <th>UDISE Code</th> 
                                 <th>पदाचे नाव</th>
-                                <th>Category</th>
+                                <th>प्रवर्ग</th>
                             
                             </tr>
                             </thead>
@@ -819,6 +819,49 @@ $schoolLevelLabels = [
                      </div>
 
                      
+                     <div class="pdf-field">
+                        
+                     
+
+                        <div class="row mt-1">
+                            <div class="col-md-3 mt-2">
+                                <label for="grand" class="form-label marathi-label required-field">
+                                     पद रिक्त होण्याची कारणे:
+                                </label>                                
+                            </div>
+                            <div class="col-md-3">
+                                <select id="vacant_reason" name="vacant_reason" class="form-select" required>
+                                    <option value="">-- निवडा --</option>
+                                    <option value="1">सेवानिवृत्ती (Retirement)</option>
+                                    <option value="2">बदली (Transfer)/पदोन्नती (Promotion)</option>
+                                    <option value="3">सेवासमाप्ती / बडतर्फी</option>
+                                    <option value="4">नवीन पदनिर्मिती</option>
+                                    <option value="5">मृत्यू (Death)</option>
+                                </select>
+                            </div>
+                        </div>                        
+
+                        <div class="row mt-1">
+                            <div class="col-md-3 mt-2">
+                                <label for="vacant_reason" class="form-label marathi-label required-field">
+                                    अनुदानाचे प्रकार:
+                                </label>
+                            </div>
+                            <div class="col-md-3">
+                                <select id="grand" name="grand" class="form-select" required>
+                                    <option value="">-- निवडा --</option>
+                                    <option value="100">100% अनुदानित (Fully Aided)</option>
+                                    <option value="80">80% अंशतः अनुदानित</option>
+                                    <option value="60">60% अंशतः अनुदानित</option>
+                                    <option value="40">40% अंशतः अनुदानित</option>
+                                    <option value="20">20% अंशतः अनुदानित</option>
+                                    <option value="0">विनाअनुदानित  (Unaided)</option>
+                                </select>
+                            </div>
+                         </div>
+                         
+                    </div>
+
                     <div class="col-md-12 mt-3">
 
                         <label class="form-label fw-bold d-block">
@@ -1017,7 +1060,6 @@ $schoolLevelLabels = [
 
     </div>
 
-    <hr>
 </div>
 
                     <div class="pdf-field">
@@ -1027,13 +1069,41 @@ $schoolLevelLabels = [
                             <!-- Dynamic UDISE-wise PDF inputs will come here -->
                         </div>
 
-                        <hr/>
                     </div>          
 
                    
+                    <div class="card">
+                        <label class="checkbox-label">
+                        <label class="checkbox-label">
+                            या प्रकरणासंदर्भात कोणताही न्यायालयीन आदेश निर्गमित झाला आहे का?  &rarr;
+                            </label>
+                            <label class="checkbox-label">
+                            <input type="radio" id="courtOrderYes"  name="courtOrder" value="1" onchange="showDiv('courtOrderDiv')"> होय 
+                            </label><label class="checkbox-label">
+                            <input type="radio" id="courtOrderNo"  name="courtOrder" value="0" onchange="hideDiv('courtOrderDiv')">  नाही
+                            </label>
+                        
+                        </label>
+                        
+                        <div id="courtOrderDiv" class="transfer-section">                        
+                            <div class="row mb-3">     
+                                <div class="col-md-3">                            
+                                        <input type="text" placeholder="याचिका क्रमांक" class="form-control" id="courtOrderPetitionNumber" name="courtOrderPetitionNumber">
+                               </div>  
+                                <div class="col-md-3">                                    
+                                        <input type="date" placeholder="दिनांक" class="form-control" id="courtOrderDate" name="courtOrderDate">
+                                </div>                
+                                <div class="col-md-6">
+                                    <input type="file" id="courtOrderFile" name="courtOrderFile" class="form-control file-upload-check" accept=".pdf">
+                                </div>
+                            </div>                    
+                        </div>
+                    </div>
+
 
                        <!-- Submit Button -->
                     <div id="saUploadProgress" class="mb-3" aria-live="polite"></div>
+
                     <div class="form-section">
                         <div class="form-check mb-4">
                             <input class="form-check-input" type="checkbox" id="declaration" required>
@@ -1041,8 +1111,15 @@ $schoolLevelLabels = [
                                 मी खात्रीपूर्वक सांगतो/सांगते की, वरील सर्व माहिती खरी आहे व सर्व कागदपत्रे खरी आहेत. कोणतीही चुकीची माहिती दिल्यास, माझ्यावर योग्य कायदेशीर कारवाई केली जाऊ शकते याची मला पूर्ण कल्पना / जाणीव आहे.
                             </label>
                         </div>
+
+                      <div class="d-flex flex-column align-items-end">
+                        <p id="fullName" class="mb-0"></p>
+                        <p id="mobilenumber" class="mb-0"></p>
+                     </div>
+
                     </div>
 
+                    
 
                     <!-- Submit Button -->
                     <div class="d-flex justify-content-between mt-4">
@@ -1204,6 +1281,12 @@ $schoolLevelLabels = [
                                 मी खात्रीपूर्वक सांगतो/सांगते की, वरील सर्व माहिती खरी आहे व सर्व कागदपत्रे खरी आहेत. कोणतीही चुकीची माहिती दिल्यास, माझ्यावर योग्य कायदेशीर कारवाई केली जाऊ शकते याची मला पूर्ण कल्पना / जाणीव आहे.
                             </label>
                         </div>
+
+                        <div class="d-flex flex-column align-items-end">
+                        <p id="fullNamep" class="mb-0"></p>
+                        <p id="mobilenumberp" class="mb-0"></p>
+                        </div>
+
                     </div>
 
 
@@ -1339,6 +1422,7 @@ $schoolLevelLabels = [
                         <hr/>                        
                     </div>            
 
+                    <div id="courtOrderDivShow"></div>
                     </div>    
                                     
                 
@@ -1436,6 +1520,7 @@ $('#approvedOrderPdfModal').on('hidden.bs.modal', function () {
                             document.getElementById("adv_post_list").innerHTML = response.html;
                             document.getElementById("periodDivShow").innerHTML = response.data.periodDivShow;
                             document.getElementById("cadetailsDivShow").innerHTML = response.data.cadetailsDivShow;
+                            document.getElementById("courtOrderDivShow").innerHTML = response.data.courtOrderDiv;
 
                             if (response.data.approvalLetterUrl) {
                                 $('#adv_post_approval_file').html(`
@@ -1620,6 +1705,8 @@ $('#approvedOrderPdfModal').on('hidden.bs.modal', function () {
             $('#udiseNumber').text(staffObject.udise_code);
             $('#schoolName').text(staffObject.school_name);
             $('#appointmentDate').val(staffObject.date_of_joining);
+            $('#fullName').text(staffObject.fullName || '');
+            $('#mobilenumber').text(staffObject.mobileNumber || '');
 
           
              empNameDetails = staffObject.post_name ;
@@ -1725,7 +1812,7 @@ $('#approvedOrderPdfModal').on('hidden.bs.modal', function () {
                                     class="form-select vacancy-category"
                                     data-vacancy-id="${vacancy.id}">
 
-                                    <option value="">श्रेणी निवडा </option>
+                                    <option value="">प्रवर्ग निवडा </option>
                                     <option value="SC">SC</option>
                                     <option value="ST">ST</option>
                                     <option value="OBC">OBC</option>
@@ -1952,6 +2039,7 @@ $('#approvedOrderPdfModal').on('hidden.bs.modal', function () {
                 const schoolLevel = $('#saFormStep1 .row-select:checked').first().data('school-level');
                 const sanctionsDate = $('#sanctions_date').val();
                 const outwardNumber = String($('#outward_number').val() || '').trim();
+                const courtOrder = $('input[name="courtOrder"]:checked').val() || '0';
                 const schoolDetails = {};
                 const descriptors = [];
 
@@ -2013,6 +2101,9 @@ $('#approvedOrderPdfModal').on('hidden.bs.modal', function () {
                     addDescriptor($('#saFormStep2 input[name="advApprovelFile"]')[0], 'advApprovelFile');
                     addDescriptor($('#saFormStep2 input[name="resolutionFile"]')[0], 'resolutionFile');
                     addDescriptor($('#saFormStep2 input[name="CADetailsFile"]')[0], 'CADetailsFile');
+                    if (courtOrder === '1') {
+                        addDescriptor($('#saFormStep2 input[name="courtOrderFile"]')[0], 'courtOrderFile');
+                    }
 
                     const schoolCodes = [...new Set($('#saFormStep2 .sanch-manyata-file').map(function() {
                         return String($(this).data('udise-code') || '').trim();
@@ -2161,7 +2252,12 @@ $('#approvedOrderPdfModal').on('hidden.bs.modal', function () {
                     minority_sanstha: $('#minority_sanstha').val(),
                     smdetails: schoolDetails,
                     upload_tokens: tokenReferences,
-                    submission_key: saAdvertisementSubmissionKey
+                    submission_key: saAdvertisementSubmissionKey,
+                    grand: $('#grand').val(),
+                    vacant_reason: $('#vacant_reason').val(),
+                    courtOrder: courtOrder,
+                    courtOrderPetitionNumber : $('#courtOrderPetitionNumber').val(),
+                    courtOrderDate : $('#courtOrderDate').val()
                 };
 
                 progress.append($('<div class="small"></div>').text('Saving application...'));
@@ -2274,6 +2370,9 @@ $('#approvedOrderPdfModal').on('hidden.bs.modal', function () {
             $('#appointmentDate').val(staffObject.date_of_joining);
             empNameDetails = staffObject.post_name ;
             $('#empNameDetails').html(empNameDetails);
+            $('#fullNamep').text(staffObject.fullName || '');
+            $('#mobilenumberp').text(staffObject.mobileNumber || '');
+
           
             let basicData = {
                                 "institution_code" : staffObject.sanstha_code,
@@ -2288,7 +2387,10 @@ $('#approvedOrderPdfModal').on('hidden.bs.modal', function () {
                                 "mobile" : staffObject.mobile,
                                 "pay_scale" : staffObject.pay_scale,
                                 "subject_taught" : staffObject.subject_taught,
-                                "medium" : staffObject.medium
+                                "medium" : staffObject.medium,
+                                "fullName" : staffObject.fullName,
+                                "mobilenumber" : staffObject.mobileNumber,
+
                             };
             $("#pl_basic_data").val(JSON.stringify(basicData));          
         }

@@ -2,7 +2,11 @@ ALTER TABLE post_advertisement
     ADD COLUMN IF NOT EXISTS submission_key UUID,
     ADD COLUMN IF NOT EXISTS submission_fingerprint CHAR(64),
     ADD COLUMN IF NOT EXISTS sanctions_date DATE,
-    ADD COLUMN IF NOT EXISTS outward_number TEXT;
+    ADD COLUMN IF NOT EXISTS outward_number TEXT,
+    ADD COLUMN IF NOT EXISTS court_order INTEGER,
+    ADD COLUMN IF NOT EXISTS court_order_petition_number TEXT,
+    ADD COLUMN IF NOT EXISTS court_order_date DATE,
+    ADD COLUMN IF NOT EXISTS court_order_file TEXT;
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_post_advertisement_submission_key
     ON post_advertisement (submission_key)
@@ -31,7 +35,7 @@ CREATE TABLE IF NOT EXISTS post_advertisement_upload_tokens (
     client_upload_id UUID NOT NULL,
     user_id TEXT NOT NULL,
     sanstha_code TEXT NOT NULL,
-    document_type VARCHAR(32) NOT NULL CHECK (
+    document_type VARCHAR(32) NOT NULL CONSTRAINT ck_post_advertisement_upload_document_type CHECK (
         document_type IN (
             'advApprovelFile',
             'resolutionFile',
@@ -39,7 +43,8 @@ CREATE TABLE IF NOT EXISTS post_advertisement_upload_tokens (
             'periodFile',
             'period2324File',
             'sanch_manyata',
-            'smDetailsFile'
+            'smDetailsFile',
+            'courtOrderFile'
         )
     ),
     udise_code TEXT,
@@ -60,6 +65,26 @@ CREATE TABLE IF NOT EXISTS post_advertisement_upload_tokens (
     CONSTRAINT uq_post_advertisement_upload_client_id
         UNIQUE (user_id, sanstha_code, client_upload_id)
 );
+
+ALTER TABLE post_advertisement_upload_tokens
+    DROP CONSTRAINT IF EXISTS post_advertisement_upload_tokens_document_type_check;
+
+ALTER TABLE post_advertisement_upload_tokens
+    DROP CONSTRAINT IF EXISTS ck_post_advertisement_upload_document_type;
+
+ALTER TABLE post_advertisement_upload_tokens
+    ADD CONSTRAINT ck_post_advertisement_upload_document_type CHECK (
+        document_type IN (
+            'advApprovelFile',
+            'resolutionFile',
+            'CADetailsFile',
+            'periodFile',
+            'period2324File',
+            'sanch_manyata',
+            'smDetailsFile',
+            'courtOrderFile'
+        )
+    );
 
 CREATE INDEX IF NOT EXISTS ix_post_advertisement_upload_expiry
     ON post_advertisement_upload_tokens (status, expires_at);

@@ -140,6 +140,12 @@ class PostAdvertisementTable extends Table
                 'PostAdvertisement.sm_details',
                 'PostAdvertisement.sanctions_date',
                 'PostAdvertisement.outward_number',
+                'PostAdvertisement.vacant_reason',
+                'PostAdvertisement.grand_text',
+                'PostAdvertisement.court_order',
+                'PostAdvertisement.court_order_petition_number',
+                'PostAdvertisement.court_order_date',
+                'PostAdvertisement.court_order_file',
             ])
             ->where([
                 'PostAdvertisement.id' => $id

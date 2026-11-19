@@ -163,6 +163,12 @@ class GeneralUtilitiesController extends AppController
               $resolutionfile = $storage->signedUrl($ng2g->resolutionfile);    
         }
 
+         $courtOrderFile = null;
+         if ($ng2g && !empty($ng2g->court_order_file)) {
+              $storage = new EsdlStorageService();
+              $courtOrderFile = $storage->signedUrl($ng2g->court_order_file);    
+        }
+
         $resolutionDiv = ' <div class="pdf-field">
                         <h3 class="section-title">Roster</h3>
                         <div class="row mt-1">
@@ -198,7 +204,44 @@ class GeneralUtilitiesController extends AppController
                         <hr/>                        
                     </div> ';
 
-        
+        $courtOrderDiv = '';
+        if ($ng2g && !empty($ng2g->court_order)) {
+            $courtOrderDiv = ' <div class="pdf-field">
+                        <h3 class="section-title">अदालती आदेश</h3>
+                        <div class="row mt-1">
+                            <div class="col-md-3 mt-2">
+                                <label for="advCourtOrderFile" class="form-label english-label">
+                                    अदालती आदेश
+                                </label>                                
+                            </div>    
+                            <div class="col-md-3" id="">
+                                '.$this->getdocumentFileALink($courtOrderFile).'
+                            </div>      
+                        </div>   
+                        <div class="row mt-1">
+                            <div class="col-md-3 mt-2">
+                                <label for="advCourtOrderPetitionNumber" class="form-label english-label">
+                                    याचिका क्रमांक
+                                </label>                                
+                            </div>    
+                            <div class="col-md-3" id="">
+                               '.$ng2g->court_order_petition_number.'
+                            </div>      
+                        </div>   
+                        <div class="row mt-1">
+                            <div class="col-md-3 mt-2">
+                                <label for="advCourtOrderDate" class="form-label english-label">
+                                    आदेशाची तारीख
+                                </label>                                
+                            </div>    
+                            <div class="col-md-3" id="">
+                               '.$ng2g->court_order_date->format('d-m-Y').'
+                            </div>      
+                        </div>                    
+                        <hr/>                        
+                    </div> ';
+        }       
+
         $period2324file = null;
          if ($ng2g && !empty($ng2g->period2324_file)) {
               $storage = new EsdlStorageService();
@@ -276,8 +319,9 @@ class GeneralUtilitiesController extends AppController
                             </tr>';
              $i++;               
          }    
-
-         $periodDiv = '<h6>आपले सदस्य पद सन २०२३-२४ च्या संयमान्यतेनुसार आहे किंवा त्यापूर्वीचे पायाभूत आहे.</h6>';
+        
+         $periodDiv = '<b>अनुदानाचे प्रकार:</b> '.$ng2g->grand_text.'<br/> <b>रिक्त पदांची माहिती:</b> '.$ng2g->vacant_reason.'<br/><br/>';
+         $periodDiv .= '<h6>आपले सदस्य पद सन २०२३-२४ च्या संयमान्यतेनुसार आहे किंवा त्यापूर्वीचे पायाभूत आहे.</h6>';
          if ($ng2g && !empty($ng2g->period)) {
             $periodDiv .= '<div class="col-md-6"> ' . h($ng2g->period==1 ? 'पायाभूत' : '') . '</div>';
         }
@@ -334,8 +378,9 @@ class GeneralUtilitiesController extends AppController
                         'periodDivShow' => $periodDiv,
                         'cadetailsDivShow' => $cadetailsDiv,
                         'smDetails' => $smDetails,
-                        'resolutionDivShow' => $resolutionDiv,
+                        'resolutionDivShow' => $resolutionDiv.'<br>'.$courtOrderDiv,
                         'minority_sanstha' => $sansthaRecord['minority_sanstha'] ?? null,
+                        'courtOrderDiv' => $courtOrderDiv,
                      ],
                     'html'=> $html,
                     'audithtml'=>$audithtml,

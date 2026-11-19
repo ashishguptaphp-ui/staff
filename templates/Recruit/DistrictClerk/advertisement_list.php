@@ -1064,7 +1064,8 @@
                         <hr/>                        
                     </div>            
                 
-
+                  
+                    
 
                     </div>    
                                     
@@ -1736,7 +1737,7 @@ $(document).ready(function(){
                             document.getElementById("adv_post_list").innerHTML = response.data.htmlVacancyDiv;
                             document.getElementById("cadetailsDivShow").innerHTML = response.data.cadetailsDivShow;
                             document.getElementById("resolutionDivShow").innerHTML = response.data.resolutionDivShow;
-
+                           
                             //document.getElementById("saAuditTableBody").innerHTML = response.audithtml; 
                             document.getElementById("saTimelineContainer").innerHTML = response.data.auditLogsHistory || '<div class="timeline-item left"><div class="card"><div class="card-body p-4"><h3 class="text-center">No audit history found.</h3></div></div></div>';                          
                                                      

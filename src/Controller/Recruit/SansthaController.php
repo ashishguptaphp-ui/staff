@@ -1104,7 +1104,8 @@ class SansthaController extends AppController
         $this->viewBuilder()->setLayout('recruit-sanstha');
 
         $user = $this->request->getAttribute('identity');
-        
+        $fullName = $this->request->getAttribute('identity')?->get('full_name');
+        $mobileNumber = $this->request->getAttribute('identity')?->get('mobile');
         $minority_sanstha = $user->Sanstha->minority_sanstha;
         $sanstha_code = $user->Sanstha->code;
         $sanstha_name = $user->Sanstha->sanstha_name;
@@ -1174,6 +1175,10 @@ class SansthaController extends AppController
             }
         }
 
+        $staffData = [];
+        $staffData['fullName'] = $fullName;
+        $staffData['mobileNumber'] = $mobileNumber;
+
         $this->set('ddovacant', $ddovacant);               
         $this->set('ng2g', $ng2g);
         $this->set('schools', $schools);
@@ -1185,7 +1190,7 @@ class SansthaController extends AppController
         $this->set('minority_sanstha', $minority_sanstha);
         $this->set('sanstha_name', $sanstha_name);
         $this->set('sanstha_code', $sanstha_code);
-        $this->set('staff', '');
+        $this->set('staff', $staffData);
         $this->set('approvedLogDocuments', $approvedLogDocuments);
         $this->set('rejectLogDocuments', $rejectLogDocuments);
 
@@ -1217,6 +1222,13 @@ class SansthaController extends AppController
                         'PostAdvertisement.cadetails_file',
                         'PostAdvertisement.sanctions_date',
                         'PostAdvertisement.outward_number',
+                        'PostAdvertisement.grand',
+                        'PostAdvertisement.vacant_reason',
+                        'PostAdvertisement.grand_text',
+                        'PostAdvertisement.court_order',
+                        'PostAdvertisement.court_order_petition_number',
+                        'PostAdvertisement.court_order_date',
+                        'PostAdvertisement.court_order_file',
                      ])  
                    ->where(['id' => $post_advertisement_id])
                    ->first();
@@ -1231,6 +1243,12 @@ class SansthaController extends AppController
          if ($ng2g && !empty($ng2g->resolutionfile)) {
               $storage = new EsdlStorageService();
               $resolutionfile = $storage->signedUrl($ng2g->resolutionfile);    
+        }
+
+        $courtOrderFile = null;
+         if ($ng2g && !empty($ng2g->court_order_file)) {
+              $storage = new EsdlStorageService();
+              $courtOrderFile = $storage->signedUrl($ng2g->court_order_file);    
         }
 
         $sanctionsDate = $ng2g?->sanctions_date;
@@ -1281,6 +1299,44 @@ class SansthaController extends AppController
                         </div>                    
                         <hr/>                        
                     </div> ';
+
+        $courtOrderDiv = '';
+        if ($ng2g && !empty($ng2g->court_order)) {
+            $courtOrderDiv = ' <div class="pdf-field">
+                        <h3 class="section-title">अदालती आदेश</h3>
+                        <div class="row mt-1">
+                            <div class="col-md-3 mt-2">
+                                <label for="advCourtOrderFile" class="form-label english-label">
+                                    अदालती आदेश
+                                </label>                                
+                            </div>    
+                            <div class="col-md-3" id="">
+                                '.$this->getdocumentFileALink($courtOrderFile).'
+                            </div>      
+                        </div>   
+                        <div class="row mt-1">
+                            <div class="col-md-3 mt-2">
+                                <label for="advCourtOrderPetitionNumber" class="form-label english-label">
+                                    याचिका क्रमांक
+                                </label>                                
+                            </div>    
+                            <div class="col-md-3" id="">
+                               '.$ng2g->court_order_petition_number.'
+                            </div>      
+                        </div>   
+                        <div class="row mt-1">
+                            <div class="col-md-3 mt-2">
+                                <label for="advCourtOrderDate" class="form-label english-label">
+                                    आदेशाची तारीख
+                                </label>                                
+                            </div>    
+                            <div class="col-md-3" id="">
+                               '.$ng2g->court_order_date->format('d-m-Y').'
+                            </div>      
+                        </div>                    
+                        <hr/>                        
+                    </div> ';
+        }            
 
          $period2324file = null;
          if ($ng2g && !empty($ng2g->period2324_file)) {
@@ -1362,7 +1418,8 @@ class SansthaController extends AppController
              $i++;               
          }    
 
-         $periodDiv = '<h6>आपले सदस्य पद सन २०२३-२४ च्या संयमान्यतेनुसार आहे किंवा त्यापूर्वीचे पायाभूत आहे.</h6>';
+         $periodDiv = '<b>अनुदानाचे प्रकार:</b> '.$ng2g->grand_text.'<br/> <b>रिक्त पदांची माहिती:</b> '.$ng2g->vacant_reason.'<br/><br/>';
+         $periodDiv .= '<h6>आपले सदस्य पद सन २०२३-२४ च्या संयमान्यतेनुसार आहे किंवा त्यापूर्वीचे पायाभूत आहे.</h6>';
          if ($ng2g && !empty($ng2g->period)) {
             $periodDiv .= '<div class="col-md-6"> ' . h($ng2g->period==1 ? 'पायाभूत' : '') . '</div>';
         }
@@ -1394,7 +1451,8 @@ class SansthaController extends AppController
                         'smDetails' => $smDetails,
                         'periodDivShow' => $periodDiv,
                         'cadetailsDivShow' => $cadetailsDiv,
-                        'resolutionDivShow' => $resolutionDiv
+                        'resolutionDivShow' => $resolutionDiv,
+                        'courtOrderDiv' => $courtOrderDiv,
                     ],
                     'html'=> $html,
                     'message' => 'Application forwarded successfully'
@@ -1421,6 +1479,7 @@ class SansthaController extends AppController
             'period2324File',
             'sanch_manyata',
             'smDetailsFile',
+            'courtOrderFile'
         ];
         $isSchoolDocument = in_array($documentType, ['sanch_manyata', 'smDetailsFile'], true);
 
@@ -1716,9 +1775,39 @@ class SansthaController extends AppController
             }
         }
 
+        $grandOptions = [
+                    100 => '100% अनुदानित (Fully Aided)',
+                    80  => '80% अंशतः अनुदानित',
+                    60  => '60% अंशतः अनुदानित',
+                    40  => '40% अंशतः अनुदानित',
+                    20  => '20% अंशतः अनुदानित',
+                    0   => 'विनाअनुदानित (Partially Aided)',
+            ];
+
+        $vacantReasonOptions = [
+                1 => 'सेवानिवृत्ती (Retirement)',
+                2 => 'बदली (Transfer)/पदोन्नती (Promotion)',
+                3 => 'सेवासमाप्ती / बडतर्फी',
+                4 => 'नवीन पदनिर्मिती',
+                5 => 'मृत्यू (Death)',
+            ];
+
         $period = (string)($data['period'] ?? '');
         $period2324 = (string)($data['period2324'] ?? '');
         $caDetails = (string)($data['cadetails'] ?? '');
+        $grand = (int)($data['grand'] ?? 0);
+        $grandText = $grandOptions[$this->request->getData('grand')] ?? '';
+        $vacantReason = $vacantReasonOptions[$this->request->getData('vacant_reason')] ?? '';
+        $courtOrder = (string)($data['courtOrder'] ?? '0') === '1' ? 1 : 0;
+        $courtOrderPetitionNumber = null;
+        $courtOrderDate = null;
+        if ($courtOrder === 1) {
+            $petitionNumber = trim((string)($data['courtOrderPetitionNumber'] ?? ''));
+            $courtOrderPetitionNumber = $petitionNumber !== '' ? $petitionNumber : null;
+            $courtOrderDateValue = trim((string)($data['courtOrderDate'] ?? ''));
+            $courtOrderDate = $courtOrderDateValue !== '' ? $courtOrderDateValue : null;
+        }
+
         if (!in_array($period, ['1', '2'], true) || !in_array($caDetails, ['1', '2'], true)) {
             return $this->advertisementJsonResponse(['success' => false, 'message' => 'Please complete the required application choices.'], 400);
         }
@@ -1731,6 +1820,9 @@ class SansthaController extends AppController
             'resolutionFile:' => ['document_type' => 'resolutionFile', 'udise_code' => null],
             'CADetailsFile:' => ['document_type' => 'CADetailsFile', 'udise_code' => null],
         ];
+        if ($courtOrder === 1) {
+            $expectedUploads['courtOrderFile:'] = ['document_type' => 'courtOrderFile', 'udise_code' => null];
+        }
         if ($period === '1') {
             $expectedUploads['periodFile:'] = ['document_type' => 'periodFile', 'udise_code' => null];
         } elseif ($period2324 === '1') {
@@ -1753,7 +1845,7 @@ class SansthaController extends AppController
                 foreach ($value as $udise => $token) {
                     $flatTokens[$documentType . ':' . trim((string)$udise)] = $token;
                 }
-            } elseif (in_array($documentType, ['advApprovelFile', 'resolutionFile', 'CADetailsFile', 'periodFile', 'period2324File'], true)) {
+            } elseif (in_array($documentType, ['advApprovelFile', 'resolutionFile', 'CADetailsFile', 'periodFile', 'period2324File','courtOrderFile'], true)) {
                 $flatTokens[$documentType . ':'] = $value;
             } else {
                 return $this->advertisementJsonResponse(['success' => false, 'message' => 'Invalid document token type.'], 400);
@@ -1793,6 +1885,9 @@ class SansthaController extends AppController
             'outward_number' => $outward_number,
             'minority_sanstha' => (string)($data['minority_sanstha'] ?? ''),
             'smdetails' => $normalizedChoices,
+            'court_order' => $courtOrder,
+            'court_order_petition_number' => $courtOrderPetitionNumber,
+            'court_order_date' => $courtOrderDate,
             'upload_tokens' => $flatTokens,
         ];
         $fingerprint = hash('sha256', json_encode($canonicalPayload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
@@ -1831,7 +1926,13 @@ class SansthaController extends AppController
                 $caDetails,
                 $createdAt,
                 $sanctions_date,
-                $outward_number
+                $outward_number,
+                $grandText,
+                $vacantReason,
+                $grand,
+                $courtOrder,
+                $courtOrderPetitionNumber,
+                $courtOrderDate                
             ) {
                 $tokenRows = $uploadTokensTable->find()
                     ->where(['token IN' => $tokenValues])
@@ -1893,6 +1994,7 @@ class SansthaController extends AppController
 
     'cadetails' => $caDetails,
     'cadetails_file' => $fileKeys['CADetailsFile:'],
+    'court_order_file' => $courtOrder === 1 ? $fileKeys['courtOrderFile:'] : null,
 
     'period' => $period,
     'period_file' => $period === '1'
@@ -1919,8 +2021,12 @@ class SansthaController extends AppController
 
     'submission_key' => $submissionKey,
     'submission_fingerprint' => $fingerprint,
-
-   
+    'grand' => $grand,
+    'vacant_reason' => $vacantReason,
+    'grand_text' => $grandText,  
+    'court_order' => $courtOrder,
+    'court_order_petition_number' => $courtOrderPetitionNumber,
+    'court_order_date' => $courtOrderDate,
 ];
 
               
@@ -1930,20 +2036,7 @@ class SansthaController extends AppController
         foreach ($postData as $field => $value) {
             $application->set($field, $value);
         }
-Log::debug(
-    'ENTITY BEFORE SAVE: ' .
-    json_encode($application->toArray())
-);
 
-Log::debug(
-    'ENTITY ERRORS: ' .
-    json_encode($application->getErrors())
-);
-
-Log::debug(
-    'DIRTY FIELDS: ' .
-    json_encode($application->getDirty())
-);
 
 if (!$postAdvertisementTable->save($application)) {
 
