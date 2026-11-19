@@ -741,8 +741,8 @@ var dscSigner = (function($) {
 		} else {
 			StampingObject.mode = "L";
 		}
-		StampingObject.stampingX = 200;//$('#stampingX').val();
-		StampingObject.stampingY = 200;//$('#stampingY').val();
+		StampingObject.stampingX = $('#stampingX').val() || 200;
+		StampingObject.stampingY = $('#stampingY').val() || 50;
 		StampingObject.scale = $('#scale').val();
 		StampingObject.stampingImageData = $('#imageData').val();
 		var data = {

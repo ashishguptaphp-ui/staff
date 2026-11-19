@@ -584,6 +584,9 @@
 #approvedOrderPdfModal {
     z-index: 10010 !important;
 }
+#advertisementRejectSignerModal {
+    z-index: 10010 !important;
+}
 .modal-backdrop {
     z-index: 10000 !important;
 }
@@ -752,7 +755,7 @@
 	left: 0;
 	width: 100%;
 	height: 100%;
-    z-index: 10020;
+    z-index: 20000 !important;
 	background: rgba(255, 255, 255, 0.9);
 	display: none;
 	text-align: center;
@@ -902,6 +905,31 @@
             </div>
             <div class="modal-body p-0">
                 <iframe id="approvedOrderPdfFrame" title="आदेश PDF" src="about:blank" style="width: 100%; height: 100%; border: 0;"></iframe>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="advertisementRejectSignerModal" tabindex="-1" aria-labelledby="advertisementRejectSignerModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered" style="max-width: 92vw;">
+        <div class="modal-content" style="height: 90vh;">
+            <div class="modal-header">
+                <h5 class="modal-title" id="advertisementRejectSignerModalLabel">नकार आदेश तपासा व डिजिटल स्वाक्षरी करा</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0 flex-grow-1">
+                <iframe id="advertisementRejectPdfFrame" title="Rejection order PDF" src="about:blank" style="width: 100%; height: 100%; border: 0;"></iframe>
+            </div>
+            <div class="modal-footer d-flex justify-content-between">
+                <div>
+                    <span id="advertisementRejectSignStatus" class="small" aria-live="polite"></span>
+                    <a id="advertisementRejectSignedDownload" class="btn btn-sm btn-outline-primary ms-2 d-none" href="#" download="signed-rejection-order.pdf">Signed PDF डाउनलोड करा</a>
+                </div>
+                <div>
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" id="advertisementRejectSignBtn" class="btn btn-warning btn-sm" disabled>Sign with DSC</button>
+                    <button type="button" id="advertisementRejectFinalizeBtn" class="btn btn-danger btn-sm" disabled>Submit Signed Rejection</button>
+                </div>
             </div>
         </div>
     </div>
@@ -1417,6 +1445,7 @@
                         Please enter reject reason.
                     </div>        
 
+                    <div id="saRejectSubmitError" class="text-danger mt-2 d-none" role="alert"></div>
 
                 
 
@@ -3328,6 +3357,60 @@ $(document).on('click', '#saSubmitApproveBtn', function () {
     );
 });
 
+function prepareAdvertisementRejection(postId, reason) {
+    const button = $('#saSubmitRejectBtn');
+    $('#saRejectSubmitError').addClass('d-none').text('');
+    button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i> Preparing PDF...');
+
+    $.ajax({
+        url: '<?= $this->Url->build(['prefix' => 'Recruit', 'controller' => 'District', 'action' => 'advertisementRejectPrepare']); ?>',
+        type: 'POST',
+        data: {post_id: postId, reject_reason: reason},
+        headers: {'X-CSRF-Token': $('meta[name="csrfToken"]').attr('content')},
+        success: function(response) {
+            if (!response.success || !response.url) {
+                $('#saRejectSubmitError').text(response.message || 'Unable to prepare the rejection PDF.').removeClass('d-none');
+                return;
+            }
+
+            window.pendingRejectPostId = response.post_id;
+            window.pendingRejectReason = reason;
+            window.pendingRejectPdfBase64 = '';
+            window.pendingRejectSignedPdfData = '';
+
+            $('#advertisementRejectPdfFrame').attr('src', response.url);
+            $('#advertisementRejectSignStatus').text('Loading rejection PDF...');
+            $('#advertisementRejectSignBtn').prop('disabled', true);
+            $('#advertisementRejectFinalizeBtn').prop('disabled', true);
+            $('#advertisementRejectSignedDownload').addClass('d-none').attr('href', '#');
+            bootstrap.Modal.getOrCreateInstance(
+                document.getElementById('saRejectReasonModal')
+            ).hide();
+            bootstrap.Modal.getOrCreateInstance(
+                document.getElementById('advertisementRejectSignerModal')
+            ).show();
+
+            pdfUrlToBase64(response.url).then(function(pdfBase64) {
+                window.pendingRejectPdfBase64 = pdfBase64;
+                $('#advertisementRejectSignStatus').text('Review the PDF, then sign it with your DSC.');
+                $('#advertisementRejectSignBtn').prop('disabled', false);
+            }).catch(function(error) {
+                console.error('Unable to load rejection PDF for signing:', error);
+                $('#advertisementRejectSignStatus').text('Unable to load the PDF for signing. Close this window and retry.');
+            });
+        },
+        error: function(xhr) {
+            const message = xhr.responseJSON && xhr.responseJSON.message
+                ? xhr.responseJSON.message
+                : 'Unable to prepare the rejection PDF.';
+            $('#saRejectSubmitError').text(message).removeClass('d-none');
+        },
+        complete: function() {
+            button.prop('disabled', false).html('<i class="fas fa-paper-plane me-1"></i> Submit Reject');
+        }
+    });
+}
+
 $(document).on('click', '#saSubmitRejectBtn', function () {
 
     let postId = $('#saRejectPostId').val();
@@ -3356,23 +3439,12 @@ $(document).on('click', '#saSubmitRejectBtn', function () {
 
 
      // Create HTML
-    let finalReason = '';
-
-    issues.forEach(function (issue) {
-        finalReason += '<p>' + issue + '</p>';
-    });
-
-    // Add manually entered reason
-    finalReason += '<p>' + reason + '<br></p>';
+    const finalReason = [...issues, reason].join('\n');
 
 
     $('#saRejectReasonError').hide();
 
-    loadApprovedPost(
-        postId,
-        'reject',
-        finalReason
-    );
+    prepareAdvertisementRejection(postId, finalReason);
 });
 
 
@@ -3633,6 +3705,7 @@ loadApprovedPost = function(PostId,action,reason=''){
 
  $(document).ready(function() {
     
+window.activeAdvertisementDscFlow = 'approve';
 var initConfig = {
         "preSignCallback" : function() {
             // do something 
@@ -3666,9 +3739,19 @@ var initConfig = {
                                     //get data.data.sig -> add pdf header and append to link
                                     var jsonData = JSON.parse(atob(data.data));
                                     if (jsonData.status === "SUCCESS") {
-                                        
-                                        $('#downloadDiv').addClass('btn btn-info');
                                         var pdfData = jsonData.sig;
+                                        if (window.activeAdvertisementDscFlow === 'reject') {
+                                            window.pendingRejectSignedPdfData = pdfData;
+                                            $('#advertisementRejectSignedDownload')
+                                                .attr('href', 'data:application/pdf;base64,' + pdfData)
+                                                .removeClass('d-none');
+                                            $('#advertisementRejectSignStatus').text('Signature applied. Submit the signed rejection to finalize.');
+                                            $('#advertisementRejectSignBtn').prop('disabled', true);
+                                            $('#advertisementRejectFinalizeBtn').prop('disabled', false);
+                                            return;
+                                        }
+
+                                        $('#downloadDiv').addClass('btn btn-info');
                                         $('#signedPdfData').val(pdfData);
                                         var dlnk = document.getElementById('downloadDiv');
                                         dlnk.href = 'data:application/pdf;base64,'+ pdfData;
@@ -3679,7 +3762,13 @@ var initConfig = {
            
 
                                     } else {
-                                        alert(jsonData.message || "The PDF decryption service did not return SUCCESS.");
+                                        const message = jsonData.message || "The PDF decryption service did not return SUCCESS.";
+                                        if (window.activeAdvertisementDscFlow === 'reject') {
+                                            $('#advertisementRejectSignStatus').text(message);
+                                            $('#advertisementRejectSignBtn').prop('disabled', false);
+                                        } else {
+                                            alert(message);
+                                        }
                                     }
 
                                 } else {
@@ -3687,14 +3776,24 @@ var initConfig = {
                                     var errorMessage = apiError.message || data.message
                                         || "Decryption failed (status code: " + data.status_cd
                                         + ", error code: " + (apiError.error_cd || "unknown") + ").";
-                                    alert(errorMessage);
+                                    if (window.activeAdvertisementDscFlow === 'reject') {
+                                        $('#advertisementRejectSignStatus').text(errorMessage);
+                                        $('#advertisementRejectSignBtn').prop('disabled', false);
+                                    } else {
+                                        alert(errorMessage);
+                                    }
                                     return false;
 
                                 }
                             }).fail(
                             function(jqXHR, textStatus,
                                     errorThrown) {
-                                alert(textStatus);
+                                if (window.activeAdvertisementDscFlow === 'reject') {
+                                    $('#advertisementRejectSignStatus').text('DSC decryption failed: ' + textStatus);
+                                    $('#advertisementRejectSignBtn').prop('disabled', false);
+                                } else {
+                                    alert(textStatus);
+                                }
                             });
         },
         signType : 'pdf',
@@ -3706,6 +3805,7 @@ var initConfig = {
 
     $(document).on('click', '#signDocBtn', function (e) {
     e.preventDefault();
+        window.activeAdvertisementDscFlow = 'approve';
         var data = $("#pdfData").val();
         console.log('PDF Data Length:', data ? data.length : 0);
         if (data != null || data != '') {
@@ -3722,6 +3822,90 @@ var initConfig = {
            */
 
         }
+    });
+
+    $(document).on('click', '#advertisementRejectSignBtn', function () {
+        if (!window.pendingRejectPdfBase64) {
+            $('#advertisementRejectSignStatus').text('The rejection PDF is not ready to sign.');
+            return;
+        }
+
+        const signerPanel = document.getElementById('panel');
+        if (signerPanel && signerPanel.parentElement !== document.body) {
+            document.body.appendChild(signerPanel);
+        }
+        $('#panel').css({position: 'fixed', zIndex: 20000});
+
+        window.activeAdvertisementDscFlow = 'reject';
+        $('#signingReason').val('Advertisement rejection order');
+        $('#stampingX').val('360');
+        $('#stampingY').val('80');
+        $('#advertisementRejectSignBtn').prop('disabled', true);
+        $('#advertisementRejectSignStatus').text('Waiting for the DSC signer...');
+
+        try {
+            dscSigner.sign(window.pendingRejectPdfBase64);
+        } catch (error) {
+            $('#advertisementRejectSignBtn').prop('disabled', false);
+            $('#advertisementRejectSignStatus').text(error.message || 'Unable to start the DSC signer.');
+        }
+    });
+
+    $(document).on('click', '#advertisementRejectFinalizeBtn', function () {
+        const signedPdfData = window.pendingRejectSignedPdfData;
+        if (!signedPdfData || !window.pendingRejectPostId || !window.pendingRejectReason) {
+            $('#advertisementRejectSignStatus').text('Sign the rejection PDF before submitting.');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('post_id', window.pendingRejectPostId);
+        formData.append('action', 'reject');
+        formData.append('reject_reason', window.pendingRejectReason);
+        formData.append('signed_pdf_data', signedPdfData);
+
+        const button = $('#advertisementRejectFinalizeBtn');
+        button.prop('disabled', true).text('Submitting...');
+        $('#advertisementRejectSignStatus').text('Saving signed rejection...');
+
+        $.ajax({
+            url: '<?= $this->Url->build(['prefix' => 'Recruit', 'controller' => 'District', 'action' => 'advertisementPostApprovelEO']); ?>',
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            headers: {'X-CSRF-Token': $('meta[name="csrfToken"]').attr('content')},
+            success: function(response) {
+                if (!response.success) {
+                    $('#advertisementRejectSignStatus').text(response.message || 'Unable to save the signed rejection.');
+                    button.prop('disabled', false).text('Submit Signed Rejection');
+                    return;
+                }
+
+                bootstrap.Modal.getOrCreateInstance(
+                    document.getElementById('advertisementRejectSignerModal')
+                ).hide();
+                location.reload();
+            },
+            error: function(xhr) {
+                const message = xhr.responseJSON && xhr.responseJSON.message
+                    ? xhr.responseJSON.message
+                    : 'Unable to save the signed rejection.';
+                $('#advertisementRejectSignStatus').text(message);
+                button.prop('disabled', false).text('Submit Signed Rejection');
+            }
+        });
+    });
+
+    $('#advertisementRejectSignerModal').on('hidden.bs.modal', function () {
+        $('#advertisementRejectPdfFrame').attr('src', 'about:blank');
+        window.pendingRejectPostId = null;
+        window.pendingRejectReason = '';
+        window.pendingRejectPdfBase64 = '';
+        window.pendingRejectSignedPdfData = '';
+        window.activeAdvertisementDscFlow = 'approve';
+        $('#stampingX').val('200');
+        $('#stampingY').val('50');
     });
 
 
