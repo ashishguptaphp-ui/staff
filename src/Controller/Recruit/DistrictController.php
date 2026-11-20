@@ -3789,6 +3789,7 @@ $postAdvertisementVacancy = $postAdvertisementVacanciesTable->find()
             $letterData['targetQRPath'] = $qrcodeDir . 'staff_order_reject_' . $appId . '.png';
             $letterData['reject_text'] = nl2br(h((string)$text));
 
+
             //$this->generateQRCode($fullUrl, $appId);
             $html = $this->renderRejectLetterViewContent($letterData);
 

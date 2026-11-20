@@ -1265,6 +1265,22 @@ class SansthaController extends AppController
             }
         }
 
+         $courtorderDate = $ng2g?->court_order_date;
+$formattedCourtorderDate = '';
+
+if ($courtorderDate instanceof \DateTimeInterface) {
+    $formattedCourtorderDate = $courtorderDate->format('d-m-Y');
+
+} elseif (is_string($courtorderDate) && !empty($courtorderDate)) {
+
+    try {
+        $parsedCourtorderDate = new \DateTimeImmutable($courtorderDate);
+        $formattedCourtorderDate = $parsedCourtorderDate->format('d-m-Y');
+    } catch (\Exception $e) {
+        $formattedCourtorderDate = '';
+    }
+}
+
           $resolutionDiv = ' <div class="pdf-field">
                         <h3 class="section-title">Roster</h3>
                         <div class="row mt-1">
@@ -1331,7 +1347,7 @@ class SansthaController extends AppController
                                 </label>                                
                             </div>    
                             <div class="col-md-3" id="">
-                               '.$ng2g->court_order_date->format('d-m-Y').'
+                               '.$formattedCourtorderDate.'
                             </div>      
                         </div>                    
                         <hr/>                        
@@ -1726,7 +1742,7 @@ class SansthaController extends AppController
             ->where(['id IN' => $vacancyIds])
             ->all()
             ->toArray();
-        Log::debug('Retrieved DDO Vacancies: ' . count($ddoVacancies));
+        
         if (count($ddoVacancies) !== count($vacancyIds)) {
             return $this->advertisementJsonResponse(['success' => false, 'message' => 'One or more selected vacancies are no longer available.'], 409);
         }

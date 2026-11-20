@@ -168,6 +168,35 @@ class GeneralUtilitiesController extends AppController
               $storage = new EsdlStorageService();
               $courtOrderFile = $storage->signedUrl($ng2g->court_order_file);    
         }
+      $sanctionsDate = $ng2g?->sanctions_date;
+        $formattedSanctionsDate = '';
+        if ($sanctionsDate) {
+            $formattedSanctionsDate = $sanctionsDate->format('d-m-Y');
+        } elseif (is_string($sanctionsDate)) {
+            $parsedSanctionsDate = \DateTimeImmutable::createFromFormat('!Y-m-d', $sanctionsDate);
+            if (
+                $parsedSanctionsDate !== false &&
+                $parsedSanctionsDate->format('Y-m-d') === $sanctionsDate
+            ) {
+                $formattedSanctionsDate = $parsedSanctionsDate->format('d-m-Y');
+            }
+        }
+
+       $courtorderDate = $ng2g?->court_order_date;
+$formattedCourtorderDate = '';
+
+if ($courtorderDate instanceof \DateTimeInterface) {
+    $formattedCourtorderDate = $courtorderDate->format('d-m-Y');
+
+} elseif (is_string($courtorderDate) && !empty($courtorderDate)) {
+
+    try {
+        $parsedCourtorderDate = new \DateTimeImmutable($courtorderDate);
+        $formattedCourtorderDate = $parsedCourtorderDate->format('d-m-Y');
+    } catch (\Exception $e) {
+        $formattedCourtorderDate = '';
+    }
+}
 
         $resolutionDiv = ' <div class="pdf-field">
                         <h3 class="section-title">Roster</h3>
@@ -188,7 +217,7 @@ class GeneralUtilitiesController extends AppController
                                 </label>                                
                             </div>    
                             <div class="col-md-3" id="">
-                                '.$ng2g->sanctions_date?->format('d-m-Y').'
+                                '.$formattedSanctionsDate.'
                             </div>      
                         </div>   
                         <div class="row mt-1">
@@ -235,12 +264,12 @@ class GeneralUtilitiesController extends AppController
                                 </label>                                
                             </div>    
                             <div class="col-md-3" id="">
-                               '.$ng2g->court_order_date->format('d-m-Y').'
+                               '.$formattedCourtorderDate.'
                             </div>      
                         </div>                    
                         <hr/>                        
                     </div> ';
-        }       
+        }      
 
         $period2324file = null;
          if ($ng2g && !empty($ng2g->period2324_file)) {
