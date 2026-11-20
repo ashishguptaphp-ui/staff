@@ -2691,7 +2691,175 @@ private function generateAdvertisementRejectPdf($appId, $rejectReason): ?string
 
     }
 
- 
+ public function staffOnboardApprove_backup()
+    {
+        $this->Authorization->skipAuthorization();
+        $this->request->allowMethod(['post', 'ajax']);
+        $data = $this->request->getData();
+        $files = $this->request->getUploadedFiles();
+        $identity = $this->request->getAttribute('identity');
+        $userId = $identity ? $identity->getIdentifier() : null;  
+        $connection = ConnectionManager::get('default');
+        $connection->begin();
+        $fileName = null;
+
+        try {
+            $StaffOnboardingAppointmentsTable = TableRegistry::getTableLocator()->get('StaffOnboardingAppointments');            
+            if (!empty($data['app_id'])) {
+                $onboard = $StaffOnboardingAppointmentsTable->get($data['app_id']);
+            }else{
+                return $this->response
+                            ->withType('application/json')
+                            ->withStringBody(json_encode([
+                                'success' => false,
+                                'message' => 'Invalid Application ID'
+                            ]));
+            }
+
+            if($onboard->id < 1){
+                return $this->response
+                            ->withType('application/json')
+                            ->withStringBody(json_encode([
+                                'success' => false,
+                                'message' => 'Invalid Application'
+                            ]));
+            }
+            
+          
+            
+            //'pending'::staff_update_statuses_enum
+            $staffData = [               
+                'status'            => 'Approved'        
+
+            ];
+            $config = Configure::read('ESDL');
+            
+            $bucketPath = $config['mode'].'/staff/onboarding/'.$onboard->id;        
+
+            $generatedDocument = WWW_ROOT . 'uploads' . DS . 'staffonboarding' . DS
+                . 'approve' . DS . 'staff_order_' . $onboard->id . '.pdf';
+            /*if (!is_file($generatedDocument)) {
+                $connection->rollback();
+                return $this->response
+                    ->withStatus(400)
+                    ->withType('application/json')
+                    ->withStringBody(json_encode([
+                        'success' => false,
+                        'message' => 'Generate the work order before uploading its signed copy.'
+                    ]));
+            }*/
+
+            $file = $data['app_doc'] ?? null;
+            if (
+                !$file instanceof \Psr\Http\Message\UploadedFileInterface
+                || $file->getError() !== UPLOAD_ERR_OK
+            ) {
+                $connection->rollback();
+                return $this->response
+                    ->withStatus(400)
+                    ->withType('application/json')
+                    ->withStringBody(json_encode([
+                        'success' => false,
+                        'message' => 'Upload the PDF signed with your DSC before approving.'
+                    ]));
+            }
+
+            $tmpPath = $file->getStream()->getMetadata('uri');
+            $fileSize = $file->getSize() ?? filesize($tmpPath);
+            if (!is_int($fileSize) || $fileSize < 5 || $fileSize > (10 * 1024 * 1024)) {
+                $connection->rollback();
+                return $this->response
+                    ->withStatus(400)
+                    ->withType('application/json')
+                    ->withStringBody(json_encode([
+                        'success' => false,
+                        'message' => 'The signed PDF must be smaller than 10 MB.'
+                    ]));
+            }
+
+            $fileInfo = new \finfo(FILEINFO_MIME_TYPE);
+            if (
+                $fileInfo->file($tmpPath) !== 'application/pdf'
+                || file_get_contents($tmpPath, false, null, 0, 5) !== '%PDF-'
+            ) {
+                $connection->rollback();
+                return $this->response
+                    ->withStatus(400)
+                    ->withType('application/json')
+                    ->withStringBody(json_encode([
+                        'success' => false,
+                        'message' => 'The signed document must be a valid PDF.'
+                    ]));
+            }
+
+            $renamedFile = new UploadedFile(
+                $tmpPath,
+                $fileSize,
+                $file->getError(),
+                'staff_order_' . $onboard->id . '_signed.pdf',
+                'application/pdf'
+            );
+            $storage = new EsdlStorageService();
+            $fileName = $storage->upload($renamedFile, $bucketPath);
+    
+            
+            $onboard = $StaffOnboardingAppointmentsTable->patchEntity($onboard, $staffData);
+
+            if ($onboard->hasErrors()) {
+                $connection->rollback();
+                return $this->response
+                    ->withType('application/json')
+                    ->withStringBody(json_encode([
+                        'success' => false,
+                        'message' => 'Unable to upload file'
+                    ]));
+            }
+
+            if (!$StaffOnboardingAppointmentsTable->save($onboard)) {
+                $connection->rollback();
+                return $this->response
+                    ->withType('application/json')
+                    ->withStringBody(json_encode([
+                        'success' => false,
+                        'message' => 'Unable to approve Staff Onboarding application'
+                    ]));
+            }
+
+            if (!$this->addApplicationLog(
+                                    $data['app_id'],
+                                    'Approved',
+                                    $userId,
+                                    $data['remark'] ?? null,
+                                    $fileName ?? null,
+                                )) {
+                throw new \RuntimeException('Unable to save approval document in application log');
+            }
+
+            
+            $connection->commit();
+            return $this->response
+                ->withType('application/json')
+                ->withStringBody(json_encode([
+                    'success' => true,
+                    'id' => $onboard->id,
+                    'file' => $fileName,
+                    'message' => 'Staff Onboarding application approved successfully'
+                ]));
+
+           
+
+        } catch (\Throwable $e) {
+            $connection->rollback();
+
+            return $this->response
+                ->withStatus(422)
+                ->withType('application/json')
+                ->withStringBody(json_encode([
+                    'status' => false,
+                    'error' => $e->getMessage()
+                ]));
+        }
+    }
    
     public function staffOnboardApprove()
     {
