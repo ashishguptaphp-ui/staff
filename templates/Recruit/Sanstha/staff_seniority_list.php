@@ -597,6 +597,10 @@
             </thead>
             <tbody>                        
                 <?php 
+                    $user = $this->request->getAttribute('identity');
+                    $mobileNumber = $user?->get('mobile');
+                    $fullName = $user?->get('full_name');
+
                 $idx =1;
                 //dd($staffs);
                 
@@ -911,16 +915,32 @@
                     <div class="row mb-3" id="casteCategoryBox">
 
 
-                     <div class="col-md-4">
+                     <!-- <div class="col-md-4">
                             <label for="originalCategory" class="form-label marathi-label required-field">मूळ आरक्षण प्रवर्ग <span class="english-label">(Original)</span></label>
                             <select class="form-select" id="originalCategory" name="originalCategory" required>                            
                                 <option value="">-- Select Original Category --</option>
-                                <?php 
-                                    foreach($casteCategories as $cc){
-                                        echo '<option value="'.$cc->code.'">'.$cc->category_name.'</option>';
-                                    }
+                                <?php // foreach($casteCategories as $cc){ echo '<option value="'.$cc->code.'">'.$cc->category_name.'</option>'; }
                                 ?>
                             </select> 
+                        </div> -->
+
+                        <div class="col-md-4">
+                            <label for="originalCategory" class="form-label marathi-label required-field">
+                                मूळ आरक्षण प्रवर्ग <span class="english-label">(Original)</span>
+                            </label>
+
+                            <select class="form-select" id="originalCategory" disabled>
+                                <option value="">-- Select Original Category --</option>
+
+                                <?php foreach ($casteCategories as $cc): ?>
+                                    <option value="<?= h($cc->code) ?>"
+                                            data-category-name="<?= h($cc->category_name) ?>">
+                                        <?= h($cc->category_name) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+
+                            <input type="hidden" name="originalCategory" id="originalCategoryHidden">
                         </div>
                      
                         <div class="col-md-4">
@@ -957,17 +977,7 @@
                                 ?>
                             </select> 
                         </div>
-                        <div class="col-md-4">
-                            <label for="castecertificateFile" class="form-label marathi-label ">जात प्रमाणपत्र अपलोड करा</label>
-                            <input type="file" id="castecertificateFile" name="castecertificateFile" class="form-control file-upload-check" accept=".pdf" >  
-                        </div>
-                         <div class="col-md-4">
-                            <label for="validcastecertificateFile" class="form-label marathi-label ">वैध जात प्रमाणपत्र अपलोड करा</label>
-                            <input type="file" id="validcastecertificateFile" name="validcastecertificateFile" class="form-control file-upload-check" accept=".pdf" >  
-                        </div>
-
                         
-
                      <?php endif; ?>   
 
                          <div class="col-md-4">
@@ -1001,7 +1011,24 @@
                                     उच्च माध्यमिक <span class="english-label">(HSC)</span>
                                 </label>
                                 <input type="file" id="hscFile" name="hscFile" class="form-control file-upload-check" accept=".pdf" required>      
-                            </div>                     
+                            </div>    
+
+                            <div class="col-md-3" id="casteCertificateDiv">
+                                <label for="casteCertificate" class="form-label marathi-label required-field">
+                                    जात प्रमाणपत्र अपलोड करा
+                                </label>
+                                <input type="file" id="casteCertificate" name="casteCertificate"
+                                    class="form-control file-upload-check" accept=".pdf" required>
+                            </div>
+
+                            <div class="col-md-3" id="casteValidityDiv">
+                                <label for="casteValidity" class="form-label marathi-label required-field">
+                                    वैध जात प्रमाणपत्र अपलोड करा
+                                </label>
+                                <input type="file" id="casteValidity" name="casteValidity"
+                                    class="form-control file-upload-check" accept=".pdf" required>
+                            </div>   
+
                             <div class="col-md-3">
                                 <label for="graduateFile" class="form-label marathi-label">
                                     पदवी <span class="english-label">(Graduate Degree)</span>
@@ -1127,7 +1154,21 @@
                             <div class="col-md-3">
                                 <input type="file" id="resolutionFile" name="resolutionFile" class="form-control file-upload-check" accept=".pdf" required>      
                             </div>   
+
+                            <div class="col-md-1 mt-1">
+                                <label for="sansthaDate" class="form-label marathi-label required-field">
+                                  संस्थेचा तारीख
+                                </label>                                    
+                            </div>     
+                            <div class="col-md-3">
+                                <input type="date" id="sansthaDate" name="sansthaDate" class="form-control" required>      
+                            </div>  
+
+                            <div class="col-md-3">
+                                <input type="text" id="sansthaNo" name="sansthaNo" class="form-control" placeholder="संस्थेचा क्रमांक">      
+                            </div>  
                         </div>
+
 
                           <div class="row mt-3">
                             <div class="col-md-2 mt-2">
@@ -1137,7 +1178,20 @@
                             </div>     
                             <div class="col-md-3">
                                 <input type="file" id="orderFile" name="orderFile" class="form-control file-upload-check" accept=".pdf" required>      
-                            </div>   
+                            </div>
+
+                            <div class="col-md-1 mt-1">
+                                <label for="aadeshDate" class="form-label marathi-label required-field">
+                                  आदेश तारीख
+                                </label>                                    
+                            </div>     
+                            <div class="col-md-3">
+                                <input type="date" id="aadeshDate" name="aadeshDate" class="form-control" required>      
+                            </div>  
+
+                            <div class="col-md-3">
+                                <input type="text" id="aadeshNo" name="aadeshNo" class="form-control" placeholder="आदेश क्रमांक">      
+                            </div> 
                         </div>
 
                         <hr/>                        
@@ -1208,6 +1262,20 @@
                             <label class="form-check-label marathi-label" for="declaration">&nbsp;&nbsp;
                                 मी खात्रीपूर्वक सांगतो/सांगते की, वरील सर्व माहिती खरी आहे व सर्व कागदपत्रे खरी आहेत. कोणतीही चुकीची माहिती दिल्यास, माझ्यावर योग्य कायदेशीर कारवाई केली जाऊ शकते याची मला पूर्ण कल्पना / जाणीव आहे.
                             </label>
+                        </div>
+
+                        <div class="form-check mb-4 text-end">
+                            <?php if (!empty($fullName)): ?>
+                                <label class="form-check-label marathi-label">
+                                    नाव: <?= h($fullName) ?>
+                                </label>
+                            <?php endif; ?>
+
+                            <?php if (!empty($mobileNumber)): ?>
+                                <label class="form-check-label marathi-label ms-3">
+                                    मोबाईल क्रमांक: <?= h($mobileNumber) ?>
+                                </label>
+                            <?php endif; ?>
                         </div>
                     </div>
                     
@@ -1306,17 +1374,6 @@
 
                     <form id="correctionForm" enctype="multipart/form-data"></form>
                     
-                
-                    
-                   
-                    
-                        
-                    
-                    
-              
-          
-                    
-              
            
         </div>
 
@@ -1528,7 +1585,81 @@ $(document).ready(function(){
 <script>  
     $(document).ready(function() {  
 
-       
+        function setOriginalCategory(category) {
+            const categoryName = $.trim(category || '');
+
+            const $option = $('#originalCategory option').filter(function () {
+                return $.trim($(this).attr('data-category-name') || '').toLowerCase() === categoryName.toLowerCase();
+            }).first();
+
+            if ($option.length) {
+
+                // Display the category in the disabled dropdown.
+                $('#originalCategory').val($option.val());
+
+                // Submit the actual category name.
+                $('#originalCategoryHidden').val($option.val());
+
+                toggleCasteDocuments();
+
+            } else {
+                $('#originalCategory').val('');
+                $('#originalCategoryHidden').val('');
+
+                console.error('Category not found:', category);
+            }
+        }
+
+        function toggleCasteDocuments() {
+            const selectedCategory = $('#originalCategory').val();
+
+            // Category ID 1 represents General.
+            const isGeneral = selectedCategory === '1';
+
+            if (isGeneral) {
+                $('#casteCertificateDiv, #casteValidityDiv').hide();
+
+                $('#casteCertificate, #casteValidity')
+                    .prop('required', false)
+                    .prop('disabled', true)
+                    .val('');
+            } else {
+                $('#casteCertificateDiv, #casteValidityDiv').show();
+
+                $('#casteCertificate, #casteValidity')
+                    .prop('disabled', false)
+                    .prop('required', true);
+            }
+        }
+
+        function setAadeshDateMin() {
+
+            var sansthaDate = $('#sansthaDate').val();
+            var aadeshDate = $('#aadeshDate').val();
+
+            if (sansthaDate) {
+
+                // Restrict order date before institution date
+                $('#aadeshDate').attr('min', sansthaDate);
+
+                // Clear order date if it is earlier than institution date
+                if (aadeshDate && aadeshDate < sansthaDate) {
+                    $('#aadeshDate').val('');
+                }
+
+            } else {
+                $('#aadeshDate').removeAttr('min');
+                $('#aadeshDate').val('');
+            }
+        }
+
+    // Update minimum date when institution date changes
+    $('#sansthaDate').on('change', function () {
+        setAadeshDateMin();
+    });
+
+    // Apply restriction on page load
+    setAadeshDateMin();
 
         $('#schoolCommitteeOutwardDate, #originSansthaAppointmentDate').on('blur', function () {
 
@@ -1971,10 +2102,14 @@ function loadonBoardingDetails(caseId, staffObject) {
         },
         success: function(response) {
             if (!response.success || !response.data) {
+                console.error('Staff advertisement details not found');
                 return;
             }
 
             const d = response.data;
+
+            // Set category received from AJAX response.
+            setOriginalCategory(d.category);
 
             if(response.periodDiv && response.periodDiv.trim() !== ''){
                 document.getElementById('periodSectionDivView').innerHTML = response.periodDiv;

@@ -48,6 +48,9 @@ class StaffOnboardingAppointment extends Entity
         'relationship_1' => true,
         'percentage_1' => true,
         'nominee_dob_1' => true,
-
+        'sanstha_date' => true,
+        'sanstha_no'   => true,
+        'aadesh_date'  => true,
+        'aadesh_no'    => true,
     ];
 }

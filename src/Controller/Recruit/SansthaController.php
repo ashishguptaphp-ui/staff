@@ -2369,8 +2369,455 @@ Log::debug(
         }
     }
 
+public function saveStaffOnboarding()
+    {
+        $this->request->allowMethod(['post', 'ajax']);
+        $this->disableAutoRender();
 
-    public function saveStaffOnboarding()
+        $data = $this->request->getData();
+
+        // Skip caste certificate and validity for General category
+        if ((string)($data['originalCategory'] ?? '') === '1') {
+            unset(
+                $data['casteCertificate'],
+                $data['casteValidity']
+            );
+        }
+
+        $appointmentsTable = $this->fetchTable('StaffOnboardingAppointments');
+        $connection = $appointmentsTable->getConnection();
+        $wasAutoQuotingEnabled = $connection->getDriver()->isAutoQuotingEnabled();
+        $connection->getDriver()->enableAutoQuoting();
+        $createdApprovalFilePath = null;
+
+        try {
+
+            $appointment = $connection->transactional(function () use (
+                $appointmentsTable,
+                $data,
+                &$createdApprovalFilePath
+            ) {
+
+                /*
+                * -----------------------------------------
+                * 1. Main Appointment Data
+                * -----------------------------------------
+                */
+
+                $rosterValue = $data['courtRoster'] ?? null;
+                $courtOrderValue = $data['courtOrder'] ?? null;
+                $candidateName = trim((string)($data['candidate_firstname'] ?? '') . ' ' . trim((string)($data['candidate_middlename'] ?? '')) . ' ' . trim((string)($data['candidate_lastname'] ?? '')));
+
+                $roster = in_array((string)$rosterValue, ['1', 'true', 'yes', 'on'], true);
+                $courtOrder = in_array((string)$courtOrderValue, ['1', 'true', 'yes', 'on'], true);
+                
+
+                $appointment = $appointmentsTable->newEntity([
+                    'staff_id' => $data['staffId'] ?? null,
+                     'candidate_firstname' => $data['candidate_firstname'] ?? null,
+                    'candidate_lastname' => $data['candidate_lastname'] ?? null,
+                    'candidate_middlename' => $data['candidate_middlename'] ?? null,   
+                    'candidate_name' => $candidateName,
+                    'nominee_name_1' => $data['nominee_name_1'] ?? null,
+                    'nominee_address_1' => $data['nominee_address_1'] ?? null,    
+                    'nominee_dob_1' => $data['nominee_dob_1'] ?? null,
+                    'relationship_1' => $data['relationship_1'] ?? null,
+                    'percentage_1' => 100,
+
+                    'appointment_date' => !empty($data['appointmentDate'])
+                        ? date(
+                            'Y-m-d H:i:s',
+                            strtotime($data['appointmentDate'])
+                        )
+                        : null,
+
+                    'pan_number' => $data['panNumber'] ?? null,
+                    'aadhar_number' => $data['aadharNumber'] ?? null,
+                    'headmastername' => $data['headmastername'] ?? null,
+                    'heademail' => $data['heademail'] ?? null,
+                    'headmobilenumber' => $data['headmobilenumber'] ?? null,
+
+                    'gender' => $data['gender'] ?? null,
+                    'dob_date' => $data['dob_date'] ?? null,
+                    'gender' => $data['gender'] ?? null,
+                    'candidate_name' => $candidateName,
+                    'candidateemail' => $data['candidateemail'] ?? null,
+                    'candidatemobile' => $data['candidatemobile'] ?? null,
+                    'pay_scale' => $data['pay_scale'] ?? null,
+                    'graduate_degree' => $data['degree'] ?? null,
+                    'matrimonial_status' => $data['matrimonial_status'] ?? null,
+                    'post_graduate_degree' => $data['post_graduate_degree'] ?? null,
+                    'original_category' => !empty($data['originalCategory'])
+                        ? (int)$data['originalCategory']
+                        : null,
+
+                    'appointment_category' => !empty($data['appointmentCategory'])
+                        ? (int)$data['appointmentCategory']
+                        : null,
+
+                    'horizontal_category' => !empty($data['horizontalCategory'])
+                        ? (int)$data['horizontalCategory']
+                        : null,
+                    'period' => $data['period'] ?? null,
+                    'period2324' => $data['period2324'] ?? null,
+                    'status' => 'submitted',
+                    'roster' => $roster,
+                    'court_order' => $courtOrder,
+                    'court_order_petition_number' => $data['courtOrderPetitionNumber'] ?? null,
+                    'court_order_date' => $data['courtOrderDate']?? null,
+                    'sanstha_date' => !empty($data['sansthaDate'])
+                        ? $data['sansthaDate']
+                        : null,
+                    'sanstha_no' => $data['sansthaNo'] ?? null,
+                    'aadesh_date' => !empty($data['aadeshDate'])
+                        ? $data['aadeshDate']
+                        : null,
+                    'aadesh_no' => $data['aadeshNo'] ?? null,
+                ]);
+
+                $schemaColumns = $appointmentsTable->getSchema()->columns();
+                error_log('ONBOARDING SCHEMA CHECK: ' . print_r([
+                    'sanstha_date' => in_array('sanstha_date', $schemaColumns, true),
+                    'sanstha_no'   => in_array('sanstha_no', $schemaColumns, true),
+                    'aadesh_date'  => in_array('aadesh_date', $schemaColumns, true),
+                    'aadesh_no'    => in_array('aadesh_no', $schemaColumns, true),
+                ], true));
+                
+                /*
+                * -----------------------------------------
+                * 2. Validate Main Data
+                * -----------------------------------------
+                */
+
+                if ($appointment->hasErrors()) {
+                    throw new \RuntimeException(
+                        json_encode($appointment->getErrors())
+                    );
+                }
+
+
+                /*
+                * -----------------------------------------
+                * 3. Documents
+                * -----------------------------------------
+                */
+
+                $documentFields = [
+                    'sscFile' => 'ssc',
+                    'hscFile' => 'hsc',
+                    'graduateFile' => 'graduate',
+                    'postGraduateFile' => 'post_graduate',
+                    'advApprovelFile' => 'adv_approval',
+                    'advertisementFile' => 'advertisement',
+                    'signatureFile' => 'signature',
+                    'markingFile' => 'marking',
+                    'resolutionFile' => 'resolution',
+                    'orderFile' => 'order',
+                    'courtRosterFile' => 'court_roster',
+                    'courtOrderFile' => 'court_order',
+                    'governmentFile' => 'government',
+                    'horizontalcertificateFile' => 'horizontalcertificate',
+                    'casteCertificate' => 'castecertificate',
+                    'casteValidity' => 'castevalidity',
+                    'periodFile' => 'periodFile',
+                    'period2324File' => 'period2324File'
+
+                ];
+
+
+                $documents = [];
+
+                foreach ($documentFields as $formField => $documentType) {
+
+                    if (
+                        !isset($data[$formField]) ||
+                        empty($data[$formField])
+                    ) {
+                        continue;
+                    }
+
+                    $file = $data[$formField];
+
+                    /*
+                    * CakePHP UploadedFileInterface
+                    */
+                    if ($file instanceof \Psr\Http\Message\UploadedFileInterface) {
+
+                        if ($file->getError() !== UPLOAD_ERR_OK) {
+                            continue;
+                        }
+
+                        $originalName = $file->getClientFilename();
+
+                        $extension = pathinfo(
+                            $originalName,
+                            PATHINFO_EXTENSION
+                        );
+
+                        $fileName = uniqid(
+                            $documentType . '_',
+                            true
+                        ) . ($extension ? '.' . $extension : '');
+
+                        $uploadPath = WWW_ROOT . 'uploads' .
+                            DS . 'staff' .
+                            DS . $data['staffId'];
+
+                        if (!is_dir($uploadPath)) {
+                            mkdir(
+                                $uploadPath,
+                                0775,
+                                true
+                            );
+                        }
+
+                        $filePath = $uploadPath . DS . $fileName;
+
+                        $file->moveTo($filePath);
+
+                        $relativePath =
+                            'uploads/staff/' .
+                            $data['staffId'] .
+                            '/' .
+                            $fileName;
+
+                        $documents[] = [
+                            'document_type' => $documentType,
+                            'file_name' => $fileName,
+                            'original_name' => $originalName,
+                            'file_path' => $relativePath,
+                            'file_size' => $file->getSize(),
+                            'mime_type' => $file->getClientMediaType()
+                        ];
+                    }
+                }
+
+                $hasApprovalDocument = false;
+                foreach ($documents as $document) {
+                    if ($document['document_type'] === 'adv_approval') {
+                        $hasApprovalDocument = true;
+                        break;
+                    }
+                }
+
+                if (!$hasApprovalDocument) {
+                    $staffId = filter_var($data['staffId'] ?? null, FILTER_VALIDATE_INT);
+                    if ($staffId === false || $staffId < 1) {
+                        throw new \RuntimeException('Missing or invalid staff id for the advertisement approval document.');
+                    }
+
+                    $approvalLog = $this->fetchTable('PostAdvertisementAuditLogs')->find()
+                        ->select(['PostAdvertisementAuditLogs.stage_doc'])
+                        ->innerJoin(
+                            ['PostAdvertisement' => 'post_advertisement'],
+                            '"PostAdvertisement"."id" = "PostAdvertisementAuditLogs"."post_advertisement_id"'
+                        )
+                        ->innerJoin(
+                            ['PostAdvertisementVacancies' => 'post_advertisement_vacancies'],
+                            '"PostAdvertisementVacancies"."post_advertisement_id" = "PostAdvertisement"."id"'
+                        )
+                        ->where([
+                            'PostAdvertisementVacancies.id' => $staffId,
+                            'PostAdvertisement.status' => 'approved',
+                            'PostAdvertisement.institution_code' => $this->username,
+                            'PostAdvertisementAuditLogs.new_status' => 'approved',
+                            'PostAdvertisementAuditLogs.stage_doc IS NOT' => null,
+                        ])
+                        ->order([
+                            'PostAdvertisementAuditLogs.created_at' => 'DESC',
+                            'PostAdvertisementAuditLogs.id' => 'DESC',
+                        ])
+                        ->first();
+
+                    if (!$approvalLog || trim((string)$approvalLog->stage_doc) === '') {
+                        throw new \RuntimeException('The approved advertisement approval document could not be found.');
+                    }
+
+                    $stageDoc = trim((string)$approvalLog->stage_doc);
+                    $normalizedStageDoc = str_replace('\\', '/', $stageDoc);
+                    if (
+                        preg_match('#(^|/)\.\.?(/|$)#', $normalizedStageDoc) ||
+                        preg_match('#^[a-z][a-z0-9+.-]*://#i', $normalizedStageDoc) ||
+                        preg_match('#^[a-z]:/#i', $normalizedStageDoc)
+                    ) {
+                        throw new \RuntimeException('The approved advertisement document path is invalid.');
+                    }
+
+                    $relativeStageDoc = ltrim($normalizedStageDoc, '/');
+                    $localStageDoc = realpath(WWW_ROOT . str_replace('/', DS, $relativeStageDoc));
+                    $webRoot = realpath(WWW_ROOT);
+                    if (
+                        $localStageDoc !== false &&
+                        $webRoot !== false &&
+                        str_starts_with($localStageDoc, $webRoot . DS) &&
+                        is_file($localStageDoc)
+                    ) {
+                        $approvalContents = file_get_contents($localStageDoc);
+                        if ($approvalContents === false) {
+                            throw new \RuntimeException('Unable to read the approved advertisement document.');
+                        }
+                    } else {
+                        $approvalContents = (new EsdlStorageService())->getContents($stageDoc);
+                    }
+
+                    if (!str_starts_with($approvalContents, '%PDF-')) {
+                        throw new \RuntimeException('The approved advertisement document is not a valid PDF.');
+                    }
+
+                    $uploadPath = WWW_ROOT . 'uploads' . DS . 'staff' . DS . $staffId;
+                    if (!is_dir($uploadPath) && !mkdir($uploadPath, 0775, true) && !is_dir($uploadPath)) {
+                        throw new \RuntimeException('Unable to create the staff document upload directory.');
+                    }
+
+                    $fileName = 'adv_approval_' . bin2hex(random_bytes(8)) . '.pdf';
+                    $createdApprovalFilePath = $uploadPath . DS . $fileName;
+                    if (file_put_contents($createdApprovalFilePath, $approvalContents, LOCK_EX) === false) {
+                        throw new \RuntimeException('Unable to save the approved advertisement document.');
+                    }
+
+                    $documents[] = [
+                        'document_type' => 'adv_approval',
+                        'file_name' => $fileName,
+                        'original_name' => basename($relativeStageDoc) ?: 'advertisement_approval.pdf',
+                        'file_path' => 'uploads/staff/' . $staffId . '/' . $fileName,
+                        'file_size' => strlen($approvalContents),
+                        'mime_type' => 'application/pdf',
+                    ];
+                }
+
+                /*
+                * -----------------------------------------
+                * 4. Attach Documents
+                * -----------------------------------------
+                */
+
+                $documentsTable = $appointmentsTable
+                    ->getAssociation('StaffOnboardingDocuments')
+                    ->getTarget();
+
+                $appointment->set(
+                    'staff_onboarding_documents',
+                    array_map(
+                        fn (array $document) => $documentsTable->newEntity($document),
+                        $documents
+                    )
+                );
+
+
+                /*
+                * -----------------------------------------
+                * 5. Save Appointment + Documents
+                * -----------------------------------------
+                */
+                $connection = $appointmentsTable->getConnection();
+                $dbInfo = $connection->execute(
+                    'SELECT current_database() AS db, current_schema() AS schema'
+                )->fetch('assoc');
+
+                \Cake\Log\Log::write('error', 'ONBOARDING DB CONNECTION: ' . print_r(
+                    $dbInfo,
+                    true
+                ));
+
+                \Cake\Log\Log::write('error', 'ONBOARDING SCHEMA CHECK: ' . print_r([
+                    'columns' => $appointmentsTable->getSchema()->columns(),
+
+                    'dirty_fields' => $appointment->getDirty(),
+
+                    'sanstha_date' => $appointment->get('sanstha_date'),
+                    'sanstha_no'   => $appointment->get('sanstha_no'),
+                    'aadesh_date'  => $appointment->get('aadesh_date'),
+                    'aadesh_no'    => $appointment->get('aadesh_no'),
+                ], true));
+
+                if (!$appointmentsTable->save($appointment, [
+                    'associated' => [
+                        'StaffOnboardingDocuments'
+                    ]
+                ])) {
+
+                    throw new \RuntimeException(
+                        json_encode(
+                            $appointment->getErrors()
+                        )
+                    );
+                }
+
+
+                return $appointment;
+            });
+
+
+            $identity = $this->request->getAttribute('identity');
+            $sansthaName = (string)$identity->Sanstha->name;
+            $sansthaCode = (string)$identity->Sanstha->code;
+
+
+            $dataSMSLog = [
+                        'sms_template_id' => 1,
+                        'text' => 'Your application has been approved.',
+                        'sender' => 'SYSTEM',
+                        'status' => '0',
+                        'created_by' => $this->request->getAttribute('identity')?->getIdentifier(),
+                        'application_id' => $appointment->id,
+                         'institution_code' => $sansthaCode,
+                        'institution_name' => $sansthaName,
+                        'post_id' => $appointment->staff_id,
+                        'module_name' => 'application',
+                        'application_date'=> FrozenTime::now(),
+                    ]; 
+
+                $smsService = new SmsNotificationService();
+                $result = $smsService->logSms($dataSMSLog);
+                $this->sendSmsNotificationSaveonboarding($appointment->id,$appointment->staff_id,$result['id'],'application');
+                
+
+            /*
+            * -----------------------------------------
+            * Success Response
+            * -----------------------------------------
+            */
+
+            $this->response = $this->response
+                ->withType('application/json');
+
+            return $this->response->withStringBody(
+                json_encode([
+                    'success' => true,
+                    'status' => true,
+                    'message' => 'Staff onboarding saved successfully',
+                    'data' => [
+                        'id' => $appointment->id,
+                        'staff_id' => $appointment->staff_id
+                    ]
+                ])
+            );
+
+
+        } catch (\Throwable $e) {
+            if ($createdApprovalFilePath !== null && is_file($createdApprovalFilePath)) {
+                unlink($createdApprovalFilePath);
+            }
+
+            $this->response = $this->response
+                ->withStatus(500)
+                ->withType('application/json');
+
+            return $this->response->withStringBody(
+                json_encode([
+                    'status' => false,
+                    'message' => 'Unable to save staff onboarding',
+                    'error' => $e->getMessage()
+                ])
+            );
+        } finally {
+            if (!$wasAutoQuotingEnabled) {
+                $connection->getDriver()->disableAutoQuoting();
+            }
+        }
+    }
+
+    public function saveStaffOnboarding_backup()
     {
         $this->request->allowMethod(['post', 'ajax']);
         $this->disableAutoRender();
@@ -3965,11 +4412,11 @@ foreach ($recipients as $recipient) {
 
     try {
         $mobileNumber = '9891824962';
-        /*$result = $smsService->sendSMS(
+        $result = $smsService->sendSMS(
             'otp',
             $mobileNumber,
             $message
-        );*/
+        );
 
         // Update SMS recipient status if required
         $this->log(
