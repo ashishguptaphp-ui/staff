@@ -349,8 +349,7 @@ if ($courtorderDate instanceof \DateTimeInterface) {
              $i++;               
          }    
         
-         $periodDiv = '<b>अनुदानाचे प्रकार:</b> '.$ng2g->grand_text.'<br/> <b>रिक्त पदांची माहिती:</b> '.$ng2g->vacant_reason.'<br/><br/>';
-         $periodDiv .= '<h6>आपले सदस्य पद सन २०२३-२४ च्या संयमान्यतेनुसार आहे किंवा त्यापूर्वीचे पायाभूत आहे.</h6>';
+         $periodDiv = '<h6>आपले सदस्य पद सन २०२३-२४ च्या संयमान्यतेनुसार आहे किंवा त्यापूर्वीचे पायाभूत आहे.</h6>';
          if ($ng2g && !empty($ng2g->period)) {
             $periodDiv .= '<div class="col-md-6"> ' . h($ng2g->period==1 ? 'पायाभूत' : '') . '</div>';
         }
@@ -633,6 +632,8 @@ private function generateVacancyTable(array $vacancyData, string $periodDiv): st
                         <th>पदाचे नाव</th>
                         <th>श्रेणी</th>
                         <th>वेतनश्रेणी</th>
+                        <th>अनुदानाचे प्रकार</th>
+                        <th>रिक्त पदांची माहिती</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -646,6 +647,8 @@ private function generateVacancyTable(array $vacancyData, string $periodDiv): st
         $postName   = h($dataVal['post_name'] ?? '');
         $category   = h($dataVal['category'] ?? '');
         $payScale   = h($dataVal['pay_scale'] ?? '');
+        $grandText  = h($dataVal['grand_text'] ?? '');
+        $vacantReason = h($dataVal['vacant_reason'] ?? '');
 
         $html .= '
             <tr>
@@ -655,6 +658,8 @@ private function generateVacancyTable(array $vacancyData, string $periodDiv): st
                 <td>' . $postName . '</td>
                 <td>' . $category . '</td>
                 <td>' . $payScale . '</td>
+                <td>' . $grandText . '</td>
+                <td>' . $vacantReason . '</td>
             </tr>
         ';
 

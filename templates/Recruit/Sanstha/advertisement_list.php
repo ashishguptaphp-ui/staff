@@ -1329,7 +1329,9 @@ $schoolLevelLabels = [
                             <th>शाळेचे नाव</th> 
                             <th>UDISE Code</th> 
                             <th>पदाचे नाव</th>
-                            <th>Category</th>
+                            <th>प्रवर्ग</th>
+                            <th>पद रिक्त<br>होण्याची कारणे</th>
+                            <th>अनुदानाचे प्रकार</th>
                            
                         </tr>
                         </thead>
@@ -1771,7 +1773,8 @@ $('#approvedOrderPdfModal').on('hidden.bs.modal', function () {
                             <td>
                                 <select
                                     class="form-select vacancy-category"
-                                    data-vacancy-id="${vacancy.id}">
+                                    data-vacancy-id="${vacancy.id}"
+                                    required>
 
                                     <option value="">प्रवर्ग निवडा </option>
                                     <option value="SC">SC</option>
@@ -1784,18 +1787,19 @@ $('#approvedOrderPdfModal').on('hidden.bs.modal', function () {
                             </td>
                             <td>
                                 <select data-vacancy-id="${vacancy.id}"
-                                 class="form-select vacant-reason" >
+                                 class="form-select vacant-reason" required>
                                     <option value="">-- निवडा --</option>
                                     <option value="1">सेवानिवृत्ती (Retirement)</option>
-                                    <option value="2">बदली (Transfer)/पदोन्नती (Promotion)</option>
+                                    <option value="2">बदली (Transfer)</option>
                                     <option value="3">सेवासमाप्ती / बडतर्फी</option>
                                     <option value="4">नवीन पदनिर्मिती</option>
                                     <option value="5">मृत्यू (Death)</option>
+                                    <option value="6">पदोन्नती (Promotion)</option>
                                 </select>
                             </td>
                             <td>
                                 <select data-vacancy-id="${vacancy.id}"
-                                 class="form-select vacant-grand" >
+                                 class="form-select vacant-grand" required>
                                     	<option value="">-- निवडा --</option>
                                         <option value="100">100% अनुदानित (Fully Aided)</option>
                                         <option value="80">80% अंशतः अनुदानित</option>
@@ -1971,25 +1975,28 @@ $('#approvedOrderPdfModal').on('hidden.bs.modal', function () {
             let vacancyId = $(this).data('vacancy-id');
             let udiseCode = $(this).data('udise-code');
             let category = $(this).val();
+            const row = $(this).closest('tr');
+            const vacantReasonSelect = row.find('.vacant-reason');
+            const grandSelect = row.find('.vacant-grand');
+            const vacantReason = vacantReasonSelect.val();
+            const grand = grandSelect.val();
 
+            const categoryMissing = !category;
+            const reasonMissing = !vacantReason;
+            const grandMissing = grand === '';
+            isValid = isValid && !categoryMissing && !reasonMissing && !grandMissing;
 
-            if (!category) {
+            $(this).toggleClass('is-invalid', categoryMissing);
 
-                isValid = false;
-
-                $(this).addClass('is-invalid');
-
-            } else {
-
-                $(this).removeClass('is-invalid');
-
-            }
-
+            vacantReasonSelect.toggleClass('is-invalid', reasonMissing);
+            grandSelect.toggleClass('is-invalid', grandMissing);
 
                 selectedData.push({
                     vacancy_id: vacancyId,
                     udise_code: udiseCode,
-                    category: category
+                    category: category,
+                    grand: grand,
+                    vacant_reason: vacantReason
                 });
 
             });
@@ -1997,7 +2004,7 @@ $('#approvedOrderPdfModal').on('hidden.bs.modal', function () {
 
             if (!isValid) {
 
-                alert('Please select category for every vacancy.');
+                alert('Please select category, grant, and vacancy reason for every vacancy.');
 
                 return false;
             }
@@ -2226,7 +2233,12 @@ $('#approvedOrderPdfModal').on('hidden.bs.modal', function () {
                     post_advertisement_id: $('#sa_basic_data').val(),
                     school_level: schoolLevel,
                     vacancies: selectedData.map(function(item) {
-                        return {vacancy_id: item.vacancy_id, category: item.category};
+                        return {
+                            vacancy_id: item.vacancy_id,
+                            category: item.category,
+                            grand: item.grand,
+                            vacant_reason: item.vacant_reason
+                        };
                     }),
                     period: period,
                     cadetails: caDetails,
@@ -2237,8 +2249,6 @@ $('#approvedOrderPdfModal').on('hidden.bs.modal', function () {
                     smdetails: schoolDetails,
                     upload_tokens: tokenReferences,
                     submission_key: saAdvertisementSubmissionKey,
-                    grand: $('#grand').val(),
-                    vacant_reason: $('#vacant_reason').val(),
                     courtOrder: courtOrder,
                     courtOrderPetitionNumber : $('#courtOrderPetitionNumber').val(),
                     courtOrderDate : $('#courtOrderDate').val()

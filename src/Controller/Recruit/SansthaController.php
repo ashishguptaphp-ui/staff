@@ -1048,6 +1048,11 @@ class SansthaController extends AppController
                     continue;
                 }
 
+                preg_match('/^(.*?)(\d+)$/', $row1[1], $matches);
+
+                $designation = $matches[1] ?? '';
+                $number = $matches[2] ?? '';
+
                 // Check if the post_id already exists in ddo_vacant_master
                 $existingEntity = $tableWorking->find()
                     ->where(['post_id' => $postId])
@@ -1057,7 +1062,8 @@ class SansthaController extends AppController
                     // Update existing record
                     $entity = $tableWorking->patchEntity($existingEntity, [
                         'school_udise_code' => $schoolId,
-                        'post_name'         => $row1[1] ?? '',
+                        'post_name'         => $designation,
+                        'post_name_code'    => $number,
                         'ddo_code'          => $ddo_code,
                         'pay_scale'         => $row1[2] ?? null,
                     ]);
@@ -1066,7 +1072,8 @@ class SansthaController extends AppController
                     $entity = $tableWorking->newEntity([
                         'school_udise_code' => $schoolId,
                         'post_id'           => $postId,
-                        'post_name'         => $row1[1] ?? '',
+                        'post_name'         => $designation,
+                        'post_name_code'    => $number,
                         'ddo_code'          => $ddo_code,
                         'pay_scale'         => $row1[2] ?? null,
                     ]);
@@ -1308,9 +1315,6 @@ class SansthaController extends AppController
                         'PostAdvertisement.cadetails_file',
                         'PostAdvertisement.sanctions_date',
                         'PostAdvertisement.outward_number',
-                        'PostAdvertisement.grand',
-                        'PostAdvertisement.vacant_reason',
-                        'PostAdvertisement.grand_text',
                         'PostAdvertisement.court_order',
                         'PostAdvertisement.court_order_petition_number',
                         'PostAdvertisement.court_order_date',
@@ -1502,6 +1506,9 @@ if ($courtorderDate instanceof \DateTimeInterface) {
                         'PostAdvertisementVacancies.post_code',
                         'PostAdvertisementVacancies.post_name',
                         'PostAdvertisementVacancies.category',
+                        'PostAdvertisementVacancies.grand',
+                        'PostAdvertisementVacancies.grand_text',
+                        'PostAdvertisementVacancies.vacant_reason'
                      ])  
                      ->where([
                         'PostAdvertisementVacancies.post_advertisement_id' => $post_advertisement_id,
@@ -1516,12 +1523,13 @@ if ($courtorderDate instanceof \DateTimeInterface) {
                                 <td>'.$dataVal['school_udise_code'].' </td>                                    
                                 <td>'.$dataVal['post_name'].'</td>
                                 <td>'.$dataVal['category'].'</td>
+                                <td>'.$dataVal['vacant_reason'].'</td>
+                                <td>'.$dataVal['grand_text'].'</td>                              
                             </tr>';
              $i++;               
          }    
 
-         $periodDiv = '<b>अनुदानाचे प्रकार:</b> '.$ng2g->grand_text.'<br/> <b>रिक्त पदांची माहिती:</b> '.$ng2g->vacant_reason.'<br/><br/>';
-         $periodDiv .= '<h6>आपले सदस्य पद सन २०२३-२४ च्या संयमान्यतेनुसार आहे किंवा त्यापूर्वीचे पायाभूत आहे.</h6>';
+         $periodDiv = '<h6>आपले सदस्य पद सन २०२३-२४ च्या संयमान्यतेनुसार आहे किंवा त्यापूर्वीचे पायाभूत आहे.</h6>';
          if ($ng2g && !empty($ng2g->period)) {
             $periodDiv .= '<div class="col-md-6"> ' . h($ng2g->period==1 ? 'पायाभूत' : '') . '</div>';
         }
@@ -1801,6 +1809,8 @@ if ($courtorderDate instanceof \DateTimeInterface) {
         }
 
         $categories = ['SC', 'ST', 'OBC', 'VJNT', 'EWS', 'GENERAL'];
+        $grandOptions = \App\Model\Table\PostAdvertisementVacanciesTable::GRAND_OPTIONS;
+        $vacantReasonOptions = \App\Model\Table\PostAdvertisementVacanciesTable::VACANT_REASON_OPTIONS;
         $vacancyPayload = [];
         $vacancyIds = [];
         foreach ($vacancies as $vacancy) {
@@ -1809,8 +1819,19 @@ if ($courtorderDate instanceof \DateTimeInterface) {
             }
 
             $vacancyId = filter_var($vacancy['vacancy_id'] ?? null, FILTER_VALIDATE_INT);
-            $category = (string)($vacancy['category'] ?? '');
-            if (!$vacancyId || !in_array($category, $categories, true) || isset($vacancyIds[$vacancyId])) {
+            $category = $vacancy['category'] ?? null;
+            $grandInput = $vacancy['grand'] ?? null;
+            $vacantReasonInput = $vacancy['vacant_reason'] ?? null;
+            if (
+                !$vacancyId ||
+                !is_string($category) ||
+                !in_array($category, $categories, true) ||
+                !is_scalar($grandInput) ||
+                !array_key_exists((string)$grandInput, $grandOptions) ||
+                !is_scalar($vacantReasonInput) ||
+                !array_key_exists((string)$vacantReasonInput, $vacantReasonOptions) ||
+                isset($vacancyIds[$vacancyId])
+            ) {
                 return $this->advertisementJsonResponse(['success' => false, 'message' => 'Invalid or duplicate vacancy selection.'], 400);
             }
 
@@ -1818,6 +1839,9 @@ if ($courtorderDate instanceof \DateTimeInterface) {
             $vacancyPayload[] = [
                 'vacancy_id' => (int)$vacancyId,
                 'category' => $category,
+                'grand' => (int)$grandInput,
+                'grand_text' => $grandOptions[(string)$grandInput],
+                'vacant_reason' => $vacantReasonOptions[(string)$vacantReasonInput],
             ];
         }
         usort($vacancyPayload, static fn(array $left, array $right): int => $left['vacancy_id'] <=> $right['vacancy_id']);
@@ -1877,29 +1901,9 @@ if ($courtorderDate instanceof \DateTimeInterface) {
             }
         }
 
-        $grandOptions = [
-                    100 => '100% अनुदानित (Fully Aided)',
-                    80  => '80% अंशतः अनुदानित',
-                    60  => '60% अंशतः अनुदानित',
-                    40  => '40% अंशतः अनुदानित',
-                    20  => '20% अंशतः अनुदानित',
-                    0   => 'विनाअनुदानित (Partially Aided)',
-            ];
-
-        $vacantReasonOptions = [
-                1 => 'सेवानिवृत्ती (Retirement)',
-                2 => 'बदली (Transfer)/पदोन्नती (Promotion)',
-                3 => 'सेवासमाप्ती / बडतर्फी',
-                4 => 'नवीन पदनिर्मिती',
-                5 => 'मृत्यू (Death)',
-            ];
-
         $period = (string)($data['period'] ?? '');
         $period2324 = (string)($data['period2324'] ?? '');
         $caDetails = (string)($data['cadetails'] ?? '');
-        $grand = (int)($data['grand'] ?? 0);
-        $grandText = $grandOptions[$this->request->getData('grand')] ?? '';
-        $vacantReason = $vacantReasonOptions[$this->request->getData('vacant_reason')] ?? '';
         $courtOrder = (string)($data['courtOrder'] ?? '0') === '1' ? 1 : 0;
         $courtOrderPetitionNumber = null;
         $courtOrderDate = null;
@@ -2029,9 +2033,6 @@ if ($courtorderDate instanceof \DateTimeInterface) {
                 $createdAt,
                 $sanctions_date,
                 $outward_number,
-                $grandText,
-                $vacantReason,
-                $grand,
                 $courtOrder,
                 $courtOrderPetitionNumber,
                 $courtOrderDate                
@@ -2123,9 +2124,6 @@ if ($courtorderDate instanceof \DateTimeInterface) {
 
     'submission_key' => $submissionKey,
     'submission_fingerprint' => $fingerprint,
-    'grand' => $grand,
-    'vacant_reason' => $vacantReason,
-    'grand_text' => $grandText,  
     'court_order' => $courtOrder,
     'court_order_petition_number' => $courtOrderPetitionNumber,
     'court_order_date' => $courtOrderDate,
@@ -2189,6 +2187,9 @@ Log::debug(
                         'highest_class' => $school->highest_class,
                         'pay_scale' => $vacancy->pay_scale,
                         'category' => $vacancyInput['category'],
+                        'grand' => $vacancyInput['grand'],
+                        'grand_text' => $vacancyInput['grand_text'],
+                        'vacant_reason' => $vacancyInput['vacant_reason'],
                     ]);
                     if (!$postAdvertisementVacanciesTable->save($vacancyEntity)) {
                         throw new \RuntimeException('Unable to save an advertisement vacancy: ' . json_encode($vacancyEntity->getErrors()));
