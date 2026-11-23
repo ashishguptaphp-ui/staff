@@ -3581,8 +3581,16 @@ public function saveStaffOnboarding()
                              <span class="txtval">'.$horizontalCategoryName.'</span>
                         </div>
                         <div class="col-md-4">
-                            <label for="horizontalcertificateFile_onboard" class="form-label marathi-label ">लागू असल्यास प्रमाणपत्र अपलोड करा</label>
+                            <label for="horizontalcertificateFile_onboard" class="form-label marathi-label ">लागू असल्यास प्रमाणपत्र </label>
                               <span class="txtval">'.$this->getdocumentFileLink($appointmentData['staff_onboarding_documents'],'horizontalcertificate').'</span>
+                        </div>
+                        <div class="col-md-4 mt-3">
+                            <label for="castecertificateFile_onboard" class="form-label marathi-label ">जात प्रमाणपत्र</label>
+                              <span class="txtval">'.$this->getdocumentFileLink($appointmentData['staff_onboarding_documents'],'castecertificate').'</span>
+                        </div>
+                        <div class="col-md-4 mt-3">
+                            <label for="castevalidityFile_onboard" class="form-label marathi-label ">वैध जात प्रमाणपत्र</label>
+                              <span class="txtval">'.$this->getdocumentFileLink($appointmentData['staff_onboarding_documents'],'castevalidity').'</span>
                         </div>';
 
         
@@ -3602,7 +3610,7 @@ public function saveStaffOnboarding()
                         </div>';  
         }
   
-        $html .= ' <div class="col-md-4">
+        $html .= ' <div class="col-md-4 mt-3">
                           <label for="pay_scale_onboard" class="form-label marathi-label">वेतनश्रेणी  <span class="english-label">(Pay Scale)</span></label>
                               <span class="txtval">'.$payScaleName.'</span>
                         </div>
@@ -3710,11 +3718,28 @@ public function saveStaffOnboarding()
                                   संस्थेचा ठराव
                                 </label>                                    
                             </div>     
-                            <div class="col-md-3" >
+                            <div class="col-md-2" >
                                 '.$this->getdocumentFileLink($appointmentData['staff_onboarding_documents'],'resolution').'
-                           
-
                             </div>   
+
+                              <div class="col-md-2 mt-2">
+                                <label for="" class="form-label marathi-label">
+                                  संस्थेचा ठराव तारीख
+                                </label>                                    
+                            </div>     
+                            <div class="col-md-2" >
+                                '.date('d-m-Y', strtotime($appointmentData['sanstha_date'])).'
+                           
+                            </div>   
+                             <div class="col-md-2 mt-2">
+                                <label for="" class="form-label marathi-label">
+                                  संस्थेचा ठराव क्रमांक
+                                </label>                                    
+                            </div>     
+                            <div class="col-md-2" >
+                                '.$appointmentData['sanstha_no'].'
+                           
+                            </div> 
                         </div>
 
                           <div class="row mt-3">
@@ -3723,10 +3748,29 @@ public function saveStaffOnboarding()
                                   आदेश
                                 </label>                                    
                             </div>     
-                            <div class="col-md-3" >
+                            <div class="col-md-2" >
                                 '.$this->getdocumentFileLink($appointmentData['staff_onboarding_documents'],'order').'
                            
                             </div>   
+
+                            <div class="col-md-2 mt-2">
+                                <label for="" class="form-label marathi-label">
+                                  आदेश तारीख
+                                </label>                                    
+                            </div>     
+                            <div class="col-md-2" >
+                                '.date('d-m-Y', strtotime($appointmentData['aadesh_date'])).'
+                           
+                            </div>   
+                             <div class="col-md-2 mt-2">
+                                <label for="" class="form-label marathi-label">
+                                  आदेश क्रमांक
+                                </label>                                    
+                            </div>     
+                            <div class="col-md-2" >
+                                '.$appointmentData['aadesh_no'].'
+                           
+                            </div> 
                         </div>
 
                         <hr/>                        
