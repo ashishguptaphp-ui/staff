@@ -2479,6 +2479,28 @@ public function saveStaffOnboarding()
 
         $data = $this->request->getData();
 
+        $sansthaDate = $data['sansthaDate'] ?? null;
+        $appointmentOrderDate = $data['appointmentOrderDate'] ?? null;
+        $isValidDate = static function ($date): bool {
+            return is_string($date) &&
+                preg_match('/^\d{4}-\d{2}-\d{2}$/D', $date) === 1 &&
+                checkdate(
+                    (int)substr($date, 5, 2),
+                    (int)substr($date, 8, 2),
+                    (int)substr($date, 0, 4)
+                );
+        };
+        if (
+            !$isValidDate($sansthaDate) ||
+            !$isValidDate($appointmentOrderDate) ||
+            $appointmentOrderDate < $sansthaDate
+        ) {
+            return $this->advertisementJsonResponse([
+                'success' => false,
+                'message' => 'Enter a valid appointment date on or after the Sanstha date.',
+            ], 400);
+        }
+
         // Skip caste certificate and validity for General category
         if ((string)($data['originalCategory'] ?? '') === '1') {
             unset(
@@ -2498,6 +2520,7 @@ public function saveStaffOnboarding()
             $appointment = $connection->transactional(function () use (
                 $appointmentsTable,
                 $data,
+                $appointmentOrderDate,
                 &$createdApprovalFilePath
             ) {
 
@@ -2571,6 +2594,7 @@ public function saveStaffOnboarding()
                     'sanstha_date' => !empty($data['sansthaDate'])
                         ? $data['sansthaDate']
                         : null,
+                    'appointment_order_date' => $appointmentOrderDate,
                     'sanstha_no' => $data['sansthaNo'] ?? null,
                     'aadesh_date' => !empty($data['aadeshDate'])
                         ? $data['aadeshDate']
@@ -2581,6 +2605,7 @@ public function saveStaffOnboarding()
                 $schemaColumns = $appointmentsTable->getSchema()->columns();
                 error_log('ONBOARDING SCHEMA CHECK: ' . print_r([
                     'sanstha_date' => in_array('sanstha_date', $schemaColumns, true),
+                    'appointment_order_date' => in_array('appointment_order_date', $schemaColumns, true),
                     'sanstha_no'   => in_array('sanstha_no', $schemaColumns, true),
                     'aadesh_date'  => in_array('aadesh_date', $schemaColumns, true),
                     'aadesh_no'    => in_array('aadesh_no', $schemaColumns, true),
@@ -2828,6 +2853,7 @@ public function saveStaffOnboarding()
                     'dirty_fields' => $appointment->getDirty(),
 
                     'sanstha_date' => $appointment->get('sanstha_date'),
+                    'appointment_order_date' => $appointment->get('appointment_order_date'),
                     'sanstha_no'   => $appointment->get('sanstha_no'),
                     'aadesh_date'  => $appointment->get('aadesh_date'),
                     'aadesh_no'    => $appointment->get('aadesh_no'),
@@ -3770,6 +3796,14 @@ public function saveStaffOnboarding()
                             <div class="col-md-2" >
                                 '.$appointmentData['aadesh_no'].'
                            
+                            </div> 
+                                <div class="col-md-2 mt-2">
+                                <label for="" class="form-label marathi-label">
+                                  नियुक्तीची तारीख 
+                                </label>                                    
+                            </div>     
+                            <div class="col-md-2" >
+                                '.date('d-m-Y', strtotime($appointmentData['appointment_order_date'])).'                           
                             </div> 
                         </div>
 

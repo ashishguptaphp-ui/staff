@@ -1194,6 +1194,16 @@
                             </div> 
                         </div>
 
+                        <div class="row mt-3">
+                            <div class="col-md-2 mt-2">
+                                <label for="appointmentOrderDate" class="form-label marathi-label required-field">
+                                  नियुक्तीची तारीख
+                                </label>
+                            </div>
+                            <div class="col-md-3">
+                               <input type="date" id="appointmentOrderDate" name="appointmentOrderDate" class="form-control" required>
+                            </div>
+                        </div>
                         <hr/>                        
                     </div> 
 
@@ -1653,13 +1663,35 @@ $(document).ready(function(){
             }
         }
 
+        function setAppointmentOrderDateMin() {
+            const sansthaDate = $('#sansthaDate').val();
+            const appointmentOrderDate = $('#appointmentOrderDate').val();
+            const appointmentInput = document.getElementById('appointmentOrderDate');
+
+            if (sansthaDate) {
+                appointmentInput.min = sansthaDate;
+                appointmentInput.setCustomValidity(
+                    appointmentOrderDate && appointmentOrderDate < sansthaDate
+                        ? 'नियुक्तीची तारीख संस्थेच्या तारखेच्या आधीची असू शकत नाही.'
+                        : ''
+                );
+            } else {
+                appointmentInput.removeAttribute('min');
+                appointmentInput.setCustomValidity('');
+            }
+        }
+
     // Update minimum date when institution date changes
     $('#sansthaDate').on('change', function () {
         setAadeshDateMin();
+        setAppointmentOrderDateMin();
     });
+
+    $('#appointmentOrderDate').on('change', setAppointmentOrderDateMin);
 
     // Apply restriction on page load
     setAadeshDateMin();
+    setAppointmentOrderDateMin();
 
         $('#schoolCommitteeOutwardDate, #originSansthaAppointmentDate').on('blur', function () {
 

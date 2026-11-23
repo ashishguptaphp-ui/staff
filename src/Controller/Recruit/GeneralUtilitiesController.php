@@ -1111,6 +1111,15 @@ public function getStaffOnboardingDetails()
                             <div class="col-md-2" >
                                 '.$appointmentData['aadesh_no'].'                           
                             </div> 
+
+                              <div class="col-md-2 mt-2">
+                                <label for="" class="form-label marathi-label">
+                                  नियुक्तीची तारीख 
+                                </label>                                    
+                            </div>     
+                            <div class="col-md-2" >
+                                '.date('d-m-Y', strtotime($appointmentData['appointment_order_date'])).'                           
+                            </div> 
                         </div>
 
                         <hr/>                        
