@@ -1129,7 +1129,53 @@ class SansthaController extends AppController
         
     }
      
+    public function advertisementVacantPostList()
+    {
+        $this->Authorization->skipAuthorization();
+        $this->viewBuilder()->setLayout('recruit-sanstha');
 
+        $user = $this->request->getAttribute('identity');
+       
+        $sanstha_code = $user->Sanstha->code;
+        $sanstha_name = $user->Sanstha->sanstha_name;
+
+        $postAdvertisementTable = TableRegistry::getTableLocator()->get('PostAdvertisement');
+
+        $ng2g = $postAdvertisementTable->getAdvertisementListWithSansthaCode($sanstha_code);
+        
+        $PostAdvertisementVacanciesTable = TableRegistry::getTableLocator()->get('PostAdvertisementVacancies');
+        $usedPostIds = $PostAdvertisementVacanciesTable->find()
+                        ->select(['post_id'])
+                        ->where(['post_id IS NOT' => null]);
+
+        $ddovacantTable = TableRegistry::getTableLocator()->get('DdoVacantMaster');                   
+        $ddovacant = $ddovacantTable->getAvailableVacancies($usedPostIds, $sanstha_code);
+
+
+        $vacanciesBySchoolLevel = [
+                    //'primary' => [],
+                    'secondary' => [],
+                    'higher_secondary' => [],
+                ];
+
+                foreach ($ddovacant as $vacant) {
+                    $highestClass = (int)($vacant->highest_class ?? 0);
+                    $schoolLevel =  ($highestClass <= 10 ? 'secondary' : 'higher_secondary');
+                    $vacanciesBySchoolLevel[$schoolLevel][] = $vacant;
+                }
+
+                $schoolLevelLabels = [
+                    //'primary' => 'प्राथमिक शाळा',
+                    'secondary' => 'माध्यमिक शाळा',
+                    'higher_secondary' => 'उच्च माध्यमिक शाळा',
+                ];
+
+        $this->set('ng2g', $ng2g);
+        $this->set('ddovacant', $ddovacant); 
+        $this->set('vacanciesBySchoolLevel', $vacanciesBySchoolLevel); 
+        $this->set('schoolLevelLabels', $schoolLevelLabels); 
+
+    }
     public function advertisementList()
     {
       

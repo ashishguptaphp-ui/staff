@@ -809,6 +809,8 @@ $schoolLevelLabels = [
                                 <th>UDISE Code</th> 
                                 <th>पदाचे नाव</th>
                                 <th>प्रवर्ग</th>
+                                <th>पद रिक्त <br>होण्याची कारणे</th>
+                                <th>अनुदानाचे प्रकार</th>
                             
                             </tr>
                             </thead>
@@ -819,48 +821,7 @@ $schoolLevelLabels = [
                      </div>
 
                      
-                     <div class="pdf-field">
-                        
-                     
-
-                        <div class="row mt-1">
-                            <div class="col-md-3 mt-2">
-                                <label for="grand" class="form-label marathi-label required-field">
-                                     पद रिक्त होण्याची कारणे:
-                                </label>                                
-                            </div>
-                            <div class="col-md-3">
-                                <select id="vacant_reason" name="vacant_reason" class="form-select" required>
-                                    <option value="">-- निवडा --</option>
-                                    <option value="1">सेवानिवृत्ती (Retirement)</option>
-                                    <option value="2">बदली (Transfer)/पदोन्नती (Promotion)</option>
-                                    <option value="3">सेवासमाप्ती / बडतर्फी</option>
-                                    <option value="4">नवीन पदनिर्मिती</option>
-                                    <option value="5">मृत्यू (Death)</option>
-                                </select>
-                            </div>
-                        </div>                        
-
-                        <div class="row mt-1">
-                            <div class="col-md-3 mt-2">
-                                <label for="vacant_reason" class="form-label marathi-label required-field">
-                                    अनुदानाचे प्रकार:
-                                </label>
-                            </div>
-                            <div class="col-md-3">
-                                <select id="grand" name="grand" class="form-select" required>
-                                    <option value="">-- निवडा --</option>
-                                    <option value="100">100% अनुदानित (Fully Aided)</option>
-                                    <option value="80">80% अंशतः अनुदानित</option>
-                                    <option value="60">60% अंशतः अनुदानित</option>
-                                    <option value="40">40% अंशतः अनुदानित</option>
-                                    <option value="20">20% अंशतः अनुदानित</option>
-                                    <option value="0">विनाअनुदानित  (Unaided)</option>
-                                </select>
-                            </div>
-                         </div>
-                         
-                    </div>
+                 
 
                     <div class="col-md-12 mt-3">
 
@@ -1819,6 +1780,29 @@ $('#approvedOrderPdfModal').on('hidden.bs.modal', function () {
                                     <option value="VJNT">VJNT</option>
                                     <option value="EWS">EWS </option>
                                     <option value="GENERAL">General</option>
+                                </select>
+                            </td>
+                            <td>
+                                <select data-vacancy-id="${vacancy.id}"
+                                 class="form-select vacant-reason" >
+                                    <option value="">-- निवडा --</option>
+                                    <option value="1">सेवानिवृत्ती (Retirement)</option>
+                                    <option value="2">बदली (Transfer)/पदोन्नती (Promotion)</option>
+                                    <option value="3">सेवासमाप्ती / बडतर्फी</option>
+                                    <option value="4">नवीन पदनिर्मिती</option>
+                                    <option value="5">मृत्यू (Death)</option>
+                                </select>
+                            </td>
+                            <td>
+                                <select data-vacancy-id="${vacancy.id}"
+                                 class="form-select vacant-grand" >
+                                    	<option value="">-- निवडा --</option>
+                                        <option value="100">100% अनुदानित (Fully Aided)</option>
+                                        <option value="80">80% अंशतः अनुदानित</option>
+                                        <option value="60">60% अंशतः अनुदानित</option>
+                                        <option value="40">40% अंशतः अनुदानित</option>
+                                        <option value="20">20% अंशतः अनुदानित</option>
+                                        <option value="0">विनाअनुदानित  (Unaided)</option>
                                 </select>
                             </td>
                         </tr>

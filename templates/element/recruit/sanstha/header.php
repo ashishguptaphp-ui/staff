@@ -69,6 +69,16 @@ function isActiveMenu($controller, $action, $currentController, $currentAction, 
            ) ?>" href="<?= $this->Url->build(['prefix' => 'Recruit', 'controller' => 'Sanstha', 'action' => 'unifiedDataIntegration']); ?>">🚀 डेटा एकत्रीकरण</a>
         </li>
 
+        <li class="nav-item">
+         <a class="nav-link <?= isActiveMenu(
+            'Sanstha',
+            'advertisementVacantPostList',
+            $currentController,
+            $currentAction,
+            $currentPrefix
+           ) ?>" href="<?= $this->Url->build(['prefix' => 'Recruit', 'controller' => 'Sanstha', 'action' => 'advertisementVacantPostList']); ?>"><i class="fas fa-users me-1"></i> रिक्त पद</a>
+        </li>
+
          <li class="nav-item">
             <a class="nav-link <?= isActiveMenu(
               'Sanstha',
