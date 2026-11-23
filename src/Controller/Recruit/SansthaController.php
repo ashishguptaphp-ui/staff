@@ -703,14 +703,21 @@ class SansthaController extends AppController
         $data = $this->request->getData();
         $schoolId = $data['school_id'];
         $errorMsg = '';
-        $sanchDataStatus = $this->fetchSanchWorkingDetails($schoolId);
-       
-        if ($sanchDataStatus == 1) {
-            // Suppose update was successful
+        $syncResult = $this->fetchSanchWorkingDetails($schoolId);
+        $vacancyCount = is_array($syncResult) ? ($syncResult['vacancyCount'] ?? 0) : 0;
+        $syncSucceeded = is_array($syncResult)
+            ? !empty($syncResult['status'])
+            : $syncResult == 1;
+        $sanchDataStatus = is_array($syncResult)
+            ? ($syncSucceeded ? 1 : ($syncResult['statusCode'] ?? -1))
+            : $syncResult;
+
+        if ($syncSucceeded) {
             $response = [
                 'status' => 'success',
                 'statusCode' => $sanchDataStatus,
-                'message' => "The Sanch Manayata record has been successfully synchronized from the Saral Portal to the Staff Portal for UDISE '{$schoolId}'."
+                'vacancyCount' => $vacancyCount,
+                'message' => "The Sanch Manayata record has been successfully synchronized from the Saral Portal to the Staff Portal for UDISE '{$schoolId}'. Vacancies found: {$vacancyCount}."
             ];
            
         } else {
@@ -782,24 +789,7 @@ class SansthaController extends AppController
     
         $dataWorking = $bodyWorking;
 
-        /*$dataWorking = [[
-                            6570792,
-                            "02111100002",
-                            "ganesh trainee School,andheri",
-                            "15",
-                            "357",
-                            "385",
-                            "02111100002",
-                            "P",
-                            2,
-                            "2014-01-17T16:44:22.292Z[UTC]"
-                            ]
-                        ];
-*/
-        //print_r($dataWorking);
-        //exit;
-        // debug removed — was halting execution before the save
-
+      
         return $connection->transactional(function () use ($tableWorking, $schoolId, $dataWorking) {
             $entities = [];
 
@@ -807,6 +797,7 @@ class SansthaController extends AppController
                 $updated = 0;
                 $failed = 0;
                 $total = 0;
+                $vacancyCount = 0;
 
                 if (!is_array($dataWorking) || empty($dataWorking)) {
                     return [
@@ -816,6 +807,7 @@ class SansthaController extends AppController
                         'inserted' => 0,
                         'updated'  => 0,
                         'failed'   => 0,
+                        'vacancyCount' => 0,
                     ];
                 }
         
@@ -870,10 +862,10 @@ class SansthaController extends AppController
                     $updated++;
 
                     // Fetch vacancy details
-                   $this->fetchDDOVacancyWorkingDetails(
+                   $vacancyCount += max(0, $this->fetchDDOVacancyWorkingDetails(
                         $schoolId,
                         $row1[1] ?? null
-                    );
+                    ));
 
                 } else {
 
@@ -896,10 +888,10 @@ class SansthaController extends AppController
                     $inserted++;
 
                     // Fetch vacancy details
-                    $this->fetchDDOVacancyWorkingDetails(
+                    $vacancyCount += max(0, $this->fetchDDOVacancyWorkingDetails(
                         $schoolId,
                         $row1[1] ?? null
-                    );
+                    ));
 
                 } else {
 
@@ -921,6 +913,7 @@ class SansthaController extends AppController
                 'inserted' => $inserted,
                 'updated'  => $updated,
                 'failed'   => $failed,
+                'vacancyCount' => $vacancyCount,
             ];
             
 
@@ -934,7 +927,7 @@ class SansthaController extends AppController
        $webUrl1 = Configure::read('WEB_SHALARTH_URL');
        $webKey1 = Configure::read('WEB_SHALARTH_KEY');
 
-       $workingAPI = $webUrl1 . '/empinfo/getdata/app/' . $ddo_code;
+       $workingAPI = $webUrl1 . '/empinfo/getdata/app/non-teaching/' . $ddo_code;
 
         $http = new Client([
             'timeout' => 60.0,
@@ -956,47 +949,92 @@ class SansthaController extends AppController
 
         $connection = ConnectionManager::get('default');
 
-        $dataWorking = $bodyWorking;
+        $dataWorking = is_array($bodyWorking) && array_key_exists('vacantPosts', $bodyWorking)
+            ? $bodyWorking['vacantPosts']
+            : $bodyWorking;
 
         $payScalesDetails = [
                         'librarian'             => 14000,
-                        'laboratory assistant'  => 12000,
+                        'Lab Attendant'         => 12000,
                         'junior clerk'          => 10000,
-                        'Assistant Teacher'        => 12000,
+                        'Jr. Clerk'             => 10000,
+                        'Sr. Clerk'             => 10000,
+                        'Peon'                  => 8000,
                     ];
 
 
-        /*$dataWorking = [   [
-                            random_int(10000000, 99999999),
-                            "librarian_77200438713"
-                            ],
-                            [
-                            random_int(10000000, 99999999),
-                            "laboratory_assistant_77200717411"
-                            ],
-                            [
-                            random_int(10000000, 99999999),
-                            "junior_clerk_77200717411"
-                            ]];*/
+        
 
-        foreach ($dataWorking as &$row) {
-                $payScale = null;
+        if (!is_array($dataWorking)) {
+            Log::error('Invalid vacancy response for DDO: ' . $ddo_code);
+            return -1;
+        }
 
-                foreach ($payScalesDetails as $postName => $scale) {
-                    if (str_starts_with($row[1], $postName)) {
-                        $payScale = $scale;
-                        break;
-                    }
-                }
-
-                $row[] = $payScale;
+        foreach ($dataWorking as $rowIndex => $row) {
+            if (!is_array($row)) {
+                Log::error('Invalid vacancy row in response for DDO: ' . $ddo_code);
+                unset($dataWorking[$rowIndex]);
+                continue;
             }
 
-            unset($row);                    
+            if (isset($row[0]) && is_array($row[0])) {
+                $row = $row[0];
+            }
+
+            $postId = $row['POST_ID'] ?? $row['post_id'] ?? $row[0] ?? null;
+            $postName = $row['POST_NAME'] ?? $row['post_name'] ?? $row[1] ?? '';
+            if (is_array($postName)) {
+                $postName = $postName['POST_NAME']
+                    ?? $postName['post_name']
+                    ?? $postName['postName']
+                    ?? $postName['name']
+                    ?? reset($postName);
+            }
+
+            if (!is_scalar($postId) || !is_string($postName)) {
+                Log::error('Invalid vacancy post data in response for DDO: ' . $ddo_code);
+                unset($dataWorking[$rowIndex]);
+                continue;
+            }
+
+            $postId = filter_var($postId, FILTER_VALIDATE_INT);
+            if ($postId === false || $postId < 1) {
+                Log::error('Invalid integer vacancy post ID in response for DDO: ' . $ddo_code);
+                unset($dataWorking[$rowIndex]);
+                continue;
+            }
+
+            $normalizedPostName = strtolower($postName);
+            if (
+                str_starts_with($normalizedPostName, 'peon')
+                || str_starts_with($normalizedPostName, 'sr. clerk')
+            ) {
+                unset($dataWorking[$rowIndex]);
+                continue;
+            }
+
+            $payScale = null;
+            foreach ($payScalesDetails as $postNamePrefix => $scale) {
+                if (str_starts_with($postName, $postNamePrefix)) {
+                    $payScale = $scale;
+                    break;
+                }
+            }
+
+            if ($payScale === null) {
+                unset($dataWorking[$rowIndex]);
+                continue;
+            }
+
+            $dataWorking[$rowIndex] = [$postId, $postName, $payScale];
+        }
+
+        $dataWorking = array_values($dataWorking);
         // debug removed — was halting execution before the save
 
         return $connection->transactional(function () use ($tableWorking, $schoolId, $ddo_code, $dataWorking) {
             $entities = [];
+            $vacancyCount = 0;
 
             if (!isset($dataWorking[0])) {
                 return -1;
@@ -1038,12 +1076,14 @@ class SansthaController extends AppController
                     
                 if (!$tableWorking->save($entity, ['checkRules' => false])) {
                     Log::error('Failed to save vacant post entity for Post ID: ' . $postId);
+                } else {
+                    $vacancyCount++;
                 }
                     
             }
 
         
-            return 1;
+            return $vacancyCount;
         });
 
     }

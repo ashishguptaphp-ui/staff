@@ -292,7 +292,13 @@
                      //alert("Data syn successfully!")
                         //alert(response.response.message);
                     }else{
-                         element.innerHTML = '<i class="fa-solid fa-check-circle text-info"></i> <span class="text-info">Successful.</span>';
+                         const vacancyCount = Number(response.response.vacancyCount || 0);
+                         if (vacancyCount > 0) {
+                             const vacancyLabel = vacancyCount === 1 ? 'vacancy' : 'vacancies';
+                             element.innerHTML = '<i class="fa-solid fa-check-circle text-info"></i> <span class="text-info">Successful (' + vacancyCount + ' ' + vacancyLabel + ').</span>';
+                         } else {
+                             element.innerHTML = '<i class="fa-solid fa-circle-info text-info"></i> <span class="text-info">No vacancies found.</span>';
+                         }
                      //alert("Data syn successfully!")
                     }
                      
