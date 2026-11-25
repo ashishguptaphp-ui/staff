@@ -185,6 +185,7 @@ class SansthaController extends AppController
                 'udise_code' => 'PostAdvertisementVacancies.school_udise_code',
                 'post_id' => 'PostAdvertisementVacancies.post_id',
                 'category' => 'PostAdvertisementVacancies.category',
+                'pay_scale' => 'PostAdvertisementVacancies.pay_scale',
                 'post_advertisement_id' => 'PostAdvertisementVacancies.post_advertisement_id',
                 'status' => 'SOA.status',
                 'is_onboarding_submitted' => 'CASE
@@ -1589,7 +1590,7 @@ if ($courtorderDate instanceof \DateTimeInterface) {
             'period2324File',
             'sanch_manyata',
             'smDetailsFile',
-            'courtOrderFile'
+            'courtOrderFile',
         ];
         $isSchoolDocument = in_array($documentType, ['sanch_manyata', 'smDetailsFile'], true);
 
@@ -3570,7 +3571,7 @@ public function saveStaffOnboarding()
                         </div>
                         <div class="col-md-3">
                             <label for="dob_date" class="form-label marathi-label ">जन्मतारीख
-                             <span class="txtval">'.$appointmentData['dob_date'].'</span></label>                             
+                             <span class="txtval">'.date('d-m-Y', strtotime($appointmentData['dob_date'])).'</span></label>                             
                         </div>
                        <div class="col-md-3">
                             <label for="matrimonial_status " class="form-label marathi-label ">अविवाहित/विवाहित
@@ -4167,6 +4168,7 @@ public function saveStaffOnboarding()
                 'udise_code' => 'PostAdvertisementVacancies.school_udise_code',
                 'post_id' => 'PostAdvertisementVacancies.post_id',
                 'category' => 'PostAdvertisementVacancies.category',
+                'pay_scale' => 'PostAdvertisementVacancies.pay_scale',
                 'post_advertisement_id' => 'PostAdvertisementVacancies.post_advertisement_id',
                 'period' => 'PostAdvertisement.period',
                 'period_file' => 'PostAdvertisement.period_file',

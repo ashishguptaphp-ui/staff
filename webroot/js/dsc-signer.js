@@ -3,6 +3,7 @@ var dscSigner = (function($) {
 	var signData;
 	var aliasName;
 	var storeData;
+	var signPosition = null;
 
 	var batch_size = 0;
 	var batch_token;
@@ -24,11 +25,16 @@ var dscSigner = (function($) {
 			alert("Incorrect configuration data.");
 	};
 
-	var gstSigner = function(data) {
+	var gstSigner = function(data, position) {
 		signData = data;
+		signPosition = position || null;
+
+		console.log('Signer received PDF position:', signPosition);
+
 		if (config.mode != "batch") {
 			logout();
 		}
+
 		initialize(function(data) {
 			listCertificatesForSigning();
 		});
@@ -317,7 +323,8 @@ var dscSigner = (function($) {
 				if (config.mode === 'stamping') {
 					realSignPdfStamping(signData);
 				} else if (config.mode === 'nostampingv2') {
-					PDFNoStampingV2(signData);
+					// PDFNoStampingV2(signData);
+					PDFNoStampingV2(signData, signPosition);
 				} else if (config.mode === 'nostampingv3') {
 					PDFNoStampingV3(signData);
 				} else if (config.mode === 'batch') {
@@ -631,10 +638,46 @@ var dscSigner = (function($) {
 						});
 	}
 
-	function PDFNoStampingV2(signData) {
+	
+	function PDFNoStampingV2(signData, position) {
 		var StampingObject = new Object();
-		StampingObject.stampingX = $('#stampingX').val();
-		StampingObject.stampingY = $('#stampingY').val();
+
+		// Use dynamically calculated PDF marker position for approval.
+		if ( window.activeAdvertisementDscFlow === 'approve' || window.activeAdvertisementDscFlow === 'reject'){
+
+			if (!position ||
+				!Number.isFinite(Number(position.stampingX)) ||
+				!Number.isFinite(Number(position.stampingY))) {
+
+				alert('PDF signature marker position was not received.');
+				return;
+			}
+
+			StampingObject.stampingX = Number(position.stampingX);
+			StampingObject.stampingY = Number(position.stampingY);
+
+			console.log('Part 1: Approval - Dynamic PDF Marker Position');
+			console.log('PDF Keyword Page Number:', position.pageNo);
+			console.log('PDF Keyword Location X:', position.keywordX);
+			console.log('PDF Keyword Location Y:', position.keywordY);
+			console.log('Signature Stamping X:', StampingObject.stampingX);
+			console.log('Signature Stamping Y:', StampingObject.stampingY);
+
+		} else {
+
+			// Preserve existing fixed coordinates for rejection.
+			StampingObject.stampingX = $('#stampingX').val();
+			StampingObject.stampingY = $('#stampingY').val();
+
+			console.log('Part 2: Rejection - Existing Fixed Position');
+			console.log('Using Existing Stamping X:', StampingObject.stampingX);
+			console.log('Using Existing Stamping Y:', StampingObject.stampingY);
+		}
+
+		var signingLocation = $('#signingLocation').val();
+
+		console.log('Signing Location:', signingLocation);
+
 		var data = {
 			base64PdfData : signData,
 			alias : aliasName,
@@ -688,7 +731,7 @@ var dscSigner = (function($) {
 							logout();
 						});
 	}
-	
+
 	function PDFNoStampingV3(signData) {
 		var StampingObject = new Object();
 		StampingObject.stampingX = 200;//$('#stampingX').val();

@@ -982,14 +982,8 @@
 
                          <div class="col-md-4">
                             <label for="pay_scale" class="form-label marathi-label ">वेतनश्रेणी  <span class="english-label">(Pay Scale)</span></label>
-                            <select class="form-select" id="pay_scale" name="pay_scale" disabled>
-                            <option value="">Select pay scale</option>
-                            <?php foreach ($payScales as $key => $ps): ?>
-                                <option value="<?= h($key) ?>">
-                                    <?= h($ps) ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
+                            <input id="pay_scale" name="pay_scale" readonly>
+                           
                         </div>  
                         
                    </div>
@@ -2149,7 +2143,7 @@ function loadonBoardingDetails(caseId, staffObject) {
                 document.getElementById('periodSectionDivView').innerHTML = '';
                
                 }
-           
+            document.getElementById('pay_scale').value = d.pay_scale;
            if(d.approved_file==null || d.approved_file==''){
             $('#advApprovelFileDiv').html(`<div class="col-md-3 mt-2">
                                 <label for="advApprovelFile" class="form-label marathi-label required-field">

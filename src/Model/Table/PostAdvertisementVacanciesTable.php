@@ -41,7 +41,7 @@ class PostAdvertisementVacanciesTable extends Table
 
     public function validationDefault(Validator $validator): Validator
     {
-        $validator
+       /* $validator
             ->integer('grand')
             ->inList('grand', array_keys(self::GRAND_OPTIONS))
             ->allowEmptyString('grand');
@@ -56,7 +56,7 @@ class PostAdvertisementVacanciesTable extends Table
             ->scalar('vacant_reason')
             ->inList('vacant_reason', array_values(self::VACANT_REASON_OPTIONS))
             ->maxLength('vacant_reason', 100)
-            ->allowEmptyString('vacant_reason');
+            ->allowEmptyString('vacant_reason');*/
 
         return $validator;
     }

@@ -3899,6 +3899,18 @@ window.prepareStaffOnboardingRejection = function (formData, button) {
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="<?= h($this->Url->build('/js/dscapi-conf.js')) ?>?v=<?= (int)filemtime(WWW_ROOT . 'js' . DS . 'dscapi-conf.js') ?>"></script>
 <script src="<?= h($this->Url->build('/js/dsc-signer.js')) ?>?v=<?= (int)filemtime(WWW_ROOT . 'js' . DS . 'dsc-signer.js') ?>"></script>
+<script src="<?= h($this->Url->build('/js/pdfjs/pdf.min.js')) ?>?v=3.11.174"></script>
+<script>
+    // Configure local PDF.js worker
+    if (typeof pdfjsLib !== 'undefined') {
+        pdfjsLib.GlobalWorkerOptions.workerSrc =
+            '<?= h($this->Url->build('/js/pdfjs/pdf.worker.min.js')) ?>?v=3.11.174';
+
+        console.log('PDF.js loaded successfully');
+    } else {
+        console.error('PDF.js library failed to load.');
+    }
+</script>
 
 <div id="panel" style="display:none;"></div>
 <input type="hidden" id="signingReason" value="Staff onboarding work order approval">
@@ -4140,54 +4152,215 @@ var initConfig = {
 
     dscSigner.configure(initConfig);
 
-    $(document).on('click', '#signDocBtn', function (e) {
-    e.preventDefault();
-        window.activeStaffOnboardingDscFlow = 'approve';
-        initConfig.mode = 'nostampingv2';
-        dscSigner.configure(initConfig);
-        var data = $("#pdfData").val();
-        console.log('PDF Data Length:', data ? data.length : 0);
-        if (data != null || data != '') {
-            dscSigner.sign(data);
+    async function getDscKeywordPosition(base64Pdf) {
+        const keyword = window.activeStaffOnboardingDscFlow === 'reject'
+            ? 'DSC_REJECT_POSITION_2026'
+            : 'DSC_SIGNATURE_POSITION_2026';
 
-           /* $('#downloadDiv').addClass('btn btn-info');
-            var pdfData = 'test';
-            var dlnk = document.getElementById('downloadDiv');
-            dlnk.href = 'data:application/pdf;base64,'+ pdfData;
-            $("#downloadDiv").text("Download Signed PDF File");
-            $('#approvedBtn').prop('disabled', false).removeClass('d-none');
-            $('#ViewPDFBtn').prop('disabled', true).addClass('d-none');
-            $('#signDocBtn').prop('disabled', true).addClass('d-none');
-            */
+        if (!window.pdfjsLib) {
+            throw new Error('PDF.js library is not loaded.');
+        }
+
+        // Handle both raw Base64 and PDF data URLs.
+        const cleanBase64 = base64Pdf.replace(
+            /^data:application\/pdf;base64,/i,
+            ''
+        ).replace(/\s/g, '');
+
+        const pdfData = Uint8Array.from(
+            atob(cleanBase64),
+            char => char.charCodeAt(0)
+        );
+
+        const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
+
+        for (let pageNo = 1; pageNo <= pdf.numPages; pageNo++) {
+            const page = await pdf.getPage(pageNo);
+            const textContent = await page.getTextContent();
+
+            // Combine text from all PDF.js items and retain item references.
+            let combinedText = '';
+            const characterItems = [];
+
+            for (const item of textContent.items) {
+                if (!item.str) {
+                    continue;
+                }
+
+                for (const char of item.str) {
+                    // Ignore whitespace between split marker fragments.
+                    if (/\s/.test(char)) {
+                        continue;
+                    }
+
+                    combinedText += char;
+                    characterItems.push(item);
+                }
+            }
+
+            const markerIndex = combinedText.indexOf(keyword);
+
+            if (markerIndex !== -1) {
+                // Get the PDF text item where the marker starts.
+                const markerItem = characterItems[markerIndex];
+
+                const x = markerItem.transform[4];
+                const y = markerItem.transform[5];
+
+                const position = {
+                    pageNo: pageNo,
+                    keywordX: x,
+                    keywordY: y,
+                    stampingX: Math.round(x) - 330,
+                    stampingY: Math.round(y - markerItem.height + 10)
+                };
+
+                console.log('DSC Keyword Position:', position);
+
+                return position;
+            }
+        }
+
+        throw new Error(
+            keyword + ' not found in PDF. Please check the PDF content.'
+        );
+    }
+
+    // $(document).on('click', '#signDocBtn', function (e) {
+    // e.preventDefault();
+    //     window.activeStaffOnboardingDscFlow = 'approve';
+    //     initConfig.mode = 'nostampingv2';
+    //     dscSigner.configure(initConfig);
+    //     var data = $("#pdfData").val();
+    //     console.log('PDF Data Length:', data ? data.length : 0);
+    //     if (data != null || data != '') {
+    //         dscSigner.sign(data);
+
+    //        /* $('#downloadDiv').addClass('btn btn-info');
+    //         var pdfData = 'test';
+    //         var dlnk = document.getElementById('downloadDiv');
+    //         dlnk.href = 'data:application/pdf;base64,'+ pdfData;
+    //         $("#downloadDiv").text("Download Signed PDF File");
+    //         $('#approvedBtn').prop('disabled', false).removeClass('d-none');
+    //         $('#ViewPDFBtn').prop('disabled', true).addClass('d-none');
+    //         $('#signDocBtn').prop('disabled', true).addClass('d-none');
+    //         */
+    //     }
+    // });
+
+    $(document).on('click', '#signDocBtn', async function (e) {
+        e.preventDefault();
+
+        window.activeStaffOnboardingDscFlow = 'approve';
+
+        var data = $("#pdfData").val();
+
+        console.log('PDF Data Length:', data ? data.length : 0);
+
+        if (typeof data === 'string' && data.trim() !== '') {
+            try {
+                const position = await getDscKeywordPosition(data);
+
+                console.log('HTML Marker PDF Location:', position);
+
+                dscSigner.sign(data, position);
+
+            } catch (error) {
+                console.error('PDF Marker Error:', error);
+                alert(error.message);
+            }
+        } else {
+            alert('PDF data is empty.');
         }
     });
 
-    $(document).on('click', '#staffRejectSignBtn', function () {
+    // $(document).on('click', '#staffRejectSignBtn', function () {
+    //     if (!window.pendingStaffRejectPdfBase64) {
+    //         $('#staffRejectSignStatus').text('The rejection PDF is not ready to sign.');
+    //         return;
+    //     }
+
+    //     const signerPanel = document.getElementById('panel');
+    //     if (signerPanel && signerPanel.parentElement !== document.body) {
+    //         document.body.appendChild(signerPanel);
+    //     }
+    //     $('#panel').css({position: 'fixed', zIndex: 20000});
+
+    //     window.activeStaffOnboardingDscFlow = 'reject';
+    //     initConfig.mode = 'nostampingv2';
+    //     dscSigner.configure(initConfig);
+    //     $('#signingReason').val('Staff onboarding rejection order');
+    //     $('#stampingX').val('360');
+    //     $('#stampingY').val('80');
+    //     $('#staffRejectSignBtn').prop('disabled', true);
+    //     $('#staffRejectSignStatus').text('Waiting for the DSC signer...');
+
+    //     try {
+    //         dscSigner.sign(window.pendingStaffRejectPdfBase64);
+    //     } catch (error) {
+    //         $('#staffRejectSignBtn').prop('disabled', false);
+    //         $('#staffRejectSignStatus').text(error.message || 'Unable to start the DSC signer.');
+    //     }
+    // });
+
+    $(document).on('click', '#staffRejectSignBtn', async function () {
+
         if (!window.pendingStaffRejectPdfBase64) {
-            $('#staffRejectSignStatus').text('The rejection PDF is not ready to sign.');
+            $('#staffRejectSignStatus').text(
+                'The rejection PDF is not ready to sign.'
+            );
             return;
         }
 
         const signerPanel = document.getElementById('panel');
+
         if (signerPanel && signerPanel.parentElement !== document.body) {
             document.body.appendChild(signerPanel);
         }
-        $('#panel').css({position: 'fixed', zIndex: 20000});
+
+        $('#panel').css({
+            position: 'fixed',
+            zIndex: 20000
+        });
 
         window.activeStaffOnboardingDscFlow = 'reject';
-        initConfig.mode = 'nostampingv2';
-        dscSigner.configure(initConfig);
+
         $('#signingReason').val('Staff onboarding rejection order');
-        $('#stampingX').val('360');
-        $('#stampingY').val('80');
+
         $('#staffRejectSignBtn').prop('disabled', true);
-        $('#staffRejectSignStatus').text('Waiting for the DSC signer...');
+
+        $('#staffRejectSignStatus').text(
+            'Finding rejection signature position...'
+        );
 
         try {
-            dscSigner.sign(window.pendingStaffRejectPdfBase64);
+
+            // Find DSC signature marker position in PDF
+            const position = await getDscKeywordPosition(
+                window.pendingStaffRejectPdfBase64
+            );
+
+            console.log('Staff Rejection PDF Marker Position:', position);
+
+            $('#staffRejectSignStatus').text(
+                'Waiting for the DSC signer...'
+            );
+
+            // Start DSC signing
+            dscSigner.sign(
+                window.pendingStaffRejectPdfBase64,
+                position
+            );
+
         } catch (error) {
+
+            console.error('Staff Rejection PDF Marker Error:', error);
+
             $('#staffRejectSignBtn').prop('disabled', false);
-            $('#staffRejectSignStatus').text(error.message || 'Unable to start the DSC signer.');
+
+            $('#staffRejectSignStatus').text(
+                error.message || 'Unable to find the rejection signature position.'
+            );
         }
     });
 

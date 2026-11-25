@@ -774,11 +774,11 @@
                             */
 
                              if($post->status == 'Forwarded_dyd_dadi'){ 
-                             echo "<a href='#' style='text-decoration:none;' class='approvedApplication-open-transfer' data-staffObject='". json_encode($post, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP)."' data-mode='1'  data-id='".$post->id."'>
-                                <i class='fa-solid fa-arrow-trend-up'></i>  शालार्थ मंजूर
+                             echo "<a href='#' style='text-decoration:none;color:green;'  class='approvedApplication-open-transfer' data-staffObject='". json_encode($post, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP)."' data-mode='1'  data-id='".$post->id."'>
+                                <i class='fa-solid fa-arrow-trend-up'></i>   मंजूर करा
                             </a><br/>";
-                              echo "<a href='#' style='text-decoration:none;' class='rejectApplication-open-transfer' data-staffObject='". json_encode($post, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP)."' data-mode='1'  data-id='".$post->id."'>
-                                <i class='fa-solid fa-arrow-trend-down'></i>  शालार्थ नामंजूर
+                              echo "<a href='#' style='text-decoration:none;color:red;' class='rejectApplication-open-transfer' data-staffObject='". json_encode($post, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP)."' data-mode='1'  data-id='".$post->id."'>
+                                <i class='fa-solid fa-arrow-trend-down'></i>   नामंजूर करा
                             </a><br/>";
                              }
 

@@ -183,9 +183,10 @@ class GeneralUtilitiesController extends AppController
         }
 
        $courtorderDate = $ng2g?->court_order_date;
+
 $formattedCourtorderDate = '';
 
-if ($courtorderDate instanceof \DateTimeInterface) {
+if ($courtorderDate) {
     $formattedCourtorderDate = $courtorderDate->format('d-m-Y');
 
 } elseif (is_string($courtorderDate) && !empty($courtorderDate)) {

@@ -3753,6 +3753,30 @@ $postAdvertisementVacancy = $postAdvertisementVacanciesTable->find()
                             text-align: right;
                             margin: 0;
                         }
+                        .dsc-signature-block {
+                            width: 260px;
+                            margin-left: auto;
+                            margin-top: 25px;
+                            text-align: right;
+                            page-break-inside: avoid;
+                        }
+                        .dsc-signature-label {
+                            margin: 0;
+                            text-align: right;
+                        }
+                        .dsc-signature-area {
+                            height: 75px;
+                            width: 260px;
+                            margin-left: auto;
+                        }
+                        .dsc-signature-marker {
+                            display: block;
+                            font-family: Arial, sans-serif;
+                            font-size: 8px;
+                            line-height: 10px;
+                            color: #ffffff;
+                            white-space: nowrap;
+                        }
                         .copy-to {
                             margin-top: 70px;
                             clear: both;
@@ -3834,9 +3858,11 @@ $postAdvertisementVacancy = $postAdvertisementVacanciesTable->find()
 </div>     
 
 <div class="content">
-        <p class="right" style="text-align:right; margin:0;">
-            स्वाक्षरी/-
-        </p>
+        <div class="dsc-signature-block" id="dsc-signature-position">
+            <p class="dsc-signature-label">स्वाक्षरी/-</p>
+            <span class="dsc-signature-marker">DSC_SIGNATURE_POSITION_2026</span>
+            <div class="dsc-signature-area"></div>
+        </div>
 
         <!-- Fixed space -->
         <div style="height: 150px;"></div>
@@ -4034,9 +4060,11 @@ $postAdvertisementVacancy = $postAdvertisementVacanciesTable->find()
                             margin: 0px 30px;
                             color: #111;
                         }
-                        .header-img {
-                            width: 250px;
-                            height: 250px;
+                       .header-img {
+                            display: block;
+                            width: 100%;
+                            height: auto;
+                            margin: 0 auto 8px auto;
                         }
                         .qrcode-img {
                             width: 300px;
@@ -4106,6 +4134,28 @@ $postAdvertisementVacancy = $postAdvertisementVacanciesTable->find()
                             text-align: right;
                             margin: 0;
                         }
+                        .reject-dsc-signature-block {
+                            position: relative;
+                            width: 180px;
+                            margin-left: auto;
+                            margin-right: 0;
+                            text-align: center;
+                            margin-top: 20px;
+                        }
+                        .reject-dsc-signature-label {
+                            margin: 0 0 5px;
+                            font-size: 14px;
+                            font-weight: 600;
+                        }
+                        .reject-dsc-signature-marker {
+                            display: inline-block;
+                            font-size: 1px;
+                            line-height: 1px;
+                            color: #ffffff;
+                        }
+                        .reject-dsc-signature-area {
+                            height: 65px;
+                        }
                         .copy-to {
                             margin-top: 70px;
                             clear: both;
@@ -4154,9 +4204,11 @@ $postAdvertisementVacancy = $postAdvertisementVacanciesTable->find()
 <p>उपरोक्त प्रस्तावामध्ये वरील त्रुटी आढळून आल्याने सदर प्रस्ताव परत पाठविण्यात येत आहे. सदर प्रस्तावातील त्रुटींची पूर्तता करून १५ दिवसांच्या आत फेरसादर करावा.</p>
 </div>
                 <div>
-                        <p class="right" style="text-align:right; margin:0;">
-                            स्वाक्षरी/-
-                        </p>
+                        <div class="reject-dsc-signature-block" id="reject-dsc-signature-position">
+                            <p class="reject-dsc-signature-label">स्वाक्षरी/-</p>
+                            <span class="reject-dsc-signature-marker">DSC_REJECT_POSITION_2026</span>
+                            <div class="reject-dsc-signature-area"></div>
+                        </div>
 
                         <!-- Fixed space -->
                         <div style="height: 150px;"></div>
@@ -4331,8 +4383,10 @@ $postAdvertisementVacancy = $postAdvertisementVacanciesTable->find()
                             color: #111;
                         }
                         .header-img {
-                            width: 250px;
-                            height: 250px;
+                            display: block;
+                            width: 100%;
+                            height: auto;
+                            margin: 0 auto 8px auto;
                         }
                         .qrcode-img {
                             width: 300px;
