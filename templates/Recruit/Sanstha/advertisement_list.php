@@ -83,6 +83,18 @@
         font-size: 14px;
         font-family: Roboto EMOJI;
     }
+
+    @media (prefers-color-scheme: dark) {
+        #saSelectedVacancyList .vacancy-category option:disabled {
+            color: #adb5bd;
+            background-color: #343a40;
+        }
+    }
+
+    [data-bs-theme="dark"] #saSelectedVacancyList .vacancy-category option:disabled {
+        color: #adb5bd;
+        background-color: #343a40;
+    }
 </style>
     
 
@@ -576,6 +588,7 @@
         .form-group { margin: 10px 0; }
     </style>
 
+
 <div class="d-flex justify-content-between align-items-center"
      style="padding: 5px 10px; border-bottom: 2px solid #1a237e;">
 
@@ -737,7 +750,67 @@ $schoolLevelLabels = [
                     <input type="hidden" id="sa_basic_data">
                     <div style="background: #fff; padding:10px;">       
         
+                   <div class="text-center fw-bold fs-5 mb-2">
+                        बिंदू नामावली
+                    </div>
+                <table class="table table-bordered text-center" id="categoryTable">
+                    <thead>
+                        <tr>
+                            <th>प्रवर्ग</th>
+                            <th>मंजूर</th>
+                            <th>कार्यरत</th>
+                            <th>रिक्त</th>
+                        </tr>
+                    </thead>
 
+                    <tbody>
+
+                       <?php foreach ($casteCategoriesArray as $category): ?>
+                        <tr>
+                            <td><?= h($category->category_name) ?></td>
+
+                            <!-- मंजूर -->
+                            <td>
+                                <input type="number"
+                                    name="sanctioned[<?= h($category->id) ?>]"
+                                    class="form-control sanctioned"
+                                    value="0"
+                                    min="0">
+                            </td>
+
+                            <!-- कार्यरत -->
+                            <td>
+                                <input type="number"
+                                    name="working[<?= h($category->id) ?>]"
+                                    class="form-control working"
+                                    value="0"
+                                    min="0">
+                            </td>
+
+                            <!-- रिक्त (Read Only) -->
+                            <td>
+                                <input type="number"
+                                    name="vacant[<?= h($category->id) ?>]"
+                                    class="form-control vacant"
+                                    data-category-name="<?= h($category->category_name) ?>"
+                                    value="0"
+                                    readonly>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+
+                    </tbody>
+
+                    <tfoot>
+                        <tr class="fw-bold">
+                            <td>TOTAL</td>
+                            <td id="totalSanctioned">0</td>
+                            <td id="totalWorking">0</td>
+                            <td id="totalVacant">0</td>
+                        </tr>
+                    </tfoot>
+                </table>
+                    
                     <table id="staffTable" class="table table-bordered table-striped table-hover align-middle">
                         <thead class="table-light">
                         <tr>
@@ -1745,11 +1818,18 @@ $('#approvedOrderPdfModal').on('hidden.bs.modal', function () {
                         return;
                     }
 
+                    calculateTotal();
+                    const availableCategories = getAvailableVacancyCategories();
+                    if (availableCategories.length === 0) {
+                        alert('कृपया किमान एका प्रवर्गासाठी रिक्त पदसंख्या नोंदवा (Please enter a vacancy count for at least one category)');
+                        return;
+                    }
+
                  console.log('Selected Vacancies:', selectedVacancies);
 
 
                 // Build second slide
-                renderCategorySlide(selectedVacancies);
+                renderCategorySlide(selectedVacancies, availableCategories);
 
                 // Move Step 1 -> Step 2
                 activateStep(2);
@@ -1758,9 +1838,95 @@ $('#approvedOrderPdfModal').on('hidden.bs.modal', function () {
             });
 
 
-            function renderCategorySlide(vacancies)
+            const saVacancyCategories = [
+                { value: 'SC', label: 'SC' },
+                { value: 'ST', label: 'ST' },
+                { value: 'OBC', label: 'OBC' },
+                { value: 'VJNT', label: 'VJNT' },
+                { value: 'EWS', label: 'EWS' },
+                { value: 'GENERAL', label: 'General' }
+            ];
+            const saVacancyCategoryAliases = {
+                SC: ['SC'],
+                ST: ['ST'],
+                OBC: ['OBC'],
+                VJNT: ['VJNT', 'VJA', 'NTB', 'NTC', 'NTD'],
+                EWS: ['EWS'],
+                GENERAL: ['GENERAL']
+            };
+
+            function getVacancyCategoryCounts()
+            {
+                const vacancyCounts = {};
+                saVacancyCategories.forEach(function (category) {
+                    vacancyCounts[category.value] = 0;
+                });
+
+                $('#categoryTable .vacant').each(function () {
+                    const count = Number(this.value);
+                    if (!Number.isFinite(count) || count <= 0) {
+                        return;
+                    }
+
+                    const categoryName = String(this.dataset.categoryName || '').trim().toUpperCase();
+                    Object.keys(saVacancyCategoryAliases).forEach(function (category) {
+                        if (saVacancyCategoryAliases[category].includes(categoryName)) {
+                            vacancyCounts[category] += count;
+                        }
+                    });
+                });
+
+                return vacancyCounts;
+            }
+
+            function getAvailableVacancyCategories()
+            {
+                const vacancyCounts = getVacancyCategoryCounts();
+                return saVacancyCategories.filter(function (category) {
+                    return vacancyCounts[category.value] > 0;
+                });
+            }
+
+            function updateVacancyCategoryOptions()
+            {
+                const vacancyCounts = getVacancyCategoryCounts();
+                const selectedCounts = {};
+                $('.vacancy-category').each(function () {
+                    if (this.value) {
+                        selectedCounts[this.value] = (selectedCounts[this.value] || 0) + 1;
+                    }
+                });
+
+                $('.vacancy-category').each(function () {
+                    const selectedCategory = this.value;
+                    const options = saVacancyCategories
+                        .filter(function (category) {
+                            return vacancyCounts[category.value] > 0;
+                        })
+                        .map(function (category) {
+                            const selectedElsewhere = (selectedCounts[category.value] || 0)
+                                - (selectedCategory === category.value ? 1 : 0);
+                            const disabled = selectedElsewhere >= vacancyCounts[category.value];
+                            return `<option value="${category.value}" ${disabled ? 'disabled' : ''}>${category.label}</option>`;
+                    }).join('');
+
+                    this.innerHTML = `<option value="">प्रवर्ग निवडा </option>${options}`;
+                    this.value = selectedCategory;
+                });
+            }
+
+            $('#saSelectedVacancyList').on(
+                'change',
+                '.vacancy-category',
+                updateVacancyCategoryOptions
+            );
+
+            function renderCategorySlide(vacancies, availableCategories)
             {
                 let html = '';
+                const categoryOptions = availableCategories.map(function (category) {
+                    return `<option value="${category.value}">${category.label}</option>`;
+                }).join('');
 
                 $.each(vacancies, function (index, vacancy) {
 
@@ -1777,12 +1943,7 @@ $('#approvedOrderPdfModal').on('hidden.bs.modal', function () {
                                     required>
 
                                     <option value="">प्रवर्ग निवडा </option>
-                                    <option value="SC">SC</option>
-                                    <option value="ST">ST</option>
-                                    <option value="OBC">OBC</option>
-                                    <option value="VJNT">VJNT</option>
-                                    <option value="EWS">EWS </option>
-                                    <option value="GENERAL">General</option>
+                                    ${categoryOptions}
                                 </select>
                             </td>
                             <td>
@@ -1815,6 +1976,7 @@ $('#approvedOrderPdfModal').on('hidden.bs.modal', function () {
                 });
 
                 $('#saSelectedVacancyList').html(html);
+                updateVacancyCategoryOptions();
 
                 // Create unique UDISE-wise document inputs
                 renderSanchManyataDocuments(vacancies);
@@ -2631,6 +2793,48 @@ $('#approvedOrderPdfModal').on('hidden.bs.modal', function () {
         const areaBtn = document.getElementById(btn);
         areaBtn.style.display =  "none";
     } 
+
+function calculateTotal() {
+
+    let totalSanctioned = 0;
+    let totalWorking = 0;
+    let totalVacant = 0;
+
+    document.querySelectorAll('#categoryTable tr').forEach(row => {
+
+        let sanctionedInput = row.querySelector('.sanctioned');
+        let workingInput = row.querySelector('.working');
+        let vacantInput = row.querySelector('.vacant');
+
+        if (!sanctionedInput || !workingInput || !vacantInput) return;
+
+        let sanctioned = Number(sanctionedInput.value) || 0;
+        let working = Number(workingInput.value) || 0;
+
+        // रिक्त = मंजूर - कार्यरत
+        let vacant = sanctioned - working;
+
+        vacantInput.value = vacant;
+
+        totalSanctioned += sanctioned;
+        totalWorking += working;
+        totalVacant += vacant;
+    });
+
+    document.getElementById('totalSanctioned').innerText = totalSanctioned;
+    document.getElementById('totalWorking').innerText = totalWorking;
+    document.getElementById('totalVacant').innerText = totalVacant;
+}
+
+document.addEventListener('input', function(e) {
+
+    if (e.target.matches('.sanctioned, .working')) {
+        calculateTotal();
+    }
+
+});
+
+calculateTotal();
 
 </script>
 

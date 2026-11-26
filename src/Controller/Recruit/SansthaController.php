@@ -1214,6 +1214,12 @@ class SansthaController extends AppController
 
         $casteCategoriesTable = TableRegistry::getTableLocator()->get('CasteCategories');
         $casteCategoriesDetails = $casteCategoriesTable->find()->all();
+        $casteCategoriesArray = $casteCategoriesTable
+            ->find()
+            ->distinct(['code'])
+            ->orderBy(['code' => 'ASC'])
+            ->all()
+            ->toArray();
 
         
         $horizontalCategoriesTable = TableRegistry::getTableLocator()->get('HorizontalCategories');
@@ -1290,6 +1296,7 @@ class SansthaController extends AppController
         $this->set('staff', $staffData);
         $this->set('approvedLogDocuments', $approvedLogDocuments);
         $this->set('rejectLogDocuments', $rejectLogDocuments);
+        $this->set(compact('casteCategoriesArray'));
 
 
     }
@@ -4587,11 +4594,13 @@ $recipients = $SmsNotificationRecipients->find()
     ->all();
 
 $smsService = new SmsService();
+$message = $sanstha_name.' संस्थेचा कर्मचारी मान्यता प्रस्ताव प्राप्त झाला आहे. प्रस्तावावर आवश्यक कार्यवाही करावी. -Sch Edu and Sports dept';
+$templateId = "1177179491125288789";
 
 foreach ($recipients as $recipient) {
 
     $mobileNumber = $recipient->mobile_number;
-    $message = $sanstha_name.' संस्थेचा कर्मचारी मान्यता प्रस्ताव प्राप्त झाला आहे. प्रस्तावावर आवश्यक कार्यवाही करावी.';
+    
     if (empty($mobileNumber)) {
         continue;
     }
@@ -4875,10 +4884,13 @@ $recipients = $SmsNotificationRecipients->find()
 
 $smsService = new SmsService();
 
+$message = $sanstha_name.' या संस्थेकडून जाहिरात परवानगी मिळण्याबाबतचा प्रस्ताव प्राप्त झाला आहे. प्रस्तावाची नियमानुसार छाननी करून आवश्यक ती कार्यवाही करावी. -Sch Edu and Sports dept';
+$templateId = "1177179388431592978";
+
 foreach ($recipients as $recipient) {
 
     $mobileNumber = $recipient->mobile_number;
-    $message = $sanstha_name.' संस्थेचा जाहिरात परवानगी प्रस्ताव प्राप्त झाला आहे. प्रस्तावावर आवश्यक कार्यवाही करावी.';
+    
     if (empty($mobileNumber)) {
         continue;
     }
@@ -5002,7 +5014,7 @@ public function thridpartytest()
     // 1. cURL connection error
     if ($response === false || $curlErrorNo !== 0) {
 
-        \Cake\Log\Log::error('Third Party API cURL Error: ' . $curlError);
+        Log::error('Third Party API cURL Error: ' . $curlError);
 
         $result = [
             'status' => false,
@@ -5024,7 +5036,7 @@ public function thridpartytest()
     // 2. HTTP error handling
     if ($httpCode < 200 || $httpCode >= 300) {
 
-        \Cake\Log\Log::error(
+        Log::error(
             'Third Party API HTTP Error: ' . $httpCode .
             ' Response: ' . $response
         );
@@ -5049,7 +5061,7 @@ public function thridpartytest()
 
     if (json_last_error() !== JSON_ERROR_NONE) {
 
-        \Cake\Log\Log::error(
+        Log::error(
             'Third Party API Invalid JSON: ' . json_last_error_msg()
         );
 
@@ -5084,23 +5096,6 @@ public function thridpartytest()
 
 
 
-public function unifiedDataIntegrationTest()
-    {                
-        $this->Authorization->skipAuthorization();
-        $this->viewBuilder()->setLayout('recruit-sanstha');
-
-        $schoolsTable = TableRegistry::getTableLocator()->get('Schools');
-
-        $schools = $schoolsTable->find()->where(['sanstha_code' => $this->username])
-            ->all();
-
-         $sanchDataStatus = $this->fetchSanchWorkingDetails('27230100523');
-
-         print_r($sanchDataStatus);
-
-        $this->set('schools', $schools);
-     
-    }
 
 
   }
