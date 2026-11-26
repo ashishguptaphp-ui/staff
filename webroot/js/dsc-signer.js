@@ -643,7 +643,7 @@ var dscSigner = (function($) {
 		var StampingObject = new Object();
 
 		// Use dynamically calculated PDF marker position for approval.
-		if ( window.activeAdvertisementDscFlow === 'approve' || window.activeAdvertisementDscFlow === 'reject'){
+		if ( window.activeAdvertisementDscFlow === 'approve' || window.activeAdvertisementDscFlow === 'reject' || window.activeStaffOnboardingDscFlow === 'approve' || window.activeStaffOnboardingDscFlow === 'reject' ){
 
 			if (!position ||
 				!Number.isFinite(Number(position.stampingX)) ||

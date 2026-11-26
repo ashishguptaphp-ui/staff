@@ -943,6 +943,8 @@ class SansthaController extends AppController
        
         $bodyWorking = $responseWorking->getJson();
 
+        Log::debug('Request API Data: ' . print_r($bodyWorking, true));
+
         $tableWorking = TableRegistry::getTableLocator()->get('DdoVacantMaster', [
             'table' => 'ddo_vacant_master',
             'className' => \Cake\ORM\Table::class,
@@ -961,6 +963,7 @@ class SansthaController extends AppController
                         'Jr. Clerk'             => 10000,
                         'Sr. Clerk'             => 10000,
                         'Peon'                  => 8000,
+                        'Liberian'              => 14000,
                     ];
 
 

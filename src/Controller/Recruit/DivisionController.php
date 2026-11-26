@@ -51,6 +51,7 @@ class DivisionController extends AppController
             'advertisementVacancyAjax',
             'advertisementList',
             'staffOnboardApprove',
+            'staffOnboardRejectPrepare',
             'addShalarthEmployeeRecord',
             'staffOnboardReject',
             'staffOnboardForward',
@@ -1597,12 +1598,99 @@ class DivisionController extends AppController
         }
     }
 
+    public function staffOnboardRejectPrepare()
+    {
+        $this->Authorization->skipAuthorization();
+        $this->request->allowMethod(['post', 'ajax']);
+        $data = $this->request->getData();
+        $staffId = filter_var($data['reject_id'] ?? null, FILTER_VALIDATE_INT);
+
+        if (!$staffId) {
+            return $this->response->withStatus(400)->withType('application/json')
+                ->withStringBody(json_encode(['success' => false, 'message' => 'Invalid staff application.']));
+        }
+
+        $appointmentsTable = $this->fetchTable('StaffOnboardingAppointments');
+        $onboard = $appointmentsTable->find()
+            ->where(['staff_id' => $staffId])
+            ->order(['id' => 'DESC'])
+            ->first();
+
+        if (!$onboard) {
+            return $this->response->withStatus(404)->withType('application/json')
+                ->withStringBody(json_encode(['success' => false, 'message' => 'Staff onboarding application not found.']));
+        }
+
+        $rejectedDocuments = $this->getStaffOnboardRejectedDocuments($data);
+        $remark = trim((string)($data['reject_remark'] ?? ''));
+        if (!$rejectedDocuments && $remark === '') {
+            return $this->response->withStatus(400)->withType('application/json')
+                ->withStringBody(json_encode(['success' => false, 'message' => 'Select a rejection reason or enter a remark.']));
+        }
+
+        $pdfLines = [];
+        foreach ($rejectedDocuments as $index => $document) {
+            $pdfLines[] = ($index + 1) . '. ' . $document;
+        }
+        if ($remark !== '') {
+            $pdfLines[] = 'शेरा: ' . $remark;
+        }
+
+        $generatedDocument = 'uploads/staffonboarding/reject/staff_order_reject_' . $onboard->id . '.pdf';
+        $generation = $this->generateStaffRejectLetter((int)$onboard->id, implode("\n", $pdfLines));
+        if (is_object($generation) && method_exists($generation, 'getStatusCode') && $generation->getStatusCode() >= 400) {
+            $generationData = json_decode((string)$generation->getBody(), true);
+            return $this->response->withStatus(500)->withType('application/json')
+                ->withStringBody(json_encode([
+                    'success' => false,
+                    'message' => $generationData['message'] ?? 'Unable to generate the rejection PDF.',
+                ]));
+        }
+        if (!is_file(WWW_ROOT . $generatedDocument)) {
+            return $this->response->withStatus(500)->withType('application/json')
+                ->withStringBody(json_encode(['success' => false, 'message' => 'Rejection PDF was not created.']));
+        }
+
+        $basePath = $this->request->getAttribute('base') ?? '';
+        $pdfUrl = $this->request->scheme() . '://' . $this->request->host()
+            . $basePath . '/' . ltrim($generatedDocument, '/')
+            . '?v=' . filemtime(WWW_ROOT . $generatedDocument);
+
+        return $this->response->withType('application/json')
+            ->withStringBody(json_encode([
+                'success' => true,
+                'url' => $pdfUrl,
+                'staff_id' => $staffId,
+                'application_id' => $onboard->id,
+            ]));
+    }
+
      public function staffOnboardReject()
     {
         $this->Authorization->skipAuthorization();
         $this->request->allowMethod(['post', 'ajax']);
         $data = $this->request->getData();
-        $files = $this->request->getUploadedFiles();
+         $staffId = filter_var($data['reject_id'] ?? null, FILTER_VALIDATE_INT);
+         $applicationId = filter_var($data['reject_application_id'] ?? null, FILTER_VALIDATE_INT);
+         $signedPdfData = $data['signed_pdf_data'] ?? null;
+         if (!$staffId || !$applicationId || !is_string($signedPdfData) || trim($signedPdfData) === '') {
+             return $this->response->withStatus(400)->withType('application/json')
+                 ->withStringBody(json_encode([
+                     'success' => false,
+                     'message' => 'Sign the rejection PDF before submitting.',
+                 ]));
+         }
+
+         $base64Pdf = preg_replace('/^data:application\/pdf;base64,/i', '', trim($signedPdfData));
+         $pdfBytes = base64_decode($base64Pdf, true);
+         if ($pdfBytes === false || strlen($pdfBytes) > 10 * 1024 * 1024 || substr($pdfBytes, 0, 5) !== '%PDF-') {
+             return $this->response->withStatus(400)->withType('application/json')
+                 ->withStringBody(json_encode([
+                     'success' => false,
+                     'message' => 'Signed PDF data is invalid or exceeds 10 MB.',
+                 ]));
+         }
+
         $identity = $this->request->getAttribute('identity');
         $userId = $identity ? $identity->getIdentifier() : null;            
         $connection = ConnectionManager::get('default');
@@ -1614,23 +1702,13 @@ class DivisionController extends AppController
            
             $StaffOnboardingAppointmentsTable = TableRegistry::getTableLocator()->get('StaffOnboardingAppointments');
             
-            if (!empty($data['reject_id'])) {
-                $staffId = !empty($data['reject_id']) ? (int)$data['reject_id'] : 0;
-                $onboard = $StaffOnboardingAppointmentsTable->find()
-                            ->where(['staff_id' => $staffId])
-                            ->first();
-                                            
-            }else{
-                return $this->response
-                            ->withType('application/json')
-                            ->withStringBody(json_encode([
-                                'success' => false,
-                                'message' => 'Invalid Application'
-                            ]));
-            }
+            $onboard = $StaffOnboardingAppointmentsTable->find()
+                ->where(['id' => $applicationId, 'staff_id' => $staffId])
+                ->first();
 
-            if($onboard->id < 1){
+            if (!$onboard) {
                 return $this->response
+                            ->withStatus(404)
                             ->withType('application/json')
                             ->withStringBody(json_encode([
                                 'success' => false,
@@ -1748,8 +1826,20 @@ class DivisionController extends AppController
             }
         }
 
-
-
+            $signedPdfDirectory = WWW_ROOT . 'uploads' . DS . 'staffonboarding' . DS . 'reject' . DS;
+            if (!is_dir($signedPdfDirectory) && !mkdir($signedPdfDirectory, 0775, true) && !is_dir($signedPdfDirectory)) {
+                throw new \RuntimeException('Unable to save the signed rejection PDF.');
+            }
+            $signedPdfFileName = sprintf(
+                'staff_order_reject_%d_signed_%s.pdf',
+                $onboard->id,
+                bin2hex(random_bytes(4))
+            );
+            $signedPdfRelativePath = 'uploads/staffonboarding/reject/' . $signedPdfFileName;
+            $signedPdfAbsolutePath = $signedPdfDirectory . $signedPdfFileName;
+            if (file_put_contents($signedPdfAbsolutePath, $pdfBytes, LOCK_EX) !== strlen($pdfBytes)) {
+                throw new \RuntimeException('Unable to save the signed rejection PDF.');
+            }
 
             $onboard = $StaffOnboardingAppointmentsTable->patchEntity($onboard, $staffData);
 
@@ -1777,7 +1867,7 @@ class DivisionController extends AppController
                                     'rejected',
                                     $userId,
                                     $data['reject_remark'] ?? null,
-                                    $fileName ?? null,
+                                    $signedPdfRelativePath,
                                 );
 
             $connection->commit();
@@ -1809,6 +1899,309 @@ class DivisionController extends AppController
         }
     }
 
+    public function generateStaffRejectLetter($appId, $text)
+    {
+        $this->autoRender = false;
+        try {
+            $appId = (int)$appId;
+            if ($appId <= 0) {
+                throw new \InvalidArgumentException('Invalid application ID.');
+            }
+
+            $appointment = $this->fetchTable('StaffOnboardingAppointments')->find()
+                ->where(['id' => $appId])
+                ->first();
+            if (!$appointment) {
+                throw new \RuntimeException('Staff onboarding application not found.');
+            }
+
+            $vacancy = $this->fetchTable('PostAdvertisementVacancies')->find()
+                ->where(['id' => $appointment->staff_id])
+                ->first();
+            if (!$vacancy) {
+                throw new \RuntimeException('Staff vacancy details not found.');
+            }
+
+            $uploadDir = WWW_ROOT . 'uploads' . DS . 'staffonboarding' . DS . 'reject' . DS;
+            $qrcodeDir = $uploadDir . 'qrcodes' . DS;
+            foreach ([$uploadDir, $qrcodeDir] as $directory) {
+                if (!is_dir($directory) && !mkdir($directory, 0775, true) && !is_dir($directory)) {
+                    throw new \RuntimeException('Unable to create the rejection PDF directory.');
+                }
+            }
+
+            $endPoint = 'uploads/staffonboarding/reject/staff_order_reject_' . $appId . '.pdf';
+            $outputPath = WWW_ROOT . $endPoint;
+            $tempHtmlPath = $uploadDir . 'temp_reject_letter.html';
+            $basePath = $this->request->getAttribute('base') ?? '';
+            $fullUrl = $this->request->scheme() . '://' . $this->request->host() . $basePath . '/' . $endPoint;
+            $letterData = [
+                'app_id' => $appId,
+                'targetAppUrl' => $fullUrl,
+                'targetQRUrl' => $this->request->scheme() . '://' . $this->request->host()
+                    . $basePath . '/uploads/staffonboarding/reject/qrcodes/staff_order_reject_' . $appId . '.png',
+                'targetQRPath' => $qrcodeDir . 'staff_order_reject_' . $appId . '.png',
+                'teacher_name' => (string)$appointment->candidate_name,
+                'designation' => (string)$vacancy->post_name,
+                'school_name' => (string)($vacancy->school_name ?? ''),
+                'reject_text' => nl2br(h((string)$text)),
+            ];
+            $html = $this->renderRejectLetterViewContent($letterData);
+            if (file_put_contents($tempHtmlPath, $html) === false) {
+                throw new \RuntimeException('Unable to write temporary rejection letter.');
+            }
+
+            $wkhtmltopdfBinary = $this->findWkhtmltopdfBinary();
+            if ($wkhtmltopdfBinary === null) {
+                throw new \RuntimeException('wkhtmltopdf is not installed or not available in PATH.');
+            }
+
+            $cmd = sprintf(
+                '%s --enable-local-file-access --encoding UTF-8 --page-size A4 %s %s',
+                escapeshellarg($wkhtmltopdfBinary),
+                escapeshellarg($tempHtmlPath),
+                escapeshellarg($outputPath)
+            );
+            $output = [];
+            $statusCode = 0;
+            exec($cmd . ' 2>&1', $output, $statusCode);
+            if ($statusCode !== 0 || !is_file($outputPath)) {
+                throw new \RuntimeException('PDF generation failed: ' . implode("\n", $output));
+            }
+
+            return null;
+        } catch (\Throwable $e) {
+            error_log('generateStaffRejectLetter failed: ' . $e->getMessage());
+            return $this->response->withStatus(500)->withType('application/json')
+                ->withStringBody(json_encode(['success' => false, 'message' => $e->getMessage()]));
+        }
+    }
+
+
+
+    private function renderRejectLetterViewContent($data): string
+    {
+        $base64ImageQR = '';
+        if (!empty($data['targetQRPath']) && file_exists($data['targetQRPath'])) {
+            $imageDataQR = base64_encode(file_get_contents($data['targetQRPath']));
+            $base64ImageQR = 'data:image/png;base64,' . $imageDataQR;
+        }
+
+        $base64Image = $this->getActiveHeaderImageDataUri((int)$this->user_id);
+
+        return '<!DOCTYPE html>
+                <html lang="mr">
+                <head>
+                    <meta charset="UTF-8">
+                    <style>
+                        body {
+                            font-size: 20px;
+                            line-height: 1.7;
+                            margin: 0px 30px;
+                            color: #111;
+                        }
+                       .header-img {
+                            display: block;
+                            width: 100%;
+                            height: auto;
+                            margin: 0 auto 8px auto;
+                        }
+                        .qrcode-img {
+                            width: 300px;
+                            border:2px solid #1da5bd;
+                        }
+                        .meta-table {
+                            width: 100%;
+                            border-collapse: collapse;
+                            margin-bottom: 15px;
+                        }
+                        .meta-table td {
+                            vertical-align: top;
+                            padding: 2px 0;
+                        }
+                        .text-right {
+                            text-align: right;
+                        }
+                        .recipient {
+                            margin: 15px 0;
+                            line-height: 1.6;
+                        }
+                        .subject-box {
+                            font-weight: bold;
+                            margin: 15px 0;
+                            padding: 6px 10px;
+                            background-color: #f4f4f4;
+                            border-left: 3px solid #666;
+                        }
+                        .reference {
+                            margin-bottom: 15px;
+                        }
+                        .content {
+                            text-align: justify;
+                            text-indent: 30px;
+                            margin-top: 15px;
+                            line-height: 1.8;
+                        }
+                        .signature-table {
+                            width: 100%;
+                            margin-top: 50px;
+                            border-collapse: collapse;
+                            page-break-inside: avoid;
+                        }
+                        .copy-section {
+                            margin-top: 40px;
+                            padding-top: 10px;
+                            border-top: 1px dashed #aaa;
+                            font-size: 13px;
+                            page-break-inside: avoid;
+                        }
+                        .right {
+                            float:right;
+                        }
+                        .signature-wrap {
+                            width: 100%;
+                            margin-top: 40px;
+                            clear: both;
+                        }
+                        .signature-block {
+                            float: right;
+                            width: 260px;
+                            text-align: right;
+                            margin-top: 10px;
+                            margin-bottom: 10px;
+                        }
+                        .signature {
+                            text-align: right;
+                            margin: 0;
+                        }
+                        .reject-dsc-signature-block {
+                            position: relative;
+                            width: 180px;
+                            margin-left: auto;
+                            margin-right: 0;
+                            text-align: center;
+                            margin-top: 20px;
+                        }
+                        .reject-dsc-signature-label {
+                            margin: 0 0 5px;
+                            font-size: 14px;
+                            font-weight: 600;
+                        }
+                        .reject-dsc-signature-marker {
+                            display: inline-block;
+                            font-size: 1px;
+                            line-height: 1px;
+                            color: #ffffff;
+                        }
+                        .reject-dsc-signature-area {
+                            height: 65px;
+                        }
+                        .copy-to {
+                            margin-top: 70px;
+                            clear: both;
+                            font-weight: 600;
+                        }
+                    </style>
+                </head>
+                <body>
+                ' . (!empty($base64Image) ? '<img class="header-img" src="' . $base64Image . '">' : '') . '
+
+                <br>
+                प्रति,
+                <div>
+                    <span class="indent">अध्यक्ष/सचिव संबंधित संस्था,
+                    </span>
+
+                </div>
+
+                <br>
+                <div class="subject">
+                      विषय :- कनिष्‍ठ लिपिक/प्रयोगशाळा सहाय्यक/ग्रंथपाल पदी वैयक्तीक मान्‍यताबाबत.
+                </div>
+                <br>
+                <div>
+                    संदर्भ :-
+                    <br>
+                    ' . $this->transliterateToMarathi("१. शासन पत्र क्र.न्‍यायाप्र/२०२३/प्र.क्र.३०/टिएनटी-२ दि.२१.०२.२०२४.
+                    <br>
+                    २. शिक्षण संचालनालयाचे पत्रक्र.शिसंमा-२०२४/शिक्षकेत्‍तर/न्‍याप्र-५०५८/२१/टी-४/११७९ दि.०१.०३.२०२४.
+                    <br>
+                    ३. संचालनालयाचे पत्रक्र.शिसंमा/शिक्षकेत्‍तर पदभरती/कार्यासन टि-४/२५९२ दि.२८.०५.२०२५.
+                    <br>
+                     ४. शालेय शिक्षण व क्रीडा विभाग यांचे शासन निर्णय क्रमांक संकीर्ण-२०२६/प्र.क्र.२६६/ई-१७६८६६७/टीएनटी-१ दि.११.०८.२०२६.
+                    <br>
+                    ५. शाळेचा प्रस्‍ताव ") . '
+                </div>
+
+                <div class="content">
+                    <p>उपरोक्त संदर्भाधिन पत्रानुसार <strong>' . h($data['school_name'] ?? '') . '</strong> येथील <strong>' . h($data['teacher_name'] ?? '') . '</strong> यांची <strong>' . h($data['designation'] ?? '') . '</strong> पदावर नियुक्ती मान्यतेसाठी प्रस्ताव सादर करण्यात आला होता.</p>
+                    <p>प्रस्तावाच्या छाननीअंती खालील त्रुटी आढळून आल्या आहेत.</p>
+                </div>
+
+                <div>' . ($data['reject_text'] ?? '') . '</div>
+
+<div>
+<p>उपरोक्त प्रस्तावामध्ये वरील त्रुटी आढळून आल्याने सदर प्रस्ताव परत पाठविण्यात येत आहे. सदर प्रस्तावातील त्रुटींची पूर्तता करून १५ दिवसांच्या आत फेरसादर करावा.</p>
+</div>
+                <div>
+                        <div class="reject-dsc-signature-block" id="reject-dsc-signature-position">
+                            <p class="reject-dsc-signature-label">स्वाक्षरी/-</p>
+                            <span class="reject-dsc-signature-marker">DSC_REJECT_POSITION_2026</span>
+                            <div class="reject-dsc-signature-area"></div>
+                        </div>
+
+                        <!-- Fixed space -->
+                        <div style="height: 150px;"></div>
+
+                        <p style="margin:0;">
+                            प्रत -
+                        </p>
+
+
+                        <p>
+                            १. मुख्‍याध्‍यापक  संबंधित शाळा  यांना माहितीसाठी व पुढील कार्यवाहीसाठी
+                        </p>
+                        <p>
+                            २.संबंधित कर्मचारी यांना मुख्‍याध्‍यापकामार्फत.
+                        </p>
+
+
+                    </div>
+
+
+                <div style="clear:both;"></div>
+            </body>
+            </html>';
+    }
+
+    private function getStaffOnboardRejectedDocuments(array $data): array
+    {
+        $fields = [
+            'ssc_doc_chk' => 'माध्यमिक (SSC)',
+            'hsc_doc_chk' => 'उच्च माध्यमिक (HSC)',
+            'graduate_doc_chk' => 'पदवी (Graduate Degree)',
+            'post_graduate_doc_chk' => 'पदव्युत्तर पदवी (Post Graduate Degree)',
+            'horizontalcertificate_doc_chk' => 'समांतर आरक्षण प्रमाणपत्र',
+            'castecertificate_doc_chk' => 'जात प्रमाणपत्र',
+            'validcastecertificate_doc_chk' => 'जात वैधता प्रमाणपत्र',
+            'adv_approval_doc_chk' => 'जाहिरात मंजूरी पत्र',
+            'advertisement_doc_chk' => 'जाहिरात',
+            'signature_doc_chk' => 'उमेदवारांच्या स्वाक्षरीची यादी',
+            'marking_doc_chk' => 'उमेदवार गुणांकन',
+            'resolution_doc_chk' => 'संस्थेचा ठराव',
+            'order_doc_chk' => 'आदेश',
+            'court_roster_doc_chk' => 'रोस्टर (Roster)',
+            'court_order_doc_chk' => 'न्यायालयीन आदेश',
+            'no_post_vacant' => 'पद रिक्त नाही',
+        ];
+        $selected = [];
+        foreach ($fields as $field => $label) {
+            if (!empty($data[$field])) {
+                $selected[] = $label;
+            }
+        }
+        return $selected;
+    }
 
      private function addApplicationLog(
         int $appId,

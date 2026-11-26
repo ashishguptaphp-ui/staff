@@ -695,7 +695,21 @@
 .d-none {
     display: none !important;
 }
-
+#panel {
+	position: fixed;
+	padding-top: 8%;
+	padding-bottom: 0;
+	padding-left: 0;
+	padding-right: 0;
+	margin: 0;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background: rgba(255, 255, 255, 0.9);
+	display: none;
+	text-align: center;
+}
 </style>
 
 <h5 style="margin:0px;padding:10px; color: #1a237e; border-bottom: 2px solid #1a237e;">
@@ -815,6 +829,31 @@
 </div>
 
 
+
+<div class="modal fade" id="staffRejectSignerModal" tabindex="-1" aria-labelledby="staffRejectSignerModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered" style="max-width: 92vw;">
+        <div class="modal-content" style="height: 90vh;">
+            <div class="modal-header">
+                <h5 class="modal-title" id="staffRejectSignerModalLabel">नकार आदेश तपासा व डिजिटल स्वाक्षरी करा</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0 flex-grow-1">
+                <iframe id="staffRejectPdfFrame" title="Staff onboarding rejection PDF" src="about:blank" style="width: 100%; height: 100%; border: 0;"></iframe>
+            </div>
+            <div class="modal-footer d-flex justify-content-between">
+                <div>
+                    <span id="staffRejectSignStatus" class="small" aria-live="polite"></span>
+                    <a id="staffRejectSignedDownload" class="btn btn-sm btn-outline-primary ms-2 d-none" href="#" download="signed-staff-rejection.pdf">Signed PDF डाउनलोड करा</a>
+                </div>
+                <div>
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" id="staffRejectSignBtn" class="btn btn-warning btn-sm" disabled>Sign with DSC</button>
+                    <button type="button" id="staffRejectFinalizeBtn" class="btn btn-danger btn-sm" disabled>Submit Signed Rejection</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 
 <!-- Slide Panel -->
@@ -2770,81 +2809,6 @@ $(document).ready(function() {
     }
 
 
-     $('#rejectForm').on('submit', function (e) {
-
-            e.preventDefault();
-            let formData = new FormData(this);
-            let rejectId = $("#reject_id").text().trim();
-            formData.append('reject_id', rejectId);
-            formData.append('action', 'reject');
-
-            formData.append('_csrfToken', $('meta[name="csrfToken"]').attr('content'));
-            $.ajax({
-                url: '<?= $this->Url->build(["controller" => "DistrictClerk", "action" => "staffOnboardReject"]); ?>',
-                type: 'POST',
-                data: formData,
-                processData: false,
-                contentType: false,
-                cache: false,
-                headers: {
-                    'X-CSRF-Token': $('meta[name="csrfToken"]').attr('content') 
-                },
-
-                beforeSend: function () {
-
-                    // Disable button
-                    $('#rejectForm button[type="submit"]')
-                        .prop('disabled', true)
-                        .html(`
-                            <span class="spinner-border spinner-border-sm me-1"></span>
-                            Processing...
-                        `);
-                },
-
-                success: function (response) {
-
-                    console.log(response);
-
-                    if(response.success == false){
-                        alert(response.message)
-                    }else{
-                        alert('Application rejected successfully.');
-                        // Optional
-                        $('#rejectForm')[0].reset();
-                        let rejectId = $("#reject_id").text().trim();
-                        $('#emp_row_' + rejectId).remove();
-                        $('#rejectApplicationSlider').removeClass('open').attr('aria-hidden', 'true');
-                        location.reload();
-                    }                    
-                },
-
-                error: function (xhr) {
-
-                    console.log(xhr);
-
-                    let errorMessage = 'Something went wrong.';
-
-                    if (xhr.responseJSON?.message) {
-                        errorMessage = xhr.responseJSON.message;
-                    }
-
-                    alert(errorMessage);
-                },
-
-                complete: function () {
-
-                    // Enable button again
-                    $('#rejectForm button[type="submit"]')
-                        .prop('disabled', false)
-                        .html(`
-                            <i class="fas fa-times-circle me-1"></i>
-                            नामंजूर करा
-                        `);
-                }
-            });
-
-        });
-
           $('#approvalForm').on('submit', function (e) {
 
             e.preventDefault();
@@ -3075,77 +3039,13 @@ $(document).ready(function() {
 
 
       $('#rejectForm').on('submit', function (e) {
-
             e.preventDefault();
             let formData = new FormData(this);
             let rejectId = $("#reject_id").text().trim();
             $('#reject_form_id').val(rejectId);
             $('#reject_form_remark').val( ($('#reject_remark').val() || '').trim());
             formData = new FormData(this);
-            $.ajax({
-                url: '<?= $this->Url->build(["controller" => "Division", "action" => "staffOnboardReject"]); ?>',
-                type: 'POST',
-                data: formData,
-                processData: false,
-                contentType: false,
-                cache: false,
-                headers: {
-                    'X-CSRF-Token': $('meta[name="csrfToken"]').attr('content') 
-                },
-
-                beforeSend: function () {
-
-                    // Disable button
-                    $('#rejectForm button[type="submit"]')
-                        .prop('disabled', true)
-                        .html(`
-                            <span class="spinner-border spinner-border-sm me-1"></span>
-                            Processing...
-                        `);
-                },
-
-                success: function (response) {
-
-                    console.log(response);
-
-                    if(response.success == false){
-                        alert(response.message)
-                    }else{
-                        alert('Application rejected successfully.');
-                        // Optional
-                        $('#rejectForm')[0].reset();
-                        let rejectId = $("#reject_id").text().trim();
-                        $('#emp_row_' + rejectId).remove();
-                        $('#rejectApplicationSlider').removeClass('open').attr('aria-hidden', 'true');
-                        location.reload();
-                    }                    
-                },
-
-                error: function (xhr) {
-
-                    console.log(xhr);
-
-                    let errorMessage = 'Something went wrong.';
-
-                    if (xhr.responseJSON?.message) {
-                        errorMessage = xhr.responseJSON.message;
-                    }
-
-                    alert(errorMessage);
-                },
-
-                complete: function () {
-
-                    // Enable button again
-                    $('#rejectForm button[type="submit"]')
-                        .prop('disabled', false)
-                        .html(`
-                            <i class="fas fa-times-circle me-1"></i>
-                            नामंजूर करा
-                        `);
-                }
-            });
-
+            window.prepareStaffOnboardingRejection(formData, $('#rejectForm button[type="submit"]'));
         });
 
 
@@ -3168,62 +3068,7 @@ $(document).ready(function() {
             formData.append('_Token', $('meta[name="csrfToken"]').attr('content'));
             console.log(Object.fromEntries(formData));
             
-           $.ajax({
-                url: '<?= $this->Url->build(["controller" => "Division", "action" => "staffOnboardReject"]); ?>',
-                type: 'POST',
-                data: formData,
-                processData: false,
-                contentType: false,
-                cache: false,
-                
-                headers: {
-                    'X-CSRF-Token': $('meta[name="csrfToken"]').attr('content'),
-                    '_Token': $('meta[name="csrfToken"]').attr('content') 
-                },
-
-                beforeSend: function () {
-
-                    // Disable button
-                    $('#approvalForm button[type="submit"]')
-                        .prop('disabled', true)
-                        .html(`
-                            <span class="spinner-border spinner-border-sm me-1"></span>
-                            Processing...
-                        `);
-                },
-
-                success: function (response) {
-
-                    console.log(response);
-
-                    if(response.success == false){
-                        alert(response.message)
-                    }else{
-                        alert('Application Reject successfully.');
-                        $('#rejectApplicationSlider').removeClass('open').attr('aria-hidden', 'true');
-                        location.reload();
-
-                    }                    
-                },
-
-                error: function (xhr) {
-
-                    console.log(xhr);
-
-                    let errorMessage = 'Something went wrong.';
-
-                    if (xhr.responseJSON?.message) {
-                        errorMessage = xhr.responseJSON.message;
-                    }
-
-                    alert(errorMessage);
-                },
-
-                complete: function () {
-
-                var ev=3;
-                }
-            });
+            window.prepareStaffOnboardingRejection(formData, $('#rejectApplicationForm button[type="submit"]'));
         }
 
 
@@ -3505,8 +3350,133 @@ $('#workOrderBtn').on('click', function (e) {
 
         });
 
-        
- async function pdfUrlToBase64(url) {
+window.prepareStaffOnboardingRejection = function (formData, button) {
+    button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i> PDF तयार करत आहे...');
+    $.ajax({
+        url: '<?= $this->Url->build(["controller" => "Division", "action" => "staffOnboardRejectPrepare"]); ?>',
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        headers: {
+            'X-CSRF-Token': $('meta[name="csrfToken"]').attr('content'),
+            '_Token': $('meta[name="csrfToken"]').attr('content')
+        },
+        success: function (response) {
+            if (!response.success || !response.url || !response.application_id) {
+                alert(response.message || 'Unable to prepare the rejection PDF.');
+                return;
+            }
+            window.pendingStaffRejectFormData = formData;
+            formData.set('reject_application_id', response.application_id);
+            window.pendingStaffRejectPdfBase64 = '';
+            window.pendingStaffRejectSignedPdfData = '';
+            $('#staffRejectPdfFrame').attr('src', response.url);
+            $('#staffRejectSignStatus').text('Loading rejection PDF...');
+            $('#staffRejectSignBtn').prop('disabled', true);
+            $('#staffRejectFinalizeBtn').prop('disabled', true);
+            $('#staffRejectSignedDownload').addClass('d-none').attr('href', '#');
+            $('#rejectApplicationSlider').removeClass('open').attr('aria-hidden', 'true');
+            bootstrap.Modal.getOrCreateInstance(
+                document.getElementById('staffRejectSignerModal')
+            ).show();
+
+            pdfUrlToBase64(response.url).then(function (pdfBase64) {
+                window.pendingStaffRejectPdfBase64 = pdfBase64;
+                $('#staffRejectSignStatus').text('Review the PDF, then sign it with your DSC.');
+                $('#staffRejectSignBtn').prop('disabled', false);
+            }).catch(function (error) {
+                console.error('Unable to load staff rejection PDF for signing:', error);
+                $('#staffRejectSignStatus').text('Unable to load the PDF for signing. Close this window and retry.');
+            });
+        },
+        error: function (xhr) {
+            const message = xhr.responseJSON && xhr.responseJSON.message
+                ? xhr.responseJSON.message
+                : 'Unable to prepare the rejection PDF.';
+            alert(message);
+        },
+        complete: function () {
+            button.prop('disabled', false).html('<i class="fas fa-times-circle me-1"></i> नामंजूर करा');
+        }
+    });
+};
+
+$(document).on('click', '#staffRejectSignBtn', async function () {
+    if (!window.pendingStaffRejectPdfBase64) {
+        $('#staffRejectSignStatus').text('The rejection PDF is not ready to sign.');
+        return;
+    }
+    const signerPanel = document.getElementById('panel');
+    if (signerPanel && signerPanel.parentElement !== document.body) {
+        document.body.appendChild(signerPanel);
+    }
+    $('#panel').css({ position: 'fixed', zIndex: 20000 });
+    window.activeStaffOnboardingDscFlow = 'reject';
+    $('#signingReason').val('Staff onboarding rejection order');
+    $('#staffRejectSignBtn').prop('disabled', true);
+    $('#staffRejectSignStatus').text('Waiting for the DSC signer...');
+    try {
+        dscSigner.sign(window.pendingStaffRejectPdfBase64);
+    } catch (error) {
+        $('#staffRejectSignBtn').prop('disabled', false);
+        $('#staffRejectSignStatus').text(error.message || 'Unable to start the DSC signer.');
+    }
+});
+
+$(document).on('click', '#staffRejectFinalizeBtn', function () {
+    const formData = window.pendingStaffRejectFormData;
+    const signedPdfData = window.pendingStaffRejectSignedPdfData;
+    if (!formData || !signedPdfData) {
+        $('#staffRejectSignStatus').text('Sign the rejection PDF before submitting.');
+        return;
+    }
+    formData.delete('signed_pdf_data');
+    formData.append('signed_pdf_data', signedPdfData);
+    const button = $('#staffRejectFinalizeBtn');
+    button.prop('disabled', true).text('Submitting...');
+    $('#staffRejectSignStatus').text('Saving signed rejection...');
+    $.ajax({
+        url: '<?= $this->Url->build(["controller" => "Division", "action" => "staffOnboardReject"]); ?>',
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        headers: {
+            'X-CSRF-Token': $('meta[name="csrfToken"]').attr('content'),
+            '_Token': $('meta[name="csrfToken"]').attr('content')
+        },
+        success: function (response) {
+            if (!response.success) {
+                $('#staffRejectSignStatus').text(response.message || 'Unable to save the signed rejection.');
+                button.prop('disabled', false).text('Submit Signed Rejection');
+                return;
+            }
+            bootstrap.Modal.getOrCreateInstance(
+                document.getElementById('staffRejectSignerModal')
+            ).hide();
+            location.reload();
+        },
+        error: function (xhr) {
+            const message = xhr.responseJSON && xhr.responseJSON.message
+                ? xhr.responseJSON.message
+                : 'Unable to save the signed rejection.';
+            $('#staffRejectSignStatus').text(message);
+            button.prop('disabled', false).text('Submit Signed Rejection');
+        }
+    });
+});
+
+$('#staffRejectSignerModal').on('hidden.bs.modal', function () {
+    $('#panel').hide();
+    $('#staffRejectPdfFrame').attr('src', 'about:blank');
+    window.pendingStaffRejectFormData = null;
+    window.pendingStaffRejectPdfBase64 = '';
+    window.pendingStaffRejectSignedPdfData = '';
+    window.activeStaffOnboardingDscFlow = 'approve';
+});
+
+async function pdfUrlToBase64(url) {
     const response = await fetch(url);
 
     if (!response.ok) {
@@ -3545,7 +3515,9 @@ $('#workOrderBtn').on('click', function (e) {
 <script>
 
  $(document).ready(function() {
-    
+
+ window.activeStaffOnboardingDscFlow = 'approve';
+
 var initConfig = {
         "preSignCallback" : function() {
             // do something 
@@ -3580,11 +3552,21 @@ var initConfig = {
                                     //get data.data.sig -> add pdf header and append to link
                                     var jsonData = JSON.parse(atob(data.data));
                                     if (jsonData.status === "SUCCESS") {
-                                        
+                                        var pdfData = jsonData.sig;
+                                        if (window.activeStaffOnboardingDscFlow === 'reject') {
+                                            window.pendingStaffRejectSignedPdfData = pdfData;
+                                            $('#staffRejectSignedDownload')
+                                                .attr('href', 'data:application/pdf;base64,' + pdfData)
+                                                .removeClass('d-none');
+                                            $('#staffRejectSignStatus').text('Signature applied. Submit the signed rejection to finalize.');
+                                            $('#staffRejectSignBtn').prop('disabled', true);
+                                            $('#staffRejectFinalizeBtn').prop('disabled', false);
+                                            return;
+                                        }
+
                                         //Set Class to download link
                                         $('#downloadDiv').addClass('btn btn-info');
                                         //get pdf data
-                                        var pdfData = jsonData.sig;
                                         var dlnk = document.getElementById('downloadDiv');
                                         dlnk.href = 'data:application/pdf;base64,'+ pdfData;
                                         $("#downloadDiv").text("Download Signed PDF File");
@@ -3621,6 +3603,7 @@ var initConfig = {
 
     $(document).on('click', '#signDocBtn', function (e) {
     e.preventDefault();
+        window.activeStaffOnboardingDscFlow = 'approve';
         var data = $("#pdfData").val();
         console.log('PDF Data Length:', data ? data.length : 0);
         if (data != null || data != '') {
