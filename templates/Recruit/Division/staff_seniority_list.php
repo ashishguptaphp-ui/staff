@@ -695,6 +695,13 @@
 .d-none {
     display: none !important;
 }
+
+#approvedOrderPdfModal {
+    position: fixed;
+    z-index: 10030 !important;
+}
+
+
 #panel {
 	position: fixed;
 	padding-top: 8%;
@@ -706,6 +713,7 @@
 	left: 0;
 	width: 100%;
 	height: 100%;
+    z-index: 10020;
 	background: rgba(255, 255, 255, 0.9);
 	display: none;
 	text-align: center;
@@ -749,6 +757,14 @@
                             : $this->Url->build('/' . ltrim($approvedLogDocument, '/'));
                     }
 
+                    $approvedLogdydDocument = $approvedLogdydDocuments[$post->soa_id] ?? null;
+                    $approvedLogdydUrl = null;
+                    if (!empty($approvedLogdydDocument)) {
+                        $approvedLogdydUrl = preg_match('/^https?:\/\//i', $approvedLogdydDocument)
+                            ? $approvedLogdydDocument
+                            : $this->Url->build('/' . ltrim($approvedLogdydDocument, '/'));
+                    }
+
                     if($post->post_type == 1){
                         continue;
                     }
@@ -774,9 +790,19 @@
                                 <i class='fa-solid fa-address-card'></i>  अर्ज पहा
                             </a><br/>";
 
-                             echo "<a href='" . h($approvedLogUrl ?? '#') . "' style='text-decoration:none;' target='_blank'" . ($approvedLogUrl ? '' : " onclick=\"return false;\"") . ">
-                                <i class='fa-solid fa-reorder'></i>  आदेश
-                            </a><br/>";
+                           
+                     if($approvedLogUrl!=null){
+                            echo "<a href='" . h($approvedLogUrl) . "' style='text-decoration:none;' class='approved-order-pdf' data-pdf-title='आदेश'>
+                                    <i class='fa-solid fa-reorder'></i>  EO आदेश
+                                </a><br/>";  
+
+                        }
+
+                        if($approvedLogdydUrl!=null){
+                            echo "<a href='" . h($approvedLogdydUrl) . "' style='text-decoration:none;' class='approved-order-pdf' data-pdf-title='आदेश'>
+                                    <i class='fa-solid fa-reorder'></i>  DYD आदेश
+                                </a><br/>";  
+                        }
 
                              echo "<a href='#' style='text-decoration:none;' class='startApplicationHistory-open-view' data-staffObject='". json_encode($post, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP)."' data-mode='1'  data-id='".$post->id."'>
                                 <i class='fa-solid fa-comments'></i>  टिप्पणी
@@ -967,6 +993,20 @@
 
 <?php echo $this->element('recruit/division/comment') ?>
 
+
+<div class="modal fade" id="approvedOrderPdfModal" tabindex="-1" aria-labelledby="approvedOrderPdfModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered" style="max-width: 92vw;">
+        <div class="modal-content" style="height: 90vh;">
+            <div class="modal-header">
+                <h5 class="modal-title" id="approvedOrderPdfModalLabel">आदेश</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0">
+                <iframe id="approvedOrderPdfFrame" title="आदेश PDF" src="about:blank" style="width: 100%; height: 100%; border: 0;"></iframe>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script>
 $(document).ready(function(){
@@ -3525,7 +3565,7 @@ var initConfig = {
             return true;
         },
         "postSignCallback" : function(alias, sign, key) {
-            $('#signedPdfData').val(sign);
+            //$('#signedPdfData').val('');
             $('#lblEncryptedKey').val(key);
             // Implement signed pdf upload and pdf Download here
             var requestData = {
@@ -3627,6 +3667,9 @@ var initConfig = {
 							
     });
 
+    $('#approvedOrderPdfModal').on('hidden.bs.modal', function () {
+        $('#approvedOrderPdfFrame').attr('src', 'about:blank');
+    });
 
 
 

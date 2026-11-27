@@ -59,6 +59,8 @@ class DivisionController extends AppController
             'headerDelete',
             'staffOnboardGenrateFile',
             'advertisementPostApprovel',
+            'advertisementRejectPrepare',
+            'advertisementPostApprovelEO',
             'advertisementGenrateFile'
         ]);
 
@@ -3156,7 +3158,6 @@ private function findWkhtmltopdfBinary(): ?string
         $data = $this->request->getData();
         $postAdvertisementId = $data['post_id'];
         $action = strtolower(trim($data['action'] ?? ''));
-        $rejectReason = trim($data['reject_reason'] ?? '');
         $forwardReason = trim($data['remark'] ?? '');
        
 
@@ -3171,12 +3172,19 @@ private function findWkhtmltopdfBinary(): ?string
                 ]));
         }
 
+        if ($action === 'reject') {
+            return $this->response
+                ->withType('application/json')
+                ->withStatus(400)
+                ->withStringBody(json_encode([
+                    'success' => false,
+                    'message' => 'A digitally signed rejection PDF is required.'
+                ]));
+        }
+
         // Convert action to database status
         $statusMap = [
-            'approve'       => 'approved',
-            'reject'        => 'rejected',
-            //'correction'    => 'send_back_correction',
-            //'clarification' => 'request_clarification'
+            'approve' => 'approved',
         ];
 
         // Validate action
@@ -3187,17 +3195,6 @@ private function findWkhtmltopdfBinary(): ?string
                 ->withStringBody(json_encode([
                     'success' => false,
                     'message' => 'Invalid action'
-                ]));
-        }
-
-         // Reject reason is mandatory
-        if ($action === 'reject' && empty($rejectReason)) {
-            return $this->response
-                ->withType('application/json')
-                ->withStatus(400)
-                ->withStringBody(json_encode([
-                    'success' => false,
-                    'message' => 'Reject reason is required'
                 ]));
         }
 
@@ -3250,20 +3247,6 @@ private function findWkhtmltopdfBinary(): ?string
             }
         }
 
-          if ($action === 'reject') {
-            $stage_doc = $this->generateAdvertisementRejectPdf($postAdvertisementId,$rejectReason);
-            if ($stage_doc === null) {
-                return $this->response
-                    ->withType('application/json')
-                    ->withStatus(500)
-                    ->withStringBody(json_encode([
-                        'success' => false,
-                        'message' => 'Unable to generate the approval document'
-                    ]));
-            }
-        }
-
-
         // Persist approval only after the document has been generated.
         $postAdvertisement->status = $newStatus;
 
@@ -3272,7 +3255,6 @@ private function findWkhtmltopdfBinary(): ?string
 
             $messages = [
                 'approved' => 'Application Approved successfully',
-                'rejected' => 'Application Rejected successfully',
                 //'send_back_correction' => 'Application sent back for correction successfully',
                 //'request_clarification' => 'Clarification requested successfully'
             ];
@@ -3313,6 +3295,235 @@ private function findWkhtmltopdfBinary(): ?string
         
    
 
+    }
+
+    public function advertisementRejectPrepare()
+    {
+        $this->request->allowMethod(['post', 'ajax']);
+
+        $postAdvertisementId = filter_var(
+            $this->request->getData('post_id'),
+            FILTER_VALIDATE_INT
+        );
+        $rejectReason = trim((string)$this->request->getData('reject_reason'));
+
+        if (!$postAdvertisementId || $rejectReason === '') {
+            return $this->response
+                ->withType('application/json')
+                ->withStatus(400)
+                ->withStringBody(json_encode([
+                    'success' => false,
+                    'message' => 'Advertisement ID and rejection reason are required.'
+                ]));
+        }
+
+        $postAdvertisement = $this->fetchTable('PostAdvertisement')->find()
+            ->where([
+                'id' => $postAdvertisementId,
+                'status' => 'forwarded_dyd_ad',
+            ])
+            ->first();
+
+        if (!$postAdvertisement) {
+            return $this->response
+                ->withType('application/json')
+                ->withStatus(409)
+                ->withStringBody(json_encode([
+                    'success' => false,
+                    'message' => 'This advertisement is no longer awaiting a Division decision.'
+                ]));
+        }
+
+        $pdfPath = $this->generateAdvertisementRejectPdf($postAdvertisementId, $rejectReason);
+        if ($pdfPath === null) {
+            return $this->response
+                ->withType('application/json')
+                ->withStatus(500)
+                ->withStringBody(json_encode([
+                    'success' => false,
+                    'message' => 'Unable to generate the rejection document.'
+                ]));
+        }
+
+        $basePath = $this->request->getAttribute('base') ?? '';
+        $pdfUrl = $this->request->scheme() . '://' . $this->request->host()
+            . $basePath . '/' . ltrim($pdfPath, '/');
+        $pdfUrl .= '?v=' . filemtime(WWW_ROOT . str_replace('/', DS, $pdfPath));
+
+        return $this->response
+            ->withType('application/json')
+            ->withStringBody(json_encode([
+                'success' => true,
+                'url' => $pdfUrl,
+                'post_id' => $postAdvertisementId,
+            ]));
+    }
+
+    public function advertisementPostApprovelEO()
+    {
+        $this->request->allowMethod(['post', 'ajax']);
+
+        $postAdvertisementId = filter_var(
+            $this->request->getData('post_id'),
+            FILTER_VALIDATE_INT
+        );
+        $action = strtolower(trim((string)$this->request->getData('action')));
+        $rejectReason = trim((string)$this->request->getData('reject_reason'));
+        $signedPdfData = $this->request->getData('signed_pdf_data');
+
+        if (!$postAdvertisementId || $action !== 'reject') {
+            return $this->response
+                ->withType('application/json')
+                ->withStatus(400)
+                ->withStringBody(json_encode([
+                    'success' => false,
+                    'message' => 'A valid advertisement ID and reject action are required.'
+                ]));
+        }
+
+        if ($rejectReason === '' || !is_string($signedPdfData) || trim($signedPdfData) === '') {
+            return $this->response
+                ->withType('application/json')
+                ->withStatus(400)
+                ->withStringBody(json_encode([
+                    'success' => false,
+                    'message' => 'Sign the rejection PDF before submitting.'
+                ]));
+        }
+
+        $base64Pdf = preg_replace(
+            '/^data:application\/pdf;base64,/i',
+            '',
+            trim($signedPdfData)
+        );
+        $pdfBytes = base64_decode($base64Pdf, true);
+        if (
+            $pdfBytes === false
+            || strlen($pdfBytes) > 20 * 1024 * 1024
+            || substr($pdfBytes, 0, 5) !== '%PDF-'
+        ) {
+            return $this->response
+                ->withType('application/json')
+                ->withStatus(400)
+                ->withStringBody(json_encode([
+                    'success' => false,
+                    'message' => 'Signed PDF data is invalid or exceeds 20 MB.',
+                ]));
+        }
+
+        $postAdvertisementTable = $this->fetchTable('PostAdvertisement');
+        $postAdvertisement = $postAdvertisementTable->find()
+            ->where([
+                'id' => $postAdvertisementId,
+                'status' => 'forwarded_dyd_ad',
+            ])
+            ->first();
+
+        if (!$postAdvertisement) {
+            return $this->response
+                ->withType('application/json')
+                ->withStatus(409)
+                ->withStringBody(json_encode([
+                    'success' => false,
+                    'message' => 'This advertisement is no longer awaiting a Division decision.'
+                ]));
+        }
+
+        $signedPdfDirectory = WWW_ROOT . 'uploads' . DS . 'staffonboarding' . DS . 'advtreject' . DS;
+        if (
+            !is_dir($signedPdfDirectory)
+            && !mkdir($signedPdfDirectory, 0775, true)
+            && !is_dir($signedPdfDirectory)
+        ) {
+            return $this->response
+                ->withType('application/json')
+                ->withStatus(500)
+                ->withStringBody(json_encode([
+                    'success' => false,
+                    'message' => 'Unable to create signed PDF directory',
+                ]));
+        }
+
+        $signedPdfFileName = sprintf(
+            'advt_division_reject_signed_%d_%s.pdf',
+            $postAdvertisementId,
+            bin2hex(random_bytes(4))
+        );
+        $signedPdfPath = 'uploads/staffonboarding/advtreject/' . $signedPdfFileName;
+        $signedPdfAbsolutePath = $signedPdfDirectory . $signedPdfFileName;
+        $bytesWritten = file_put_contents($signedPdfAbsolutePath, $pdfBytes, LOCK_EX);
+        if ($bytesWritten !== strlen($pdfBytes)) {
+            return $this->response
+                ->withType('application/json')
+                ->withStatus(500)
+                ->withStringBody(json_encode([
+                    'success' => false,
+                    'message' => 'Unable to save signed PDF',
+                ]));
+        }
+
+        $identity = $this->request->getAttribute('identity');
+        $userId = $identity ? (int)$identity->getIdentifier() : null;
+        $previousStatus = $postAdvertisement->status;
+        $postAdvertisement->status = 'rejected';
+        $postAdvertisement->reject_reason = $rejectReason;
+
+        try {
+            $postAdvertisementTable->getConnection()->transactional(function () use (
+                $postAdvertisementTable,
+                $postAdvertisement,
+                $postAdvertisementId,
+                $userId,
+                $previousStatus,
+                $rejectReason,
+                $signedPdfPath
+            ): void {
+                if (!$postAdvertisementTable->save($postAdvertisement)) {
+                    throw new \RuntimeException(
+                        'Unable to save the advertisement decision: '
+                        . json_encode($postAdvertisement->getErrors())
+                    );
+                }
+
+                if (!$this->createAdvertisementAudit(
+                    (int)$postAdvertisementId,
+                    $userId,
+                    'reject',
+                    $previousStatus,
+                    'rejected',
+                    $rejectReason,
+                    1,
+                    $signedPdfPath
+                )) {
+                    throw new \RuntimeException('Unable to save the signed rejection PDF to the audit history.');
+                }
+            });
+        } catch (\Throwable $exception) {
+            if (is_file($signedPdfAbsolutePath)) {
+                unlink($signedPdfAbsolutePath);
+            }
+            error_log('advertisementPostApprovelEO failed: ' . $exception->getMessage());
+
+            return $this->response
+                ->withType('application/json')
+                ->withStatus(500)
+                ->withStringBody(json_encode([
+                    'success' => false,
+                    'message' => 'Failed to save the advertisement decision and signed PDF.'
+                ]));
+        }
+
+        return $this->response
+            ->withType('application/json')
+            ->withStringBody(json_encode([
+                'success' => true,
+                'data' => [
+                    'post_id' => $postAdvertisementId,
+                    'action' => 'reject',
+                    'status' => 'rejected'
+                ],
+                'message' => 'Application Rejected successfully'
+            ]));
     }
 
     
