@@ -60,7 +60,7 @@ class DivisionController extends AppController
             'staffOnboardGenrateFile',
             'advertisementPostApprovel',
             'advertisementRejectPrepare',
-            'advertisementPostApprovelEO',
+            'advertisementPostApprovelDYD',
             'advertisementGenrateFile'
         ]);
 
@@ -3178,7 +3178,7 @@ private function findWkhtmltopdfBinary(): ?string
                 ->withStatus(400)
                 ->withStringBody(json_encode([
                     'success' => false,
-                    'message' => 'A digitally signed rejection PDF is required.'
+                    'message' => 'Refresh the page and use the rejection PDF review and DSC signing process before submitting.'
                 ]));
         }
 
@@ -3359,7 +3359,7 @@ private function findWkhtmltopdfBinary(): ?string
             ]));
     }
 
-    public function advertisementPostApprovelEO()
+    public function advertisementPostApprovelDYD()
     {
         $this->request->allowMethod(['post', 'ajax']);
 
@@ -3502,7 +3502,7 @@ private function findWkhtmltopdfBinary(): ?string
             if (is_file($signedPdfAbsolutePath)) {
                 unlink($signedPdfAbsolutePath);
             }
-            error_log('advertisementPostApprovelEO failed: ' . $exception->getMessage());
+            error_log('advertisementPostApprovelDYD failed: ' . $exception->getMessage());
 
             return $this->response
                 ->withType('application/json')
@@ -3645,7 +3645,7 @@ private function generateAdvertisementRejectPdf($appId, $rejectReason): ?string
 
 
     
- private function renderAdvertisementRejectLetterViewContent($data): string
+    private function renderAdvertisementRejectLetterViewContent($data): string
     {
         $base64ImageQR = '';
         if (!empty($data['targetQRPath']) && file_exists($data['targetQRPath'])) {
@@ -3665,95 +3665,174 @@ private function generateAdvertisementRejectPdf($appId, $rejectReason): ?string
                             size: A4 portrait;
                             margin: 12mm;
                         }
+
+                        * {
+                            box-sizing: border-box;
+                        }
+
                         body {
-                            font-family: "Nirmala UI", "Mangal", "DejaVu Sans", "Arial Unicode MS", sans-serif;
+                            font-family: "Kokila", "Nirmala UI", "Arial Unicode MS",
+                                        "Noto Sans Devanagari", "Mangal", sans-serif;
                             font-size: 20px;
                             line-height: 1.7;
                             margin: 0;
                             padding: 0;
                             color: #111;
                         }
+
                         .letter-page {
                             width: 100%;
                             box-sizing: border-box;
                         }
+
+                        /* Header */
                         .header-wrap {
+                            width: 100%;
                             text-align: center;
                             margin: 0 auto 12px auto;
                         }
+
                         .header-img {
                             display: block;
                             width: 100%;
                             height: auto;
                             margin: 0 auto 8px auto;
                         }
-                        .letter-title {
-                            font-size: 20px;
-                            font-weight: 700;
-                            text-align: center;
-                            margin-top: 6px;
-                            letter-spacing: 0.5px;
-                        }
-                        .qrcode-img {
-                            width: 300px;
-                            border:2px solid #1da5bd;
-                        }
-                        .meta-table {
+
+                        /* Main heading */
+                        .approval-order-heading {
                             width: 100%;
-                            border-collapse: collapse;
-                            margin-bottom: 15px;
+                            text-align: center;
+                            font-family: inherit;
+                            font-size: 24px;
+                            font-weight: bold;
+                            line-height: 1.5;
+                            text-indent: 0;
+                            margin: 10px 0 15px 0;
+                            padding: 0;
                         }
-                        .meta-table td {
-                            vertical-align: top;
-                            padding: 2px 0;
+
+                        /* Indentation */
+                        .indent {
+                            display: inline-block;
+                            margin-left: 20px;
                         }
-                        .text-right {
-                            text-align: right;
+
+                        /* General paragraphs */
+                        p {
+                            margin: 10px 0;
+                            padding: 0;
+                            line-height: 1.7;
                         }
-                        .recipient {
-                            margin: 15px 0;
-                            line-height: 1.6;
-                        }
+
+                        /* Subject */
                         .subject-box {
                             font-weight: bold;
                             margin: 15px 0;
                             padding: 6px 10px;
                             background-color: #f4f4f4;
                             border-left: 3px solid #666;
+                            text-align: left;
+                            text-indent: 0;
                         }
+
+                        /* Reference */
                         .reference {
                             margin-bottom: 15px;
+                            line-height: 1.7;
                         }
+
+                        /* Main content */
                         .content {
+                            width: 100%;
+                            box-sizing: border-box;
                             text-align: justify;
-                            text-indent: 30px;
+                            text-indent: 0;
                             margin-top: 15px;
-                            line-height: 1.8;
+                            line-height: 1.7;
+                            overflow-wrap: break-word;
                         }
+
                         .content p {
+                            width: 100%;
+                            box-sizing: border-box;
                             margin: 10px 0;
+                            padding: 0;
+                            text-indent: 30px;
+                            text-align: justify;
+                            line-height: 1.7;
+                            overflow-wrap: break-word;
+                            word-wrap: break-word;
                         }
+
+                        .content p b,
+                        .content p strong {
+                            font-family: inherit;
+                            font-size: inherit;
+                            font-weight: bold;
+                            line-height: inherit;
+                        }
+
+                        /* Tables */
+                        table {
+                            width: 100%;
+                            border-collapse: collapse;
+                            table-layout: fixed;
+                            margin: 15px 0;
+                        }
+
+                        th,
+                        td {
+                            border: 1px solid #000;
+                            padding: 6px 4px;
+                            vertical-align: top;
+                            text-align: center;
+                            text-indent: 0;
+                            box-sizing: border-box;
+                            overflow-wrap: break-word;
+                            word-wrap: break-word;
+                            word-break: break-word;
+                        }
+
+                        th {
+                            border: 1px solid green;
+                            padding: 5px;
+                            font-size: 13px;
+                            font-weight: bold;
+                            line-height: 1.4;
+                            background-color: #f5f5f5;
+                        }
+
+                        td {
+                            font-size: 13px;
+                            line-height: 1.4;
+                        }
+
+                        tr {
+                            page-break-inside: avoid;
+                        }
+
+                        /* QR Code */
+                        .qrcode-img {
+                            width: 150px;
+                            height: auto;
+                            border: 2px solid #1da5bd;
+                        }
+
+                        /* Signature */
                         .signature-table {
                             width: 100%;
                             margin-top: 50px;
                             border-collapse: collapse;
                             page-break-inside: avoid;
                         }
-                        .copy-section {
-                            margin-top: 40px;
-                            padding-top: 10px;
-                            border-top: 1px dashed #aaa;
-                            font-size: 13px;
-                            page-break-inside: avoid;
-                        }
-                        .right {
-                            float:right;
-                        }
+
                         .signature-wrap {
                             width: 100%;
                             margin-top: 40px;
                             clear: both;
                         }
+
                         .signature-block {
                             float: right;
                             width: 260px;
@@ -3761,67 +3840,128 @@ private function generateAdvertisementRejectPdf($appId, $rejectReason): ?string
                             margin-top: 10px;
                             margin-bottom: 10px;
                         }
+
                         .signature {
                             text-align: right;
                             margin: 0;
                         }
+
+                        /* DSC Signature */
+                        .reject-dsc-signature-block {
+                            width: 260px;
+                            margin-left: auto;
+                            margin-top: 10px;
+                            text-align: right;
+                            page-break-inside: avoid;
+                        }
+
+                        .reject-dsc-signature-label {
+                            margin: 0;
+                            text-align: right;
+                            text-indent: 0;
+                        }
+
+                        .reject-dsc-signature-area {
+                            height: 75px;
+                            width: 260px;
+                            margin-left: auto;
+                        }
+
+                        .reject-dsc-signature-marker {
+                            display: block;
+                            font-family: Arial, sans-serif;
+                            font-size: 8px;
+                            line-height: 10px;
+                            color: #ffffff;
+                            white-space: nowrap;
+                        }
+
+                        /* Copy section */
+                        .copy-section {
+                            margin-top: 40px;
+                            padding-top: 10px;
+                            border-top: 1px dashed #aaa;
+                            font-size: 13px;
+                            page-break-inside: avoid;
+                        }
+
                         .copy-to {
                             margin-top: 70px;
                             clear: both;
                             font-weight: 600;
                         }
-                        table {
-                            border-collapse: collapse;
-                            width: 100%;
-                            table-layout: fixed;
+
+                        .copy-to p {
+                            text-indent: 0;
                         }
-                        th, td {
-                            border: 1px solid #000;
-                            padding: 6px 4px;
-                            vertical-align: top;
-                            text-align: center;
-                            word-wrap: break-word;
+
+                        /* Utility */
+                        .text-right {
+                            text-align: right;
+                        }
+
+                        .right {
+                            float: right;
+                        }
+
+                        .clearfix {
+                            clear: both;
+                        }
+
+                        @media print {
+                            body {
+                                -webkit-print-color-adjust: exact;
+                                print-color-adjust: exact;
+                            }
+
+                            table {
+                                page-break-inside: auto;
+                            }
+
+                            tr {
+                                page-break-inside: avoid;
+                            }
+
+                            .reject-dsc-signature-block {
+                                page-break-inside: avoid;
+                            }
                         }
                     </style>
                 </head>
                 <body>
                 <div class="letter-page">
-                    ' . (!empty($base64Image) ? '<div class="header-wrap"><img class="header-img" src="' . $base64Image . '"></div>' : '') . '
-               
-                    <div>
-                        आदेश :-
-                    </div>
-<br>
-      प्रति,
-<div>
-    <span class="indent">अध्यक्ष / सचिव, संबंधित संस्था
-                        </span>
+                    ' . (!empty($base64Image) ? '<div class="header-wrap"><img class="header-img" src="' . $base64Image . '">
+                </div>' : '') . '
+                <div class="approval-order-heading">
+                    आदेश :-
+                </div>
+                    प्रति,
+                <div>
+                    <span class="indent">अध्यक्ष / सचिव, संबंधित संस्था, </span>
     
-</div>
-                
-               <br>
-                <div class="subject">
+                </div>
+                <div>
                     विषय :- कनिष्ठ लिपिक प्रयोगशाळा सहाय्यक / ग्रंथपाल / भरतीसाठी जाहीरात परवानगी बाबत.
                 </div>
-                <br>
                 <div>
                       संदर्भ :-
                     <br>
                     ' . $this->transliterateToMarathi("१. शासन निर्णय दिनांक ११/०८/२०२६ व दि.१६/०८/२०२६ नुसार.
                     <br>
-                    २. आपल्या  संस्थेची  जाहीरात  परवानगी  मागणी  दि १६/०८/२०२६ ") . ' </div>
+                    २. आपल्या  संस्थेची  जाहीरात  परवानगी  मागणी  दि १६/०८/२०२६ ") . ' 
+                </div>
 
-                <div class="content">
+                <div>
                     <p>संस्थेने दि. ________ रोजी सादर केलेल्या प्रस्तावाची पडताळणी केली असता,शिक्षकेतर पदभरतीची मागणी खालीलप्रमाणे आहे.</p>
-                    <table style="width:100%;border:1px solid green;">
+                    <table style="width:100%; border:1px solid green; border-collapse: collapse;">
                         <tr>
-                            <th>अ.क्र.</th>
-                            <th>संस्थेचे नाव </th>
-                            <th>संस्था कोड</th>
-                            <th>पदभरतीच्या पदांचा तपशील</th>
-                            <th>संवर्ग</th>
-                            <th>पदसंख्या</th>
-                             <th>वेतनश्रेणी</th>
+                            <th style="border:1px solid green; padding: 5px;">अ.क्र.</th>
+                            <th style="border:1px solid green; padding: 5px;">संस्थेचे नाव </th>
+                            <th style="border:1px solid green; padding: 5px;">संस्था कोड</th>
+                            <th style="border:1px solid green; padding: 5px;">पदभरतीच्या पदांचा तपशील</th>
+                            <th style="border:1px solid green; padding: 5px;">संवर्ग</th>
+                            <th style="border:1px solid green; padding: 5px;">पदसंख्या</th>
+                            <th style="border:1px solid green; padding: 5px;">वेतनश्रेणी</th>
                         </tr>';
                     $i = 1;
                      foreach ($data['Datalist'] as $item) {
@@ -3840,31 +3980,24 @@ private function generateAdvertisementRejectPdf($appId, $rejectReason): ?string
                       
                   $html .='  </table>
                     <p>सादर प्रस्तावामध्ये खालीलप्रमाणे त्रुटी दिसून येतात:</p>
-                    '.$data['rejectReason'].'
-                    <p></p>
+                    ' . nl2br(h((string)($data['rejectReason'] ?? ''))) . '
                     <p>सादर केलेल्या प्रस्तावामध्ये वर नमूद केलेल्या त्रुटी असल्यामुळे, जाहिरात परवानगी  प्रस्ताव अमान्य / परत करण्यात येत आहे.</p>
                 </div>
-
-        
-
                 <div>
-                        <p class="right" style="text-align:right; margin:0;">
-                            स्वाक्षरी/-
-                        </p>
+                    <div class="reject-dsc-signature-block" id="reject-dsc-signature-position">
+                        <p class="reject-dsc-signature-label">स्वाक्षरी/-</p>
+                        <span class="reject-dsc-signature-marker">DSC_REJECT_POSITION_2026</span>
+                        <div class="reject-dsc-signature-area"></div>
+                    </div>
 
                    <div style="height: 100px;"></div>
-
                         <p style="margin:0;">
                             प्रत -
                         </p>
-
                         <p>
                             १. मुख्याध्यापक / संबंधित शाळा
                         </p>
-                       
                     </div>
-
-
                 <div style="clear:both;"></div>
                 </div>
             </body>
@@ -3883,8 +4016,7 @@ private function generateAdvertisementRejectPdf($appId, $rejectReason): ?string
                         ?string $newStatus,
                         ?string $remarks = null,
                         ?int $version = null,
-                        ?string $stage_doc = null,)
-    {
+                        ?string $stage_doc = null,){
         $auditTable = $this->fetchTable('PostAdvertisementAuditLogs');
 
         $request = $this->getRequest();
@@ -4296,149 +4428,149 @@ private function generateAdvertisementRejectPdf($appId, $rejectReason): ?string
         $this->request->allowMethod(['get','post','ajax']);
 
           
-    $appId = $this->request->getData('app_id');
+        $appId = $this->request->getData('app_id');
 
-    $appointmentsTable = TableRegistry::getTableLocator()->get('StaffOnboardingAppointments');
+        $appointmentsTable = TableRegistry::getTableLocator()->get('StaffOnboardingAppointments');
 
-    $appointment = $appointmentsTable->find()
-    ->where(['id' => (int)$appId])
-    ->first();
-
-
-    $vacanciesTable = TableRegistry::getTableLocator()->get('PostAdvertisementVacancies');
-
-    $vacancies = $vacanciesTable->find()
-    ->where(['id' => $appointment->staff_id])
-    ->first();
+        $appointment = $appointmentsTable->find()
+        ->where(['id' => (int)$appId])
+        ->first();
 
 
-    //NTR_year_000001
+        $vacanciesTable = TableRegistry::getTableLocator()->get('PostAdvertisementVacancies');
 
+        $vacancies = $vacanciesTable->find()
+        ->where(['id' => $appointment->staff_id])
+        ->first();
+
+
+        //NTR_year_000001
+
+        
+        $genderMap = [
+            'm' => 'M',
+            'male' => 'M',
+            'f' => 'F',
+            'female' => 'F',
+            't' => 'T',
+            'third_gender' => 'T',
+            'third gender' => 'T',
+            'transgender' => 'T',
+            'o' => 'O',
+            'other' => 'O',
+        ];
+        $gender = $genderMap[strtolower(trim((string)$appointment->gender))] ?? null;
+
+        $maritalStatusMap = [
+            'single' => 'F',
+            'married' => 'T',
+            'divorced' => 'F',
+        ];
+        $maritalStatus = $maritalStatusMap[strtolower(trim((string)$appointment->matrimonial_status))] ?? null;
+
+        if ($gender === null || $maritalStatus === null) {
+            return $this->response
+                ->withStatus(400)
+                ->withType('application/json')
+                ->withStringBody(json_encode([
+                    'status' => 400,
+                    'message' => 'The appointment has an unsupported gender or marital status.',
+                ]));
+        }
+
+        $employeeData = [];
+        // $employeeData['APPLICANT_FULL_NAME'] = $appointment->candidate_name;
+
+        $employeeData['APPLICATION_ID'] = $this->generateApplicationNumber($appointment->id);
+        $employeeData['CURRENT_POST'] = $vacancies->post_code;
+        $employeeData['FIRST_NAME_AS_UID'] = $appointment->candidate_firstname;
+        $employeeData['MIDDLE_NAME_AS_UID'] = $appointment->candidate_middlename;
+        $employeeData['LAST_NAME_AS_UID'] = $appointment->candidate_lastname;
+        $employeeData["PERCENTAGE_1"] = (int)$appointment->percentage_1;
+        $employeeData["NOMINEE_NAME_1"] = $appointment->nominee_name_1;
+        $employeeData["NOMINEE_ADDRESS_1"] = $appointment->nominee_address_1;
+        $employeeData["NOMINEE_DOB_1"] = $appointment->nominee_dob_1;
+        $employeeData["RELATIONSHIP_1"] = $appointment->relationship_1;
+        $employeeData["PERCENTAGE_2"] = 0;
+        $employeeData["PERCENTAGE_3"] = 0;
+        $employeeData['GENDER'] = $gender;
+        $employeeData['MARITAL_STATUS'] = $maritalStatus;
+        $employeeData['DOB'] = $appointment->dob_date;
+        $employeeData['UID_NO'] = $appointment->aadhar_number;
+        $employeeData['EMAIL'] = $appointment->candidateemail;
+        $employeeData['PAN_NO'] = $appointment->pan_number;
+        $employeeData['EMPLOYEE_PHOTO_URL'] = null; 
+        $employeeData['EMPLOYEE_SIGNATURE_URL'] = null; 
+
+        //echo json_encode($employeeData); exit;
+        /*  $employeeData['CELL_NO'] = $appointment->candidatemobile;
+        $employeeData['TEL_NO'] = 0;
+        $employeeData['ACAD_QUAL'] = $appointment->graduate_degree.', '.$appointment->post_graduate_degree;
+        $employeeData['PROF_QUAL'] = NULL;*/
+
+        
+        /* $employeeData['MGMT_CODE'] = "270715SC999";
+        $employeeData['SCHL_ID'] = "27040212999";
+        $employeeData['DDO_CODE'] = "04630100999";
+        $employeeData['DDO_NAME'] = "04630100999";
+        $employeeData['SALUTATION'] = "700075";
+        $employeeData['EMP_FATHER_MIDDLE_NAME'] = "SURESH GANPAT PATIL";
+
+        $employeeData['JOINING_DT'] = "2024-09-26T00:00:00";
+        $employeeData['STATE_CD'] = 27;
+        $employeeData['DISTRICT_CD'] = 354;
+        $employeeData['ADDRESS_LINE_1'] = "AT SAMPLEWADI";
+        $employeeData['ADDRESS_LINE_2'] = "POST SAMPLE TQ SAMPLE";
+        $employeeData['LANDMARK'] = "NEAR SAMPLE TEMPLE";
+        $employeeData['LOCALITY'] = "SAMPLEWADI";
+        $employeeData['VILLAGE'] = "SAMPLEWADI";
+        $employeeData['PIN_CODE'] = 431000;
+        $employeeData['CADRE'] = "1344";
+        $employeeData['SHIKSHAN_SEVAK'] = "Y";
+        $employeeData['NEW_RECRUIT_POST_DESC'] = "Graduate Teacher std(9-10)";
+        $employeeData['NEW_RECRUIT_POST'] = 431000;
+        $employeeData['PAY_COMMISSION'] = 2500347;
+        $employeeData['NEW_PAY_SCALE_CD'] = 101;
+        $employeeData['BASIC_PAY_SCALE'] = 18000;
+        
+        $employeeData['sanchManyataPostType'] = 1;
+        $employeeData['sanchManyataPostId'] = 1;
+        $employeeData['INITIAL_APPT_DT'] = "2024-11-26T00:00:00";
+        $employeeData['AIDED'] = "N";
+        $employeeData['CURRENT_POST_DT'] = "2024-11-26T00:00:00";
+        $employeeData['EMP_TYPE'] = "T";
+        $employeeData['ORD_FILE_NAME'] = "https://files.example.org/orders/211000765099";
+        $employeeData["ORDER_DT"] = "2024-09-21T00:00:00";
+        $employeeData["BRANCH_NAME"] = "44405";
+        $employeeData["BANK_AC_NO"] = "00000000000";
+        $employeeData["IFSC_CODE"] = "SBIN0000000";
+        $employeeData["NPS_APPLICABLE"] = "N";
+        $employeeData["NPS_AC_MAINTAIN_BY"] = null;
+        $employeeData["PF_AC_MAINTAIN_BY"] = null;
+        $employeeData["PF_AC_NUMBER"] = null;
+        $employeeData["GIS_APPLICABLE"] = "2";
+        $employeeData["GIS_GROUP"] = 0;
+        $employeeData["MEMBERSHIP_DT"] = "1911-01-01T00:00:00";
+        
     
-    $genderMap = [
-        'm' => 'M',
-        'male' => 'M',
-        'f' => 'F',
-        'female' => 'F',
-        't' => 'T',
-        'third_gender' => 'T',
-        'third gender' => 'T',
-        'transgender' => 'T',
-        'o' => 'O',
-        'other' => 'O',
-    ];
-    $gender = $genderMap[strtolower(trim((string)$appointment->gender))] ?? null;
-
-    $maritalStatusMap = [
-        'single' => 'F',
-        'married' => 'T',
-        'divorced' => 'F',
-    ];
-    $maritalStatus = $maritalStatusMap[strtolower(trim((string)$appointment->matrimonial_status))] ?? null;
-
-    if ($gender === null || $maritalStatus === null) {
-        return $this->response
-            ->withStatus(400)
-            ->withType('application/json')
-            ->withStringBody(json_encode([
-                'status' => 400,
-                'message' => 'The appointment has an unsupported gender or marital status.',
-            ]));
-    }
-
-    $employeeData = [];
-   // $employeeData['APPLICANT_FULL_NAME'] = $appointment->candidate_name;
-
-    $employeeData['APPLICATION_ID'] = $this->generateApplicationNumber($appointment->id);
-    $employeeData['CURRENT_POST'] = $vacancies->post_code;
-    $employeeData['FIRST_NAME_AS_UID'] = $appointment->candidate_firstname;
-    $employeeData['MIDDLE_NAME_AS_UID'] = $appointment->candidate_middlename;
-    $employeeData['LAST_NAME_AS_UID'] = $appointment->candidate_lastname;
-    $employeeData["PERCENTAGE_1"] = (int)$appointment->percentage_1;
-    $employeeData["NOMINEE_NAME_1"] = $appointment->nominee_name_1;
-    $employeeData["NOMINEE_ADDRESS_1"] = $appointment->nominee_address_1;
-    $employeeData["NOMINEE_DOB_1"] = $appointment->nominee_dob_1;
-    $employeeData["RELATIONSHIP_1"] = $appointment->relationship_1;
-    $employeeData["PERCENTAGE_2"] = 0;
-    $employeeData["PERCENTAGE_3"] = 0;
-    $employeeData['GENDER'] = $gender;
-    $employeeData['MARITAL_STATUS'] = $maritalStatus;
-    $employeeData['DOB'] = $appointment->dob_date;
-    $employeeData['UID_NO'] = $appointment->aadhar_number;
-    $employeeData['EMAIL'] = $appointment->candidateemail;
-    $employeeData['PAN_NO'] = $appointment->pan_number;
-    $employeeData['EMPLOYEE_PHOTO_URL'] = null; 
-    $employeeData['EMPLOYEE_SIGNATURE_URL'] = null; 
-
-    //echo json_encode($employeeData); exit;
-    /*  $employeeData['CELL_NO'] = $appointment->candidatemobile;
-    $employeeData['TEL_NO'] = 0;
-    $employeeData['ACAD_QUAL'] = $appointment->graduate_degree.', '.$appointment->post_graduate_degree;
-    $employeeData['PROF_QUAL'] = NULL;*/
-
+        $employeeData["NOMINEE_NAME_2"] = null;
+        $employeeData["NOMINEE_ADDRESS_2"] = null;
+        $employeeData["NOMINEE_DOB_2"] = "1911-01-01T00:00:00";
+        $employeeData["RELATIONSHIP_2"] = null;
     
-   /* $employeeData['MGMT_CODE'] = "270715SC999";
-    $employeeData['SCHL_ID'] = "27040212999";
-    $employeeData['DDO_CODE'] = "04630100999";
-    $employeeData['DDO_NAME'] = "04630100999";
-    $employeeData['SALUTATION'] = "700075";
-    $employeeData['EMP_FATHER_MIDDLE_NAME'] = "SURESH GANPAT PATIL";
-
-    $employeeData['JOINING_DT'] = "2024-09-26T00:00:00";
-    $employeeData['STATE_CD'] = 27;
-    $employeeData['DISTRICT_CD'] = 354;
-    $employeeData['ADDRESS_LINE_1'] = "AT SAMPLEWADI";
-    $employeeData['ADDRESS_LINE_2'] = "POST SAMPLE TQ SAMPLE";
-    $employeeData['LANDMARK'] = "NEAR SAMPLE TEMPLE";
-    $employeeData['LOCALITY'] = "SAMPLEWADI";
-    $employeeData['VILLAGE'] = "SAMPLEWADI";
-    $employeeData['PIN_CODE'] = 431000;
-    $employeeData['CADRE'] = "1344";
-    $employeeData['SHIKSHAN_SEVAK'] = "Y";
-    $employeeData['NEW_RECRUIT_POST_DESC'] = "Graduate Teacher std(9-10)";
-    $employeeData['NEW_RECRUIT_POST'] = 431000;
-    $employeeData['PAY_COMMISSION'] = 2500347;
-    $employeeData['NEW_PAY_SCALE_CD'] = 101;
-    $employeeData['BASIC_PAY_SCALE'] = 18000;
-    
-    $employeeData['sanchManyataPostType'] = 1;
-    $employeeData['sanchManyataPostId'] = 1;
-    $employeeData['INITIAL_APPT_DT'] = "2024-11-26T00:00:00";
-    $employeeData['AIDED'] = "N";
-    $employeeData['CURRENT_POST_DT'] = "2024-11-26T00:00:00";
-    $employeeData['EMP_TYPE'] = "T";
-    $employeeData['ORD_FILE_NAME'] = "https://files.example.org/orders/211000765099";
-    $employeeData["ORDER_DT"] = "2024-09-21T00:00:00";
-    $employeeData["BRANCH_NAME"] = "44405";
-    $employeeData["BANK_AC_NO"] = "00000000000";
-    $employeeData["IFSC_CODE"] = "SBIN0000000";
-    $employeeData["NPS_APPLICABLE"] = "N";
-    $employeeData["NPS_AC_MAINTAIN_BY"] = null;
-    $employeeData["PF_AC_MAINTAIN_BY"] = null;
-    $employeeData["PF_AC_NUMBER"] = null;
-    $employeeData["GIS_APPLICABLE"] = "2";
-    $employeeData["GIS_GROUP"] = 0;
-    $employeeData["MEMBERSHIP_DT"] = "1911-01-01T00:00:00";
-    
-   
-    $employeeData["NOMINEE_NAME_2"] = null;
-    $employeeData["NOMINEE_ADDRESS_2"] = null;
-    $employeeData["NOMINEE_DOB_2"] = "1911-01-01T00:00:00";
-    $employeeData["RELATIONSHIP_2"] = null;
-   
-    $employeeData["NOMINEE_NAME_3"] = null;
-    $employeeData["NOMINEE_ADDRESS_3"] = null;
-    $employeeData["NOMINEE_DOB_3"] = "1911-01-01T00:00:00";
-    $employeeData["RELATIONSHIP_3"] = null;
-    
-    $employeeData["ASST_FLAG"] = "E";
-    $employeeData["ENTRY_AUTH"] = "2706DD";
-    $employeeData["SYSTEM_IP_ENTRY"] = "203.0.113.10/Chrome/Win10/N";
-    $employeeData["ENTRY_DTTS"] = "2025-02-20T00:00:00";
-    $employeeData["PH_YES_NO"] = "N";
-    $employeeData["ORD_NO"] = "3036";
-    $employeeData["BANK_NAME"] = "7920";
-    $employeeData["VERIF_AUTH"] = "N";*/
+        $employeeData["NOMINEE_NAME_3"] = null;
+        $employeeData["NOMINEE_ADDRESS_3"] = null;
+        $employeeData["NOMINEE_DOB_3"] = "1911-01-01T00:00:00";
+        $employeeData["RELATIONSHIP_3"] = null;
+        
+        $employeeData["ASST_FLAG"] = "E";
+        $employeeData["ENTRY_AUTH"] = "2706DD";
+        $employeeData["SYSTEM_IP_ENTRY"] = "203.0.113.10/Chrome/Win10/N";
+        $employeeData["ENTRY_DTTS"] = "2025-02-20T00:00:00";
+        $employeeData["PH_YES_NO"] = "N";
+        $employeeData["ORD_NO"] = "3036";
+        $employeeData["BANK_NAME"] = "7920";
+        $employeeData["VERIF_AUTH"] = "N";*/
 
 
 

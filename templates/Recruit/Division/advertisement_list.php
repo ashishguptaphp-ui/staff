@@ -722,7 +722,22 @@
   }
 }
 
-
+#panel {
+	position: fixed;
+	padding-top: 8%;
+	padding-bottom: 0;
+	padding-left: 0;
+	padding-right: 0;
+	margin: 0;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+    z-index: 20800 !important;
+	background: rgba(255, 255, 255, 0.9);
+	display: none;
+	text-align: center;
+}
 
 
 </style>
@@ -3765,7 +3780,7 @@ var initConfig = {
         $('#advertisementRejectSignStatus').text('Saving signed rejection...');
 
         $.ajax({
-            url: '<?= $this->Url->build(['prefix' => 'Recruit', 'controller' => 'Division', 'action' => 'advertisementPostApprovelEO']); ?>',
+            url: '<?= $this->Url->build(['prefix' => 'Recruit', 'controller' => 'Division', 'action' => 'advertisementPostApprovelDYD']); ?>',
             type: 'POST',
             data: formData,
             processData: false,
@@ -3838,7 +3853,7 @@ $('#approvalForm').on('submit', function (e) {
 
            console.log('Approve Post ID:', PostId);
             $.ajax({
-                url: '<?= $this->Url->build(['prefix' => 'Recruit',"controller" => "District", "action" => "advertisementPostApprovelEO"]); ?>',
+                url: '<?= $this->Url->build(['prefix' => 'Recruit',"controller" => "District", "action" => "advertisementPostApprovelDYD"]); ?>',
                 type: 'Post',
                 data: formData,
                 processData: false,

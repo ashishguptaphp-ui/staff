@@ -2051,7 +2051,7 @@ $('#approvedOrderPdfModal').on('hidden.bs.modal', function () {
                         name="smdetails[${escapeHtml(data.udise_code)}]"
                         value="1"
                         required
-                        onchange="hideDiv('smDetailsDiv_${escapeHtml(data.udise_code)}'); document.getElementById('smDetailsFile_${escapeHtml(data.udise_code)}').required = false;"
+                        onchange="hideDiv('smDetailsDiv_${escapeHtml(data.udise_code)}'); document.getElementById('smDetailsFile_${escapeHtml(data.udise_code)}').required = false; updateSmdetailsSubmitButton();"
                     >
                     <label class="form-check-label ms-2" for="smDetailsYes_${escapeHtml(data.udise_code)}">
                         होय
@@ -2065,7 +2065,7 @@ $('#approvedOrderPdfModal').on('hidden.bs.modal', function () {
                         id="smDetailsNo_${escapeHtml(data.udise_code)}"
                         name="smdetails[${escapeHtml(data.udise_code)}]"
                         value="2"
-                        onchange="showDiv('smDetailsDiv_${escapeHtml(data.udise_code)}'); document.getElementById('smDetailsFile_${escapeHtml(data.udise_code)}').required = true;"
+                        onchange="showDiv('smDetailsDiv_${escapeHtml(data.udise_code)}'); document.getElementById('smDetailsFile_${escapeHtml(data.udise_code)}').required = true; updateSmdetailsSubmitButton();"
                     >
                     <label class="form-check-label ms-2" for="smDetailsNo_${escapeHtml(data.udise_code)}">
                         नाही
@@ -2793,6 +2793,14 @@ $('#approvedOrderPdfModal').on('hidden.bs.modal', function () {
         const areaBtn = document.getElementById(btn);
         areaBtn.style.display =  "none";
     } 
+    function updateSmdetailsSubmitButton() {
+        const hasYesAnswer = document.querySelector('input[name^="smdetails["][value="1"]:checked');
+        if (hasYesAnswer) {
+            hideBtn('saSubmitBtn_step6');
+        } else {
+            showBtn('saSubmitBtn_step6');
+        }
+    }
 
 function calculateTotal() {
 
@@ -2837,6 +2845,3 @@ document.addEventListener('input', function(e) {
 calculateTotal();
 
 </script>
-
-
-

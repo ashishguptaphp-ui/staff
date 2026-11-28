@@ -1,0 +1,4533 @@
+<style>
+    /* Overlay Styling */
+    .sync-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.9);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    }
+
+    /* Centered Box */
+    .sync-box {
+    text-align: center;
+    background: #f9fafc;
+    padding: 40px 60px;
+    border-radius: 16px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+    animation: fadeIn 0.5s ease-in-out;
+    }
+
+    /* Spinner */
+    .spinner {
+    border: 6px solid #e0e0e0;
+    border-top: 6px solid #007bff;
+    border-radius: 50%;
+    width: 70px;
+    height: 70px;
+    margin: 0 auto 20px auto;
+    animation: spin 1.2s linear infinite;
+    }
+
+    /* Text */
+    .sync-message {
+    font-size: 1.1rem;
+    color: #333;
+    font-weight: 500;
+    }
+
+    /* Animations */
+    @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+    }
+
+    @keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+    }
+    #syncMessage {
+      font-size: 1.2rem;
+      font-weight: 500;
+      background: #fff;
+      padding: 20px 40px;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      border-left: 4px solid #1565c0;
+      min-width: 420px;
+      text-align: center;
+    }
+
+    #okButton {
+      
+      background-color: #28a745;
+      border: none;
+      color: white;
+      padding: 10px 25px;
+      border-radius: 6px;
+      font-size: 1rem;
+      cursor: pointer;
+      margin-top: 15px;
+      transition: background 0.3s;
+    }
+
+    #okButton:hover {
+      background-color: #218838;
+    }
+    table tbody tr td{
+        font-size: 14px;
+        font-family: Roboto EMOJI;
+    }
+</style>
+    
+
+<style>
+    /* Slide Panel */
+    .slide-panel {
+        position: fixed;
+        top: 0;
+        right: -100%;
+        width: 100%;
+        height: 100%;
+        background: #ffffff;
+        box-shadow: -2px 0 10px rgba(0,0,0,0.15);
+        transition: right 0.3s ease-in-out;
+        z-index: 1050;
+        display: flex;
+        flex-direction: column;
+    }
+    /* Slide Panel */
+    .slide-panel1 {
+        position: fixed;
+        top: 10%;
+        right: -100%;
+        width: 30%;
+        height: 90%;
+        background: #ffffff;
+        box-shadow: -2px 0 10px rgba(0,0,0,0.15);
+        transition: right 0.3s ease-in-out;
+        z-index: 1050;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .slide-panel.open {
+        right: 0;
+    }
+
+    /* Mobile */
+    @media (max-width: 768px) {
+        .slide-panel .slide-panel1{
+            width: 100%;
+            right: -100%;
+        }
+    }
+
+    .slide-header,
+    .slide-footer {
+        padding: 12px 16px;
+        border-bottom: 1px solid #dee2e6;
+        background: #1c8a8b;
+        color:#fff;
+    }
+
+    .slide-footer {
+        border-top: 1px solid #dee2e6;
+        margin-top: auto;
+    }
+
+    .slide-body {
+        padding: 3px;
+        overflow-y: auto;
+    }
+</style>
+
+<style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --accent-color: #e74c3c;
+        }
+        
+        body {
+            font-family: 'Segoe UI', 'Nirmala UI', sans-serif;
+           
+        }
+        
+        .header-section {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 15px 0;
+            border-radius: 0 0 10px 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .form-container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            padding: 10px;
+            margin-bottom: 30px;
+        }
+        
+        .section-title {
+            color: var(--primary-color);
+            border-bottom: 1px solid var(--secondary-color);
+            padding-bottom: 3px;
+            margin-bottom: 3px;
+            font-weight: 600;
+            font-size:18px;
+        }
+        
+        .form-label {
+            font-weight: 600;
+            color: #444;
+            margin-bottom: 8px;
+        }
+        
+        .marathi-label {
+            color: #2c3e50;
+            font-weight: 600;
+        }
+        
+        .english-label {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+            font-style: italic;
+        }
+        
+        .required-field::after {
+            content: " *";
+            color: var(--accent-color);
+        }
+        
+        .file-upload-area {
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            padding: 5px;
+            text-decoration:none;
+            text-align: center;
+            transition: all 0.3s;
+            cursor: pointer;
+            background-color: #f9f9f9;
+        }
+        
+        .file-upload-area:hover {
+            border-color: var(--secondary-color);
+            background-color: #f0f7ff;
+        }
+        
+        .file-upload-area.dragover {
+            border-color: var(--secondary-color);
+            background-color: #e8f4fc;
+        }
+        
+        .file-list {
+            margin-top: 15px;
+        }
+        
+        .file-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 12px;
+            background-color: #f1f8ff;
+            border-radius: 5px;
+            margin-bottom: 8px;
+            border-left: 4px solid var(--secondary-color);
+        }
+        
+        .file-icon {
+            color: var(--secondary-color);
+            margin-right: 10px;
+        }
+        
+        .btn-submit {
+            background: linear-gradient(to right, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 12px 30px;
+            font-weight: 600;
+            border: none;
+            border-radius: 6px;
+            transition: all 0.3s;
+        }
+        
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .progress-section {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 300px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 3px 15px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+        
+       
+        
+        .pdf-field {
+            background:#fff;
+            padding:10px 0px;;
+            margin-bottom: 0px;
+            border-bottom: 1px solid #333;
+        }
+        
+        .form-section {
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #6d6868;
+        }
+        
+        @media (max-width: 768px) {
+            .form-container {
+                padding: 10px;
+            }
+            
+            .progress-section {
+                position: static;
+                width: 100%;
+                margin-top: 20px;
+            }
+        }
+        .txtval{
+            color: #004884;
+            padding-left: 10px;
+        }
+</style>
+
+
+
+<style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --accent-color: #e74c3c;
+        }
+        
+        body {
+            font-family: 'Segoe UI', 'Nirmala UI', sans-serif;
+           
+        }
+        
+        .header-section {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 15px 0;
+            border-radius: 0 0 10px 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .form-container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            padding: 10px;
+            margin-bottom: 30px;
+        }
+        
+        .section-title {
+            color: var(--primary-color);
+            border-bottom: 1px solid var(--secondary-color);
+            padding-bottom: 3px;
+            margin-bottom: 3px;
+            font-weight: 600;
+            font-size:18px;
+        }
+        
+        .form-label {
+            font-weight: 600;
+            color: #444;
+            margin-bottom: 8px;
+        }
+        
+        .marathi-label {
+            color: #2c3e50;
+            font-weight: 600;
+        }
+        
+        .english-label {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+            font-style: italic;
+        }
+        
+        .required-field::after {
+            content: " *";
+            color: var(--accent-color);
+        }
+        
+        .file-upload-area {
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            padding: 5px;
+            text-decoration:none;
+            text-align: center;
+            transition: all 0.3s;
+            cursor: pointer;
+            background-color: #f9f9f9;
+        }
+        
+        .file-upload-area:hover {
+            border-color: var(--secondary-color);
+            background-color: #f0f7ff;
+        }
+        
+        .file-upload-area.dragover {
+            border-color: var(--secondary-color);
+            background-color: #e8f4fc;
+        }
+        
+        .file-list {
+            margin-top: 15px;
+        }
+        
+        .file-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 12px;
+            background-color: #f1f8ff;
+            border-radius: 5px;
+            margin-bottom: 8px;
+            border-left: 4px solid var(--secondary-color);
+        }
+        
+        .file-icon {
+            color: var(--secondary-color);
+            margin-right: 10px;
+        }
+        
+        .btn-submit {
+            background: linear-gradient(to right, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 12px 30px;
+            font-weight: 600;
+            border: none;
+            border-radius: 6px;
+            transition: all 0.3s;
+        }
+        
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .progress-section {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 300px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 3px 15px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+        
+       
+        
+        .pdf-field {
+            background:#fff;
+            padding:10px 0px;;
+            margin-bottom: 0px;
+            border-bottom: 1px solid #333;
+        }
+        
+        .form-section {
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #6d6868;
+        }
+        
+        @media (max-width: 768px) {
+            .form-container {
+                padding: 10px;
+            }
+            
+            .progress-section {
+                position: static;
+                width: 100%;
+                margin-top: 20px;
+            }
+        }
+        .txtval{
+            color: #004884;
+            padding-left: 10px;
+        }
+        .section {
+                margin-top: 0px;
+        
+
+            .section-title {
+                font-size: 16px;
+                font-weight: 700;
+                color: #0b5ed7;
+                margin-bottom: 14px;
+                border-left: 4px solid #0b5ed7;
+                padding-left: 10px;
+            }
+
+            .grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+                gap: 16px;
+            }
+
+            .field {
+                background: #f9fafb;
+                border-radius: 12px;
+                padding: 14px 16px;
+            }
+
+            .label {
+                font-size: 13px;
+                color: #6b7280;
+                margin-bottom: 4px;
+            }
+
+            .value {
+                font-size: 15px;
+                font-weight: 600;
+                color: #111827;
+            }
+
+            .highlight {
+                background: #eef2ff;
+                border-left: 5px solid #6366f1;
+            }
+        }
+
+        .card {
+        background: #ffffff;
+        border-left: 6px solid #2b6cb0;
+        padding: 10px;
+        
+        border-radius: 10px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        margin-bottom: 20px;
+    }
+
+    .checkbox-label {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 17px;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    input[type="checkbox"] {
+        width: 20px;
+        height: 20px;
+        accent-color: #2b6cb0;
+        cursor: pointer;
+    }
+
+    .transfer-section {
+        display: none;
+        margin-top: 0px;
+        padding: 10px;
+        border: 1px dashed #cbd5e0;
+        border-radius: 8px;
+        background: #f8fafc;
+    }
+
+    .transfer-section h4 {
+        margin: 0 0 3px;
+        color: #2b6cb0;
+    }
+
+    .field {
+        margin-bottom: 3px;
+    }
+
+    .field label {
+        font-weight: 600;
+        display: block;
+        margin-bottom: 4px;
+    }
+
+    .field input select {
+        width: 100%;
+        padding: 8px 10px;
+        border: 1px solid #cbd5e0;
+        border-radius: 6px;
+    }
+
+    #approvedOrderPdfModal {
+    z-index: 10010 !important;
+}
+#staffRejectSignerModal {
+    z-index: 10010 !important;
+}
+</style>
+
+    <style>
+        .hidden { display: none; }
+        .form-group { margin: 10px 0; }
+    </style>
+
+<style>
+/* The actual timeline (the vertical ruler) */
+.main-timeline {
+  position: relative;
+}
+
+/* The actual timeline (the vertical ruler) */
+.main-timeline::after {
+  content: "";
+  position: absolute;
+  width: 6px;
+  background-color: #939597;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  margin-left: -3px;
+}
+
+/* Container around content */
+.timeline {
+  position: relative;
+  background-color: inherit;
+  width: 50%;
+}
+
+/* The circles on the timeline */
+.timeline::after {
+  content: "";
+  position: absolute;
+  width: 25px;
+  height: 25px;
+  right: -13px;
+  background-color: #939597;
+  border: 5px solid #f5df4d;
+  top: 15px;
+  border-radius: 50%;
+  z-index: 1;
+}
+
+/* Place the container to the left */
+.left {
+  padding: 0px 40px 20px 0px;
+  left: 0;
+}
+
+/* Place the container to the right */
+.right {
+  padding: 0px 0px 20px 40px;
+  left: 50%;
+}
+
+/* Add arrows to the left container (pointing right) */
+.left::before {
+  content: " ";
+  position: absolute;
+  top: 18px;
+  z-index: 1;
+  right: 30px;
+  border: medium solid white;
+  border-width: 10px 0 10px 10px;
+  border-color: transparent transparent transparent white;
+}
+
+/* Add arrows to the right container (pointing left) */
+.right::before {
+  content: " ";
+  position: absolute;
+  top: 18px;
+  z-index: 1;
+  left: 30px;
+  border: medium solid white;
+  border-width: 10px 10px 10px 0;
+  border-color: transparent white transparent transparent;
+}
+
+/* Fix the circle for containers on the right side */
+.right::after {
+  left: -12px;
+}
+
+/* Media queries - Responsive timeline on screens less than 600px wide */
+@media screen and (max-width: 600px) {
+  /* Place the timelime to the left */
+  .main-timeline::after {
+    left: 31px;
+  }
+
+  /* Full-width containers */
+  .timeline {
+    width: 100%;
+    padding-left: 70px;
+    padding-right: 25px;
+  }
+
+  /* Make sure that all arrows are pointing leftwards */
+  .timeline::before {
+    left: 60px;
+    border: medium solid white;
+    border-width: 10px 10px 10px 0;
+    border-color: transparent white transparent transparent;
+  }
+
+  /* Make sure all circles are at the same spot */
+  .left::after,
+  .right::after {
+    left: 18px;
+  }
+
+  .left::before {
+    right: auto;
+  }
+
+  /* Make all right containers behave like the left ones */
+  .right {
+    left: 0%;
+  }
+}
+
+.d-none {
+    display: none !important;
+}
+
+
+
+.result {
+	color: red;
+	font-size: small;
+}
+
+#panel {
+	position: fixed;
+	padding-top: 8%;
+	padding-bottom: 0;
+	padding-left: 0;
+	padding-right: 0;
+	margin: 0;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background: rgba(255, 255, 255, 0.9);
+	display: none;
+	text-align: center;
+}
+</style>
+
+
+<h5 style="margin:0px;padding:10px; color: #1a237e; border-bottom: 2px solid #1a237e;">
+       
+        🔜👨‍💼 कर्मचारी निवड आणि रुजू प्रक्रिया
+      
+</h5>
+<!-- Bootstrap + Bootstrap Icons -->
+<div style="background: #fff; padding:10px;">      
+    
+        
+
+        <table id="staffTable" class="table table-bordered table-striped table-hover align-middle">
+            <thead class="table-light">
+            <tr>
+                <th>#</th>
+                 <!--<th>Aid Type</th> -->
+                <th>Post</th> 
+                 <!--<th>Staff Name</th>  --> 
+                <th>School</th>
+                  <!--<th>Date of Joining</th>-->
+                <th>Action</th>
+            </tr>
+            </thead>
+            <tbody>                        
+                <?php 
+                $idx =1;
+                //dd($staffs);
+                
+                foreach ($ng2g as $post): 
+
+                    if($post->post_type == 1){
+                        continue;
+                    }
+
+                $approvedLogDocument = $approvedLogDocuments[$post->soa_id] ?? null;
+                  
+                $approvedLogUrl = null;
+                if (!empty($approvedLogDocument)) {
+                    $approvedLogUrl = preg_match('/^https?:\/\//i', $approvedLogDocument)
+                        ? $approvedLogDocument
+                        : $this->Url->build('/' . ltrim($approvedLogDocument, '/'));
+                }
+
+                $rejectLogDocument = $rejectLogDocuments[$post->soa_id] ?? null;
+                   
+                $rejectLogUrl = null;
+                if (!empty($rejectLogDocument)) {
+                    $rejectLogUrl = preg_match('/^https?:\/\//i', $rejectLogDocument)
+                        ? $rejectLogDocument
+                        : $this->Url->build('/' . ltrim($rejectLogDocument, '/'));
+                }
+
+                $returnLogDocument = $returnLogDocuments[$post->soa_id] ?? null;
+                   
+                $returnLogUrl = null;
+                if (!empty($returnLogDocument)) {
+                    $returnLogUrl = preg_match('/^https?:\/\//i', $returnLogDocument)
+                        ? $returnLogDocument
+                        : $this->Url->build('/' . ltrim($returnLogDocument, '/'));
+                }
+                   
+                ?>
+                <tr>
+                    <td><?= h($idx++) ?></td>
+                   
+                    <td>
+                        <?= h($post->post_name) ?>
+                    </td>
+                                     
+                    <td>
+                      
+                        <?= h($post->school_name) ?>
+                    </td>
+
+                    <td id="actionBtns_<?= h($post->id) ?>">
+                        <?php
+                            if($post->is_onboarding_submitted == 1) {
+                       
+                            echo "<a href='#' style='text-decoration:none;' class='startApplication-open-onboarding' data-staffObject='". json_encode($post, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP)."' data-mode='1'  data-id='".$post->id."'>
+                                <i class='fa-solid fa-address-card'></i>  अर्ज पहा
+                            </a><br/>";
+
+                             echo "<a href='#' style='text-decoration:none;' class='startApplicationHistory-open-view' data-staffObject='". json_encode($post, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP)."' data-mode='1'  data-id='".$post->id."'>
+                                <i class='fa-solid fa-history'></i> टिप्पणी
+                            </a><br/>";
+
+                           if($approvedLogUrl!=null){
+                               echo "<a href='" . h($approvedLogUrl) . "' style='text-decoration:none;' class='approved-order-pdf' data-pdf-title='आदेश'>
+                                    <i class='fa-solid fa-reorder'></i>  आदेश
+                                </a><br/>";  
+                           }
+                            if($rejectLogUrl!=null){
+                               echo "<a href='" . h($rejectLogUrl) . "' style='text-decoration:none;' class='approved-order-pdf' data-pdf-title='नकार आदेश'>
+                                    <i class='fa-solid fa-reorder'></i>  नकार आदेश
+                                </a><br/>";  
+                           }
+                            if($post->status=='returned'){
+                                    if($returnLogUrl!=null){
+                                    echo "<a href='" . h($returnLogUrl) . "' style='text-decoration:none;' class='approved-order-pdf' data-pdf-title='दुरुस्तीसाठी आदेश'>
+                                            <i class='fa-solid fa-reorder'></i>  दुरुस्तीसाठी आदेश
+                                        </a><br/>";  
+                                }
+                            }
+                            if($post->status === 'Forwarded_sup') {                            
+
+                               echo "<a href='#' style='text-decoration:none;color:green;' class='approvedApplication-open-transfer' data-staffObject='". json_encode($post, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP)."' data-id='".$post->id."' data-seq='".$idx."'>
+                                    <i class='fa-solid fa-arrow-trend-up'></i>  मंजूर करा
+                                </a><br/>";
+                                echo "<a href='#' style='text-decoration:none;color:red;' class='rejectApplication-open-transfer' data-staffObject='". json_encode($post, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ."' data-id='".$post->id."' data-seq='".$idx."'>
+                                    <i class='fa-solid fa-arrow-trend-down'></i>  नामंजूर करा
+                                </a><br/>";
+                                                             
+                            }
+                                                               
+                            }else{
+                                 echo "";
+                            }                         
+                        ?>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+       
+</div>
+
+
+
+
+<div class="modal fade" id="approvedOrderPdfModal" tabindex="-1" aria-labelledby="approvedOrderPdfModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered" style="max-width: 92vw;">
+        <div class="modal-content" style="height: 90vh;">
+            <div class="modal-header">
+                <h5 class="modal-title" id="approvedOrderPdfModalLabel">आदेश</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0">
+                <iframe id="approvedOrderPdfFrame" title="आदेश PDF" src="about:blank" style="width: 100%; height: 100%; border: 0;"></iframe>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="staffRejectSignerModal" tabindex="-1" aria-labelledby="staffRejectSignerModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered" style="max-width: 92vw;">
+        <div class="modal-content" style="height: 90vh;">
+            <div class="modal-header">
+                <h5 class="modal-title" id="staffRejectSignerModalLabel">नकार आदेश तपासा व डिजिटल स्वाक्षरी करा</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0 flex-grow-1">
+                <iframe id="staffRejectPdfFrame" title="Staff onboarding rejection PDF" src="about:blank" style="width: 100%; height: 100%; border: 0;"></iframe>
+            </div>
+            <div class="modal-footer d-flex justify-content-between">
+                <div>
+                    <span id="staffRejectSignStatus" class="small" aria-live="polite"></span>
+                    <a id="staffRejectSignedDownload" class="btn btn-sm btn-outline-primary ms-2 d-none" href="#" download="signed-staff-rejection.pdf">Signed PDF डाउनलोड करा</a>
+                </div>
+                <div>
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" id="staffRejectSignBtn" class="btn btn-warning btn-sm" disabled>Sign with DSC</button>
+                    <button type="button" id="staffRejectFinalizeBtn" class="btn btn-danger btn-sm" disabled>Submit Signed Rejection</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Slide Panel -->
+<div id="startApplicationSlider" class="slide-panel" aria-hidden="true" style="border:3px solid #537895;">
+     <!-- Header -->
+    <div class="slide-header d-flex justify-content-between align-items-center">
+        <div style="width:100%;">
+            <h5 class="mb-0"><i class="fas fa-arrow-trend-up me-1"></i> Staff Onboarding </h5>
+            <!--<small class="text-muted">Case ID: <span id="caseId"></span></small>-->
+            
+           
+        </div>
+        <button class="btn btn-sm btn-outline-danger startApplication-close-slider">X</button>
+    </div>
+
+    <!-- Body -->
+    <div class="slide-body">
+        <div class="form-container">
+            <div id="saStep1">
+                <form id="saFormStep1" enctype="multipart/form-data">
+                    <input type="hidden" id="sa_basic_data">
+                    <!--
+                        <button type="submit" class="btn btn-lg btn-primary w-100">Submit</button>
+                
+                    </form><form>-->
+                    <input type="hidden" value="" name="staffId" id="staffId">
+                    <div class="section">
+                        <div class="section-title">👤 <span id="empNameDetails"></span></div>
+                        <input type="hidden" id="appointmentDate" name="appointmentDate" class="form-control">
+                        <div class="row mb-2">
+                            <div class="col-md-3">
+                                <label for="institutionCode" class="form-label marathi-label">संस्था कोड <span class="english-label">(Institution Code)</span> &rarr; <span class="txtval"><?= h($user["username"]) ?></span></label>                            
+                            </div>
+                            <div class="col-md-6">                            
+                                <label for="institutionName" class="form-label marathi-label">संस्थेचे नाव <span class="english-label">(Institution Name)</span> &rarr; <span class="txtval"></span></label> 
+                            </div>
+                             <div class="col-md-3">                            
+                                <?php if($sanstha["minority_sanstha"]==2 || $sanstha["minority_sanstha"] == 3): ?>
+                                    <span class="badge rounded-pill bg-success">Minority Sanstha (<?php echo h($sanstha["sanstha_minority_name"]); ?>)</span>
+                                 <?php else: ?>    
+                                    <span class="badge rounded-pill bg-warning text-dark">Non-Minority Sanstha</span>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-3">
+                            <label for="udiseNumber" class="form-label marathi-label">UDISE क्रमांक 
+                                <span class="english-label">(UDISE Code)</span> &rarr; <span class="txtval" id="udiseNumber">  
+                                    </span></label> 
+                        </div>
+                    
+                        <div class="col-md-9">
+                            <label for="schoolName" class="form-label marathi-label">शाळेचे नाव 
+                                <span class="english-label">(School Name)</span> &rarr; <span class="txtval" id="schoolName"></span></label> 
+                        </div>                  
+                        
+                       
+                    </div>
+                                        
+                   
+                    <!-- 1.4 अध्यापन विषय -->
+                    <div class="row mb-3">
+                         <div class="col-md-3">
+                            <label for="candidateName " class="form-label english-label required-field">Candidate Name </label>
+                            <input type="text"
+                                class="form-control"
+                                id="candidateName"
+                                name="candidateName"
+                                required>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="panNumber" class="form-label marathi-label required-field">पॅन क्रमांक <span class="english-label">(PAN)</span></label>
+                            <input type="text"
+                                class="form-control"
+                                id="panNumber"
+                                name="panNumber"
+                                pattern="^[A-Za-z]{5}[0-9]{4}[A-Za-z]$"
+                                maxlength="10"
+                                style="text-transform:uppercase"
+                                required>
+                        </div>
+                            <!-- 1.9 आधार क्रमांक -->
+                            <div class="col-md-3">
+                            <label for="aadharNumber" class="form-label marathi-label required-field">आधार क्रमांक <span class="english-label">(Aadhar)</span></label>
+                            <input type="text"
+                                class="form-control"
+                                id="aadharNumber"
+                                name="aadharNumber"
+                                pattern="^[0-9]{12}$"
+                                maxlength="12"
+                                inputmode="numeric"
+                                oninput="this.value=this.value.replace(/[^0-9]/g,'')"
+                                required>
+                            
+                        </div>
+                      
+                    </div>
+                    
+                          
+                    <!-- Additional Details Row -->
+                    <div class="row mb-3" id="casteCategoryBox">
+                        <div class="col-md-4">
+                            <label for="originalCategory" class="form-label marathi-label required-field">मूळ आरक्षण प्रवर्ग <span class="english-label">(Original)</span></label>
+                            <select class="form-select" id="originalCategory" name="originalCategory" required>                            
+                                <option value="">-- Select Original Category --</option>
+                                <?php 
+                                    foreach($casteCategories as $cc){
+                                        echo '<option value="'.$cc->code.'">'.$cc->category_name.'</option>';
+                                    }
+                                ?>
+                            </select> 
+                        </div>
+                        <div class="col-md-4">
+                            <label for="appointmentCategory" class="form-label marathi-label required-field">नियुक्तीचा आरक्षण प्रवर्ग <span class="english-label">(Appointment)</span></label>
+                            <select class="form-select" id="appointmentCategory" name="appointmentCategory" required>                   
+                                <option value="">-- Select Appointment Category --</option>
+                                <?php 
+                                    foreach($casteCategories as $cc){
+                                        echo '<option value="'.$cc->code.'">'.$cc->category_name.'</option>';
+                                    }
+                                ?>
+                            </select> 
+                        </div>
+                        <div class="col-md-4">
+                            <label for="appointmentCategory" class="form-label marathi-label required-field">समांतर आरक्षण प्रवर्ग <span class="english-label">(Horizontal)</span></label>
+                            <select class="form-select" id="horizontalCategory" name="horizontalCategory" required>                   
+                                <option value="">-- Select Horizontal Category --</option>
+                                <?php 
+                                    foreach($horizontalCategories as $hc){
+                                        echo '<option value="'.$hc->id.'">'.$hc->name.'</option>';
+                                    }
+                                ?>
+                            </select> 
+                        </div>
+                        
+                    </div>
+
+
+
+                    <div class="pdf-field">
+                        <h3 class="section-title">शैक्षणिक व व्यावसायिक अर्हता. <small style="font-size:10px;">संबंधित शिक्षकाची शैक्षणिक व व्यावसायिक अर्हता प्रमाणपत्रे • शासन निर्णय दिनांक 25.02.2019 नुसार.</small></h3>
+                        <div class="row">
+                            <div class="col-md-3 ">
+                                <label for="sscFile" class="form-label marathi-label required-field">
+                                     माध्यमिक <span class="english-label">(SSC)</span>
+                                </label>
+                                <input type="file" id="sscFile" name="sscFile" class="form-control file-upload-check" accept=".pdf" required>      
+                            </div>    
+                            <div class="col-md-3">
+                                <label for="hscFile" class="form-label marathi-label required-field">
+                                    उच्च माध्यमिक <span class="english-label">(HSC)</span>
+                                </label>
+                                <input type="file" id="hscFile" name="hscFile" class="form-control file-upload-check" accept=".pdf" required>      
+                            </div>                     
+                            <div class="col-md-3">
+                                <label for="graduateFile" class="form-label marathi-label">
+                                    पदवी <span class="english-label">(Graduate Degree)</span>
+                                </label>
+                                <input type="file" id="graduateFile" name="graduateFile" class="form-control" accept=".pdf">                      
+                            </div>
+                                <div class="col-md-3">
+                                <label for="postGraduateFile" class="form-label marathi-label">
+                                    पदव्युत्तर पदवी  <span class="english-label">(Post Graduate Degree)</span>
+                                </label>
+                                <input type="file" id="postGraduateFile" name="postGraduateFile" class="form-control" accept=".pdf">                      
+                            </div>     
+                                
+                        </div>
+                        <hr/>                        
+                    </div>   
+
+
+                    <div class="pdf-field">
+                        <h3 class="section-title">Advertisment Details.</h3>
+                        <div class="row mt-1">
+                            <div class="col-md-3 mt-2">
+                                <label for="advApprovelFile" class="form-label english-label required-field">
+                                     Advertisement Approval Letter 
+                                </label>                                
+                            </div>    
+                            <div class="col-md-3">
+                                <input type="file" id="advApprovelFile" name="advApprovelFile" class="form-control file-upload-check" accept=".pdf" required>      
+                            </div>      
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-md-3 mt-2">
+                                <label for="advertisementFile" class="form-label english-label required-field">
+                                   Advertisement
+                                </label>                                    
+                            </div>     
+                            <div class="col-md-3">
+                                <input type="file" id="advertisementFile" name="advertisementFile" class="form-control file-upload-check" accept=".pdf" required>      
+                            </div>   
+                        </div>
+                        <hr/>                        
+                    </div> 
+
+                    <div class="pdf-field">
+                        <h3 class="section-title">Selection Procedure</h3>
+                        <div class="row mt-2">
+                            <div class="col-md-2 mt-2">
+                                <label for="signatureFile" class="form-label english-label required-field">
+                                     Candidate Signature List 
+                                </label>                                
+                            </div>    
+                            <div class="col-md-3">
+                                <input type="file" id="signatureFile" name="signatureFile" class="form-control file-upload-check" accept=".pdf" required>      
+                            </div>      
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-md-2 mt-2">
+                                <label for="markingFile" class="form-label english-label required-field">
+                                  Candidate Marking
+                                </label>                                    
+                            </div>     
+                            <div class="col-md-3">
+                                <input type="file" id="markingFile" name="markingFile" class="form-control file-upload-check" accept=".pdf" required>      
+                            </div>   
+                        </div>
+                          <div class="row mt-3">
+                            <div class="col-md-2 mt-2">
+                                <label for="resolutionFile" class="form-label english-label required-field">
+                                  Sanstha Resolution
+                                </label>                                    
+                            </div>     
+                            <div class="col-md-3">
+                                <input type="file" id="resolutionFile" name="resolutionFile" class="form-control file-upload-check" accept=".pdf" required>      
+                            </div>   
+                        </div>
+
+                          <div class="row mt-3">
+                            <div class="col-md-2 mt-2">
+                                <label for="orderFile" class="form-label english-label required-field">
+                                  Order
+                                </label>                                    
+                            </div>     
+                            <div class="col-md-3">
+                                <input type="file" id="orderFile" name="orderFile" class="form-control file-upload-check" accept=".pdf" required>      
+                            </div>   
+                        </div>
+
+                        <hr/>                        
+                    </div> 
+
+                    <div class="pdf-field">
+                        <h3 class="section-title">Roster</h3>
+
+                        <div class="card">
+                        <label class="checkbox-label">
+                        <label class="checkbox-label">
+                            Is this school has single vacancy?  &rarr;
+                            </label>
+                            <label class="checkbox-label">
+                            <input type="radio" id="courtRosterYes"  name="courtRoster" value="1" onchange="hideDiv('courtRosterDiv')"> होय 
+                            </label><label class="checkbox-label">
+                            <input type="radio" id="courtRosterNo"  name="courtRoster" value="2" onchange="showDiv('courtRosterDiv')">  नाही
+                            </label>
+                        
+                        </label>
+                        
+                        <div id="courtRosterDiv" class="transfer-section">                        
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <input type="file" id="courtRosterFile" name="courtRosterFile" class="form-control file-upload-check" accept=".pdf">
+                                </div>
+                            </div>                    
+                        </div>
+                    </div>
+
+                    </div>    
+                    
+                    <div class="card">
+                        <label class="checkbox-label">
+                        <label class="checkbox-label">
+                            या प्रकरणासंदर्भात कोणताही न्यायालयीन आदेश निर्गमित झाला आहे का?  &rarr;
+                            </label>
+                            <label class="checkbox-label">
+                            <input type="radio" id="courtOrderYes"  name="courtOrder" value="1" onchange="showDiv('courtOrderDiv')"> होय 
+                            </label><label class="checkbox-label">
+                            <input type="radio" id="courtOrderNo"  name="courtOrder" value="2" onchange="hideDiv('courtOrderDiv')">  नाही
+                            </label>
+                        
+                        </label>
+                        
+                        <div id="courtOrderDiv" class="transfer-section">                        
+                            <div class="row mb-3">     
+                                <div class="col-md-3">                            
+                                        <input type="text" placeholder="याचिका क्रमांक" class="form-control" id="courtOrderPetitionNumber" name="courtOrderPetitionNumber">
+                               </div>  
+                                <div class="col-md-3">                                    
+                                        <input type="date" placeholder="दिनांक" class="form-control" id="courtOrderDate" name="courtOrderDate">
+                                </div>                
+                                <div class="col-md-6">
+                                    <input type="file" id="courtOrderFile" name="courtOrderFile" class="form-control file-upload-check" accept=".pdf">
+                                </div>
+                            </div>                    
+                        </div>
+                    </div>
+                        
+                    
+                    <!-- Submit Button -->
+                    <div class="form-section">
+                        <div class="form-check mb-4">
+                            <input class="form-check-input" type="checkbox" id="declaration" required>
+                            <label class="form-check-label marathi-label" for="declaration">&nbsp;&nbsp;
+                                मी खात्रीपूर्वक सांगतो/सांगते की, वरील सर्व माहिती खरी आहे व सर्व कागदपत्रे खरी आहेत. कोणतीही चुकीची माहिती दिल्यास, माझ्यावर योग्य कायदेशीर कारवाई केली जाऊ शकते याची मला पूर्ण कल्पना / जाणीव आहे.
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <!-- Submit Button -->
+                    <div class="d-flex justify-content-between mt-4">
+                        <!--<button type="button" class="btn btn-outline-secondary" id="saveDraftBtn">
+                            <i class="bi bi-save"></i> ड्राफ्ट सेव्ह करा
+                        </button>-->
+                        <button type="submit" class="btn btn-submit" id="saSubmitBtn_step6">
+                            <i class="bi bi-send-check"></i> अर्ज सबमिट करा
+                        </button>
+                                                
+
+                    </div>
+                </form>
+            </div>  
+                    
+              
+            
+        </div>
+
+    </div>
+
+    <!-- Footer -->
+    <div class="slide-footer text-end">
+         <div class="row" id="sa_footerBox">
+            <div id="sa_footerMsgBox"></div>
+            <div class="col-md-12" style="text-align: right;">
+                <button class="btn btn-danger btn-sm startApplication-close-slider">Close</button>
+            </div>
+            
+        </div>
+    </div>
+
+</div>
+
+
+<!-- Slide Panel -->
+<div id="startApplicationonBoardingSlider" class="slide-panel" aria-hidden="true" style="border:3px solid #537895;">
+     <!-- Header -->
+    <div class="slide-header d-flex justify-content-between align-items-center">
+        <div style="width:100%;">
+            <h5 class="mb-0"><i class="fas fa-arrow-trend-up me-1"></i> Staff Onboarding View </h5>
+            <!--<small class="text-muted">Case ID: <span id="caseId"></span></small>-->
+            
+           
+        </div>
+        <button class="btn btn-sm btn-outline-danger startApplicationonBoarding-close-slider">X</button>
+    </div>
+
+    <!-- Body -->
+    <div class="slide-body">
+        <div class="form-container">
+            <div id="saStep1">
+                <form id="saFormStep1" enctype="multipart/form-data">
+                    <input type="hidden" id="sa_basic_data">
+                   
+                    <input type="hidden" value="" name="staffId" id="staffId">
+                    <div class="section">
+                        <div class="section-title">👤 <span id="empNameDetails"></span></div>
+                        <input type="hidden" id="appointmentDate" name="appointmentDate" class="form-control">
+                        <div class="row mb-2">
+                            <div class="col-md-3">
+                                <label for="institutionCode" class="form-label marathi-label">संस्था कोड <span class="english-label">(Institution Code)</span> &rarr; <span class="txtval"><?= h($user["username"]) ?></span></label>                            
+                            </div>
+                            <div class="col-md-6">                            
+                                <label for="institutionName" class="form-label marathi-label">संस्थेचे नाव <span class="english-label">(Institution Name)</span> &rarr; <span class="txtval" id="institutionName_onboard"></span></label> 
+                            </div>
+                             <div class="col-md-3" id="minoritySanstha_onboard">                            
+                               
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-3">
+                            <label for="udiseNumber" class="form-label marathi-label">UDISE क्रमांक 
+                                <span class="english-label">(UDISE Code)</span> &rarr; <span class="txtval" id="udiseNumber_onboard">  
+                                    </span></label> 
+                        </div>
+                    
+                        <div class="col-md-9">
+                            <label for="schoolName" class="form-label marathi-label">शाळेचे नाव 
+                                <span class="english-label">(School Name)</span> &rarr; <span class="txtval" id="schoolName_onboard"></span></label> 
+                        </div>                  
+                        
+                       
+                    </div>
+                              
+                      <div class="row mb-2">
+                        <div class="col-md-3">
+                            <label for="udiseNumber" class="form-label marathi-label">स्थिती 
+                                  &rarr;  <span class="txtval" id="status_onboard">  
+                                    </span></label> 
+                        </div>
+                    
+                        <div class="col-md-9">
+                            <label for="schoolName" class="form-label marathi-label">शेरा
+                                &rarr; <span class="txtval" id="remarks_onboard"></span></label> 
+                        </div>                  
+                        
+                       
+                    </div>   
+
+                   
+                    <div id="htmldiv_onboard"></div> 
+
+
+                    <div class="card">
+                        <label class="checkbox-label">
+                        <label class="checkbox-label">
+                            या प्रकरणासंदर्भात कोणताही न्यायालयीन आदेश निर्गमित झाला आहे का?  &rarr;
+                            </label>
+                            <div id="orderCourtRoster_onboard">
+                                       
+                                    </div>
+                        
+                        </label>
+                        
+                        <div id="orderCourtRosterDiv_onbord" class="">                        
+                            <div class="row mb-3">     
+                                <div class="col-md-3">                            
+                                        <input type="text" placeholder="याचिका क्रमांक" class="form-control" id="courtOrderPetitionNumber_onboard" name="courtOrderPetitionNumber" readonly>
+                               </div>  
+                                <div class="col-md-3">                                    
+                                        <input type="date" placeholder="दिनांक" class="form-control" id="courtOrderDate_onboard" name="courtOrderDate" readonly>
+                                </div>                
+                                <div class="col-md-6">
+                                    <div id="courtOrder_onboard_file">
+                                        <a>कागदपत्र पहा</a>
+                                    </div>
+                                </div>
+                            </div>                    
+                        </div>
+                    </div>
+
+
+                </form>
+            </div>  
+                    
+              
+            
+        </div>
+
+    </div>
+
+    <!-- Footer -->
+    <div class="slide-footer text-end">
+         <div class="row" id="sa_footerBox">
+            <div id="sa_footerMsgBox"></div>
+            <div class="col-md-12" style="text-align: right;">
+                <button class="btn btn-danger btn-sm startApplicationonBoarding-close-slider">Close</button>
+            </div>
+            
+        </div>
+    </div>
+
+</div>
+
+
+<!-- Slide Panel for Correction Form -->
+<div id="correctionApplicationSlider" class="slide-panel" aria-hidden="true" style="border:3px solid #537895;">
+     <!-- Header -->
+    <div class="slide-header d-flex justify-content-between align-items-center">
+        <div style="width:100%;">
+            <h5 class="mb-0"><i class="fas fa-arrow-trend-up me-1"></i> Non-Grant → Aided Transfer <div class="text-muted" style="float:right;color:#fff !important;font-size:12px;margin-right:50px;">Staff Name: <span id="empName"></span></div></h5>
+            <!--<small class="text-muted">Case ID: <span id="caseId"></span></small>-->
+            
+           
+        </div>
+        <button class="btn btn-sm btn-outline-danger correctionApplication-close-slider">X</button>
+    </div>
+
+    <!-- Body -->
+    <div class="slide-body">
+        <div class="form-container">
+           
+            
+               
+               
+                    <!--
+                        <button type="submit" class="btn btn-lg btn-primary w-100">Submit</button>
+                
+                    </form><form>-->
+                    <input type="hidden" value="" name="staffId" id="staffId">
+                    <div class="section">
+                        <div class="section-title">👤 <span id="empNameDetails"></span></div>
+                        <input type="hidden" id="appointmentDate" name="appointmentDate" class="form-control">
+                        <div class="row mb-2">
+                            <div class="col-md-3">
+                                <label for="institutionCode" class="form-label marathi-label">संस्था कोड <span class="english-label">(Institution Code)</span> &rarr; <span class="txtval"><?= h($user["username"]) ?></span></label>                            
+                            </div>
+                            <div class="col-md-9">                            
+                                <label for="institutionName" class="form-label marathi-label">संस्थेचे नाव <span class="english-label">(Institution Name)</span> &rarr; <span class="txtval"><?= h($sanstha["name"] ?? '') ?></span></label> 
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-3">
+                            <label for="udiseNumber" class="form-label marathi-label">UDISE क्रमांक 
+                                <span class="english-label">(UDISE Code)</span> &rarr; <span class="txtval" id="udiseNumber">  
+                                    </span></label> 
+                        </div>
+                    
+                        <div class="col-md-9">
+                            <label for="schoolName" class="form-label marathi-label">शाळेचे नाव 
+                                <span class="english-label">(School Name)</span> &rarr; <span class="txtval" id="schoolName"></span></label> 
+                        </div>                  
+                        
+                        <!-- 1.1 शाळेचे ठिकाण -->
+                        <div class="col-md-12">
+                            <label for="schoolLocation" class="form-label marathi-label">शाळेचे ठिकाण <span class="english-label">(School Location)</span> &rarr; <span class="txtval" id="schoolLocation"></span></label> 
+                        </div>
+                    </div>
+
+
+
+                    <form id="correctionForm" enctype="multipart/form-data"></form>
+                    
+                
+                    
+                   
+                    
+                        
+                    
+                    
+              
+          
+                    
+              
+           
+        </div>
+
+    </div>
+
+    <!-- Footer -->
+    <div class="slide-footer text-end">
+         <div class="row" id="sa_footerBox">
+            <div id="sa_footerMsgBox"></div>
+            <div class="col-md-12" style="text-align: right;">
+                <button class="btn btn-danger btn-sm correctionApplication-close-slider">Close</button>
+            </div>
+            
+        </div>
+    </div>
+
+</div>
+
+
+<!-- Return Application Slide Panel -->
+<div id="returnApplicationSlider" class="slide-panel" aria-hidden="true" style="border:3px solid #537895;">
+    <!-- Header -->
+    <div class="slide-header d-flex justify-content-between align-items-center">
+        <div style="width:100%;">
+            <h5 class="mb-0"><i class="fas fa-arrow-trend-up me-1"></i> कर्मचारी निवड </h5>
+            <!--<small class="text-muted">Case ID: <span id="caseId"></span></small>-->
+        </div>
+        <button style="font-size:27px;" class="btn btn-sm btn-outline-danger returnApplication-close-slider">X</button>
+    </div>
+
+    <!-- Body -->
+    <div class="slide-body">
+        <div class="form-container">
+            <div id="returnHtmlForm"></div>
+
+        </div>
+
+    </div>
+
+    <!-- Footer -->
+    <div class="slide-footer text-end">
+                <button class="btn btn-secondary btn-sm returnApplication-close-slider">Close</button>
+            
+    </div>
+
+</div>
+
+
+<div id="approvedApplicationSlider"
+     class="slide-panel"
+     aria-hidden="true"
+     style="border:3px solid #537895;">
+
+    <!-- Header -->
+    <div class="slide-header d-flex justify-content-between align-items-center">
+        <div style="width:100%;">
+            <h5 class="mb-0">
+                <i class="fas fa-arrow-trend-up me-1"></i>
+                कर्मचारी निवड
+            </h5>
+        </div>
+
+        <button style="font-size:27px;"
+                class="btn btn-sm btn-outline-danger approvedApplication-close-slider">
+            X
+        </button>
+    </div>
+
+    <!-- Body -->
+    <div class="slide-body">
+
+        <div class="container-fluid">
+
+            <!-- Application Information -->
+            <div class="card shadow-sm border-0 mb-1">
+              
+
+                <div class="card-body">
+
+                    <div class="row g-1">
+                        <div class="col-md-9">
+                            <div class="form-control bg-light">
+                                संस्थेचे नाव &rarr; <b id="app_sanstha_name"></b>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-control bg-light">
+                                अर्ज क्रमांक:- <b>MAHAEDU/STAff/TRF/<span id='app_year'></span>/<span id='app_id'></span></b>
+                            </div>
+                        </div>
+                        <div class="col-md-9">
+                            <div class="form-control bg-light">
+                                कर्मचाऱ्यांचे नाव &rarr; <b id="app_staff_name"></b>
+                            </div>
+                        </div>      
+
+                        <div class="col-md-3">
+                            <div class="form-control bg-light">
+                                अर्ज दिनांक:- <b id="app_date"></b>
+                            </div>
+                        </div>
+                        
+                        
+
+                    </div>
+
+
+                    
+
+                </div>
+            </div>
+
+            <!-- Approval Section -->
+            <div class="card shadow-sm border-0">
+
+                <div class="card-header bg-success text-white">
+                    <h6 class="mb-0">
+                        <i class="fas fa-check-circle me-2"></i>
+                        पुढे करा
+                    </h6>
+                </div>
+
+                <div class="card-body">
+
+                    <?= $this->Form->create(null, [
+                        'id' => 'approvalForm',
+                        'type' => 'file',
+                        'url' => ['controller' => 'BoardChairman', 'action' => 'staffOnboardApprove']
+                    ]) ?>
+                        <input type="hidden" name="app_id" id="approve_form_id">
+                        <input type="hidden" name="action" value="approve">
+                        <input type="hidden" name="remark" id="approve_form_remark">                
+                       
+                        <!-- Remark -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">
+                                शेरा / Remark
+                            </label>
+
+                            <textarea class="form-control"
+                                      name="app_remark"
+                                      id="app_remark"
+                                      rows="5"
+                                      placeholder="कृपया शेरा नमूद करा..."
+                                      required></textarea>
+                        </div>
+
+                      <div id="workOrderFile"></div>
+
+                        <div id="actionButtons" class="d-flex justify-content-between align-items-center w-100">
+                            
+                            <button type="button" class="btn btn-success btn-sm" id="workOrderBtn">
+                                <i class="fas fa-check-circle me-1"></i>
+                                वर्क ऑर्डर तयार करा
+                            </button>
+
+                            <a id="downloadDiv" href='#' type="application/pdf" download="SignedPdf.pdf"></a>
+
+                            <button type="submit" class="btn btn-success btn-sm mt-2 d-none" id="approvedBtn" style="margin-left: auto !important;">
+                                <i class="fas fa-check-circle me-1"></i>
+                                पुढे करा
+                            </button>
+<br>
+<br>
+                            <input type="hidden"  id="pdfData" >
+                             <input type="hidden" id="signedPdfData" >
+				            <input type="hidden" id="lblEncryptedKey" >
+				       
+                        </div>
+                    <?php
+                        $this->Form->unlockField('action');
+                        $this->Form->unlockField('app_doc');
+                        $this->Form->unlockField('app_id');
+                        $this->Form->unlockField('app_remark');
+                        $this->Form->unlockField('remark');
+                    ?>
+                    <?= $this->Form->end() ?>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Footer -->
+    <div class="slide-footer text-end">
+
+        <button class="btn btn-secondary btn-sm approvedApplication-close-slider">
+            Close
+        </button>
+
+    </div>
+
+</div>
+
+
+
+<!-- Slide Panel -->
+<div id="rejectApplicationSlider"
+     class="slide-panel"
+     aria-hidden="true"
+     style="border:3px solid #537895;">
+
+    <!-- Header -->
+    <div class="slide-header d-flex justify-content-between align-items-center">
+        <div style="width:100%;">
+            <h5 class="mb-0">
+                <i class="fas fa-arrow-trend-up me-1"></i>
+                कर्मचारी निवड 
+            </h5>
+        </div>
+
+        <button style="font-size:27px;"
+                class="btn btn-sm btn-outline-danger rejectApplication-close-slider">
+            X
+        </button>
+    </div>
+
+    <!-- Body -->
+
+     <div class="slide-body">
+        <div class="form-container">
+            <div id="rejectHtmlForm"></div>
+
+        </div>
+
+    </div>
+
+   
+    <!-- Footer -->
+    <div class="slide-footer text-end">
+
+        <button class="btn btn-secondary btn-sm rejectApplication-close-slider">
+            Close
+        </button>      
+
+    </div>
+
+</div>
+
+
+<?php echo $this->element('recruit/district/comment') ?>
+
+<script>
+$(document).ready(function(){
+
+    $(document).on('change', '.file-upload-check', function () {
+        const file = this.files[0];
+        const maxSize = 2 * 1024 * 1024; // 2 MB
+
+        if (!file) return;
+
+        // Validate file size
+        if (file.size > maxSize) {
+            alert('File size must be less than 2 MB');
+            $(this).val('');
+            return;
+        }
+
+        // Validate file type (PDF)
+        if (file.type !== 'application/pdf') {
+            alert('Only PDF files are allowed');
+            $(this).val('');
+            return;
+        }
+    });
+
+
+    $('#forward_to').change(function(){
+
+        let forward_to = $(this).val();
+
+        // Hide all first
+        $('#districtDiv').addClass('hidden');
+        $('#mahanagarpalikaDiv').addClass('hidden');
+        $('#divisionDiv').addClass('hidden');
+
+        // Show based on selection
+        if(forward_to == 1 || forward_to == 2){
+            $('#districtDiv').removeClass('hidden');
+        }
+
+        else if(forward_to == 3){
+            $('#mahanagarpalikaDiv').removeClass('hidden');
+        }
+        else if(forward_to == 4){
+            $('#divisionDiv').removeClass('hidden');
+        }
+
+    });
+
+    $('#sa_forward_to').change(function(){
+
+        let forward_to = $(this).val();
+
+        // Hide all first
+        $('#sa_districtDiv').addClass('hidden');
+        $('#sa_mahanagarpalikaDiv').addClass('hidden');
+        $('#sa_divisionDiv').addClass('hidden');
+
+        // Show based on selection
+        if(forward_to == 1 || forward_to == 2){
+            $('#sa_districtDiv').removeClass('hidden');
+        }
+
+        else if(forward_to == 3){
+            $('#sa_mahanagarpalikaDiv').removeClass('hidden');
+        }
+        else if(forward_to == 4){
+            $('#sa_divisionDiv').removeClass('hidden');
+        }
+
+    });
+
+});
+</script>
+
+<script>
+    function toggleDiv(chkBox,div) {
+        const checkbox = document.getElementById(chkBox);
+        const areaDiv = document.getElementById(div);
+
+        areaDiv.style.display = checkbox.checked ? "block" : "none";
+        if(chkBox == 'minorityCheck'){
+            if(checkbox.checked){
+                $("#casteCategoryBox").hide();
+                $("#bindunamavaliMavakaDawareBox").hide();
+                $('#originalCategory').prop('disabled', true);
+                $('#appointmentCategory').prop('disabled', true);
+                $('#horizontalCategory').prop('disabled', true);
+                $('#mavakCheckListDate').prop('disabled', true);
+                $('#mavakCheckListFile').prop('disabled', true);                
+                $('#minorityCertOutwardNumber').prop('disabled', false);
+                $('#minorityCertOutwardDate').prop('disabled', false);
+                $('#minorityCertOutwardFile').prop('disabled', false);
+            }else{             
+                $("#casteCategoryBox").show();
+                $("#bindunamavaliMavakaDawareBox").show();
+                $('#originalCategory').prop('disabled', false);
+                $('#appointmentCategory').prop('disabled', false);
+                $('#horizontalCategory').prop('disabled', false);
+                $('#mavakCheckListDate').prop('disabled', false);
+                $('#mavakCheckListFile').prop('disabled', false);
+                $('#minorityCertOutwardNumber').prop('disabled', true);
+                $('#minorityCertOutwardDate').prop('disabled', true);
+                $('#minorityCertOutwardFile').prop('disabled', true);
+            }
+        }
+        if(chkBox == 'transferCheck'){
+            if(checkbox.checked){
+                $('#transferSchool').prop('disabled', false);
+            }else{    
+                $('#transferSchool').prop('disabled', true);
+            }
+        }
+        if(chkBox == 'tetCheck'){
+            if(checkbox.checked){
+                $('#tetnumber').prop('disabled', false);
+                $('#tetExam').prop('disabled', false);
+                $('#tetPaper').prop('disabled', false);
+                $('#tetCertificateFile').prop('disabled', false);
+            }else{    
+                $('#tetnumber').prop('disabled', true);
+                $('#tetExam').prop('disabled', true);
+                $('#tetPaper').prop('disabled', true);
+                $('#tetCertificateFile').prop('disabled', true);
+            }
+        }
+        if(chkBox == 'ctetCheck'){
+            if(checkbox.checked){
+                $('#ctetnumber').prop('disabled', false);
+                $('#ctetExam').prop('disabled', false);
+                $('#ctetPaper').prop('disabled', false);
+                $('#ctetCertificateFile').prop('disabled', false);
+            }else{    
+                $('#ctetnumber').prop('disabled', true);
+                $('#ctetExam').prop('disabled', true);
+                $('#ctetPaper').prop('disabled', true);
+                $('#ctetCertificateFile').prop('disabled', true);
+            }
+        }
+    }
+    function showDiv(div) {
+        const areaDiv = document.getElementById(div);
+        areaDiv.style.display =  "block";
+    }
+    function hideDiv(div) {
+        const areaDiv = document.getElementById(div);
+        areaDiv.style.display =  "none";
+    }        
+</script>
+
+<script>  
+    $(document).ready(function() {  
+
+       
+
+        $('#schoolCommitteeOutwardDate, #originSansthaAppointmentDate').on('blur', function () {
+
+            var outwardDate = $('#schoolCommitteeOutwardDate').val();
+            var appointmentDate = $('#originSansthaAppointmentDate').val();
+
+            if (outwardDate && appointmentDate) {
+
+                var outward = new Date(outwardDate);
+                var appointment = new Date(appointmentDate);
+
+                // Check: Appointment date BEFORE outward date
+                if (appointment < outward) {
+                    alert('नियुक्ती ठरावाच्या दिनांकापूर्वीची असल्यामुळे हा अर्ज पुढे प्रक्रिया करता येणार नाही.');
+                }
+
+            }
+        });
+
+       
+
+       
+
+            // Open slider
+        currentMode =2;
+        currentAppId =0;
+        // ------------------------------
+        // Slider 1: .im-open-transfer (targets #imSlider)
+        // ------------------------------
+        $(document).on('click', '.im-open-transfer', function () {
+            const caseId = $(this).data('id');
+            const staffJson = $(this).attr('data-staffObject');           
+            const staffObject = JSON.parse(staffJson);
+            currentMode = $(this).attr('data-mode');
+            currentAppId = staffObject.id;
+            // Trigger custom event for this specific slider
+            $(document).trigger('im:openSlider', [caseId, staffObject]);
+        });
+
+        // Close button for Slider 1
+        $(document).on('click', '.im-close-slider', function () {
+            $(document).trigger('im:closeSlider');
+        });
+
+        // Custom event handlers for Slider 1
+        $(document).on('im:openSlider', function (e, caseId, staffObject) {
+            loadStaffDetails(caseId, staffObject);   // Generic function (assumed to work for both sliders)
+            $('#imSlider').addClass('open').attr('aria-hidden', 'false');
+        });
+
+        $(document).on('im:closeSlider', function () {
+            $('#imSlider').removeClass('open').attr('aria-hidden', 'true');
+        });
+
+        function loadStaffDetails(caseId,staffObject) {          
+          
+            console.log("vvvv->"+staffObject.id);
+            console.log("ddddddddd->"+staffObject.school_permission_order_date);
+            $('#im_footerBox').show();
+            $('#im_footerMsgBox').hide();
+            $('#imSubmitBtn').show();
+            
+            $('#imForm')[0].reset();
+            $('#imForm input[type="file"]').val('');
+           
+            
+            $('#im_empName').val(staffObject.teacher_name); /// in the header
+        }
+        $('#imForm').submit(function(e) {                   
+            e.preventDefault();                   
+            var formData = new FormData(this);
+            forward_to = $('#forward_to').val();
+      
+            if(forward_to == 1 || forward_to == 2){
+                forward_to_target = $('#forward_to_district').val();
+                if(forward_to_target<=0){
+                    alert("Please Select District");
+                    return false;
+                }
+            }
+            else if(forward_to == 3){
+                forward_to_target = $('#forward_to_palika').val();
+                if(forward_to_target<=0){
+                    alert("Please Select Mahanagar Palika");
+                    return false;
+                }
+            }
+            else if(forward_to == 4){
+                forward_to_target = $('#forward_to_region').val();
+                if(forward_to_target<=0){
+                    alert("Please Select Division");
+                    return false;
+                }
+            }
+
+
+
+            formData.append('app_id', currentAppId);
+            formData.append('forward_to_target', forward_to_target);
+            $('#imSubmitBtn').hide();
+            $.ajax({
+                url: '',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                headers: {
+                    'X-CSRF-Token': $('meta[name="csrfToken"]').attr('content') 
+                },
+                success: function(response) {
+                    
+                        $('#actionBtns_'+currentAppId).html('<b style="color:green;">Pending EO Verification</b>');
+                        //$('#im_footerBox').hide();
+                        $('#im_footerMsgBox').show();
+                        
+                        $('#im_footerMsgBox').html('Personal Recognition Document(वैयक्तिक मान्यता) has been sent to the EO desk for verification.');    
+                                       
+                   
+                    //$('#actionBtns_'+currentAppId).html('');
+                },
+                error: function(xhr, status, error) {
+                    // Handle error
+
+                }
+            });
+           
+        });
+
+        
+
+        // ------------------------------
+        // Slider 3: .startApplication-open-transfer (targets #startApplicationSlider)
+        // ------------------------------
+       
+
+        /*$(document).on('click', '#saSubmitBtn_step1', function () {
+            alert(123);
+        });
+        */
+        activateStep = function (sid){
+            $('#saStep1').hide();
+            $('#saStep2').hide();
+            $('#saStep3').hide();
+            $('#saStep4').hide();
+            $('#saStep5').hide();
+            $('#saStep6').hide();
+            $('#saStep'+sid).show();
+            $('#saFormStep'+sid)[0].reset();
+            $('#saFormStep'+sid+' input[type="file"]').val('');
+        }
+        ng2g_id =0;        
+
+        $(document).on('click', '.startApplication-open-onboarding', function () {           
+            const caseId = $(this).data('id');
+            let staffJson = $(this).attr('data-staffObject');   // raw JSON string
+            let staffObject   = JSON.parse(staffJson)
+            currentMode = $(this).attr('data-mode'); 
+            currentAppId = staffObject.id; 
+            //console.log(staffObject);
+            currentStep = 1;
+                
+            ng2g_id = staffObject.ng2g_id;
+
+            ng2g_id = Number(ng2g_id);
+
+            // handle NaN / null / empty
+            if (!Number.isFinite(ng2g_id)) {
+                ng2g_id = 0;
+            }
+            
+                           
+            activateStep(currentStep);
+                
+            $('#sa_footerBox').show();
+            $('#sa_footerMsgBox').hide();    
+
+           $(document).trigger('startApplicationonBoarding:openSlider', [caseId, staffObject]);
+        });
+
+          // Close slider
+        $(document).on('click', '.startApplicationonBoarding-close-slider', function () {
+            $(document).trigger('startApplicationonBoarding:closeSlider');
+        });
+
+        // Custom event handlers for Slider 2
+        $(document).on('startApplicationonBoarding:openSlider', function (e, caseId, staffObject) {
+            loadonBoardingDetails(caseId, staffObject);
+            $('#startApplicationonBoardingSlider').addClass('open').attr('aria-hidden', 'false');
+        });
+
+        $(document).on('startApplicationonBoarding:closeSlider', function () {
+            $('#startApplicationonBoardingSlider').removeClass('open').attr('aria-hidden', 'true');
+        });
+        
+function loadonBoardingDetails(caseId, staffObject) {
+    if (!staffObject || !staffObject.id) {
+        console.warn('Missing staffObject.id for onboarding details');
+        return;
+    }
+
+    const staffId = Number(staffObject.id);
+
+    $('#staffId').val(staffId);
+    $('#udiseNumber_onboard').text(staffObject.udise_code || '');
+    $('#schoolName_onboard').text(staffObject.school_name || '');
+    $('#appointmentDate').val(staffObject.date_of_joining || '');
+    $('#empNameDetails').html(staffObject.post_name || '');
+
+
+
+    let basicData = {
+        institution_code: staffObject.sanstha_code,
+        institution_name: staffObject.sanstha_name,
+        udise_code: staffObject.udise_code,
+        school_name: staffObject.school_name,
+        staff_name: staffObject.teacher_name,
+        staff_type: staffObject.post_type,
+        post_name: staffObject.post_name,
+        aid_name: staffObject.aid_name,
+        email: staffObject.email,
+        mobile: staffObject.mobile,
+        pay_scale: staffObject.pay_scale,
+        subject_taught: staffObject.subject_taught,
+        medium: staffObject.medium
+    };
+    $("#sa_basic_data").val(JSON.stringify(basicData));
+
+    $.ajax({
+        url: '<?= $this->Url->build(["controller" => "GeneralUtilities", "action" => "getStaffOnboardingDetails"]); ?>' + '?staff_id=' + encodeURIComponent(staffId),
+        type: 'GET',
+        dataType: 'json',
+        headers: {
+            'X-CSRF-Token': $('meta[name="csrfToken"]').attr('content')
+        },
+        success: function(response) {
+            if (!response.success || !response.data) {
+                return;
+            }
+
+            const d = response.data;
+            document.getElementById('htmldiv_onboard').innerHTML = response.htmlbody;
+            $('#candidateName_onboard').val(d.candidate_name || '');
+            $('#appointmentDate_onboard').val(d.appointment_date || '');
+            $('#panNumber_onboard').val(d.pan_number || '');
+            $('#aadharNumber_onboard').val(d.aadhar_number || '');
+            $('#courtOrderPetitionNumber_onboard').val(d.court_order_petition_number || '');
+            $('#courtOrderDate_onboard').val(d.court_order_date || '');
+            $('#institutionName_onboard').text(d.ng2g.institution_name || '');
+            document.getElementById("minoritySanstha_onboard").innerHTML = d.minority_status;
+            $('#status_onboard').text(d.status || '');
+            $('#remarks_onboard').text(d.court_order_petition_number || 'नाही');
+            const rosterValue = d.roster;
+            if (rosterValue !== undefined && rosterValue !== null && rosterValue !== '') {
+                const isRosterYes = rosterValue === true || rosterValue === 'true' || rosterValue === 1 || rosterValue === '1';
+                $('#courtRoster_onboard').text(isRosterYes ? 'Yes' : 'No');
+                if(rosterValue == 0 || rosterValue == '0' || rosterValue === false || rosterValue === 'false'){
+                    $('#courtRosterDiv_onbord').show();
+                } else {
+                    $('#courtRosterDiv_onbord').hide();
+                }
+            }
+
+            const orderCourtRosterValue = d.court_order;
+            if (orderCourtRosterValue !== undefined && orderCourtRosterValue !== null && orderCourtRosterValue !== '') {
+                const isOrderRosterYes = orderCourtRosterValue === true || orderCourtRosterValue === 'true' || orderCourtRosterValue === 1 || orderCourtRosterValue === '1';
+                $('#orderCourtRoster_onboard').text(isOrderRosterYes ? 'Yes' : 'No');
+                 if(orderCourtRosterValue == 1 || orderCourtRosterValue == '1' || orderCourtRosterValue === true || orderCourtRosterValue === 'true'){
+                    $('#orderCourtRosterDiv_onbord').show();
+                } else {
+                    $('#orderCourtRosterDiv_onbord').hide();
+                }
+                
+            }
+
+
+            const originalCategoryValue = d.original_category ?? '';
+            if (originalCategoryValue !== '') {
+                $('#originalCategory_onboard').val(originalCategoryValue);
+            }
+
+            const appointmentCategoryValue = d.appointment_category ?? '';
+            if (appointmentCategoryValue !== '') {
+                $('#appointmentCategory_onboard').val(appointmentCategoryValue);
+            }
+
+            const horizontalCategoryValue = d.horizontal_category ?? '';
+            if (horizontalCategoryValue !== '') {
+                $('#horizontalCategory_onboard').val(horizontalCategoryValue);
+            }
+
+
+            const documents = Array.isArray(d.documents) ? d.documents : [];
+
+            const getDocumentUrl = function (docType) {
+                const doc = documents.find((item) =>
+                    String(item.document_type || '').toLowerCase() === String(docType).toLowerCase()
+                );
+
+                if (!doc || !doc.file_path) {
+                    return '';
+                }
+
+                return doc.file_path.startsWith('http')
+                    ? doc.file_path
+                    : '<?= $this->Url->build("/", ["fullBase" => true]) ?>' + doc.file_path.replace(/^\/+/, '');
+            };
+
+            const renderDocumentLink = function (docType, targetId) {
+            const fileUrl = getDocumentUrl(docType);
+
+            if (fileUrl) {
+                $(targetId).html(`
+                    <a href="${escapeHtml(fileUrl)}" target="_blank" rel="noopener">
+                        कागदपत्र पहा
+                    </a>
+                `);
+            } else {
+                $(targetId).html('<span class="text-muted">Document not available</span>');
+            }
+        };
+
+
+            renderDocumentLink('ssc', '#ssc_onboard_file');
+            renderDocumentLink('hsc', '#hsc_onboard_file');
+            renderDocumentLink('graduate', '#graduate_onboard_file');
+            renderDocumentLink('post_graduate', '#post_graduate_onboard_file'); 
+            renderDocumentLink('adv_approval', '#adv_approval_onboard_file'); 
+            renderDocumentLink('advertisement', '#advertisement_onboard_file');                        
+            renderDocumentLink('signature', '#signature_onboard_file');
+            renderDocumentLink('marking', '#marking_onboard_file');
+            renderDocumentLink('resolution', '#resolution_onboard_file');
+            renderDocumentLink('order', '#order_onboard_file');
+            renderDocumentLink('court_roster', '#courtRoster_onboard_file');
+            renderDocumentLink('court_order', '#courtOrder_onboard_file');
+
+        }
+    });
+}
+
+      function escapeHtml(value)
+                {
+                    return $('<div>')
+                        .text(value ?? '')
+                        .html();
+                }
+
+        $(document).on('click', '.startApplication-open-transfer', function () {           
+            const caseId = $(this).data('id');
+            let staffJson = $(this).attr('data-staffObject');   // raw JSON string
+            let staffObject   = JSON.parse(staffJson)
+            currentMode = $(this).attr('data-mode'); 
+            currentAppId = staffObject.id; 
+            //console.log(staffObject);
+            currentStep = $(this).attr('app-step'); 
+            if (currentStep < 2 || currentStep > 6) {
+                currentStep = 1;
+                
+            }
+            ng2g_id = staffObject.ng2g_id;
+
+            ng2g_id = Number(ng2g_id);
+
+            // handle NaN / null / empty
+            if (!Number.isFinite(ng2g_id)) {
+                ng2g_id = 0;
+            }
+            
+            //$('#tetdaatadiv').hide(); 
+            //$('#ctetdaatadiv').hide(); 
+            ///toggleDiv('transferCheck','transferDiv');
+           //toggleDiv('minorityCheck','minorityDiv');
+            //toggleDiv('tetCheck','tetDiv');
+            //toggleDiv('ctetCheck','ctetDiv');                
+            activateStep(currentStep);
+            /*if(staffObject.is_minority_school == 1){
+                $("#bindunamavaliMavakaDawareBox").hide();
+                $('#mavakCheckListDate').prop('disabled', true);
+                $('#mavakCheckListFile').prop('disabled', true);   
+            }*/
+                        
+            $('#sa_footerBox').show();
+            $('#sa_footerMsgBox').hide();    
+
+           $(document).trigger('startApplication:openSlider', [caseId, staffObject]);
+        });
+
+        // Close slider
+        $(document).on('click', '.startApplication-close-slider', function () {
+            $(document).trigger('startApplication:closeSlider');
+        });
+
+        // Custom event handlers for Slider 2
+        $(document).on('startApplication:openSlider', function (e, caseId, staffObject) {
+            loadSaDetails(caseId, staffObject);
+            $('#startApplicationSlider').addClass('open').attr('aria-hidden', 'false');
+        });
+
+        $(document).on('startApplication:closeSlider', function () {
+            $('#startApplicationSlider').removeClass('open').attr('aria-hidden', 'true');
+        });
+
+        function loadSaDetails(caseId,staffObject) {
+           // $('#saForm')[0].reset();
+           // $('#saForm input[type="file"]').val('');
+            //console.log(staffObject);
+           
+            $('#staffId').val(staffObject.id);
+            //$('#caseId').text(caseId);
+            
+                
+            //$('#empName').text(staffObject.teacher_name);
+            $('#udiseNumber').text(staffObject.udise_code);
+            $('#schoolName').text(staffObject.school_name);
+            $('#appointmentDate').val(staffObject.date_of_joining);
+
+          
+             empNameDetails = staffObject.post_name ;
+            $('#empNameDetails').html(empNameDetails);
+          
+
+            let basicData = {
+                                "institution_code" : staffObject.sanstha_code,
+                                "institution_name" : staffObject.sanstha_name,
+                                "udise_code" : staffObject.udise_code,
+                                "school_name" : staffObject.school_name,
+                                "staff_name" : staffObject.teacher_name,
+                                "staff_type" : staffObject.post_type,
+                                "post_name" : staffObject.post_name,
+                                "aid_name" : staffObject.aid_name,
+                                "email" : staffObject.email,
+                                "mobile" : staffObject.mobile,
+                                "pay_scale" : staffObject.pay_scale,
+                                "subject_taught" : staffObject.subject_taught,
+                                "medium" : staffObject.medium
+                            };
+            $("#sa_basic_data").val(JSON.stringify(basicData));                       
+           // $('#designation').text(designation);
+            //$('#school').text(staffObject?.caste_category?.category_name);
+            //$('#remarks').text('Case under scrutiny by Education Officer.');
+        }
+
+        $('#saFormStep1').submit(function(e) {
+            e.preventDefault();  
+            var formData = new FormData(this);
+            console.log(Object.fromEntries(formData));
+
+            $.ajax({
+                url: '<?= $this->Url->build(['prefix' => 'Recruit',"controller" => "Sanstha", "action" => "saveStaffOnboarding"]); ?>',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                headers: {
+                    'X-CSRF-Token': $('meta[name="csrfToken"]').attr('content') 
+                },
+                success: function(response) {
+                  
+                    if(response.success){
+                        location.reload();
+                    }
+                    // Handle success
+                },
+                error: function(xhr, status, error) {
+                    // Handle error
+
+                }
+            });
+
+
+            
+        });
+        $('#saFormStep2').submit(function(e) {
+            e.preventDefault();  
+            var formData = new FormData(this);
+
+            formData.append('ng2g_id', ng2g_id); 
+            
+            $.ajax({
+                url: '',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                headers: {
+                    'X-CSRF-Token': $('meta[name="csrfToken"]').attr('content') 
+                },
+                success: function(response) {
+                    console.log(response);
+                    //alert(response.message);
+                    if(response.success){
+                        ng2g_id = response.id;
+                        activateStep(3);
+                    }
+                    // Handle success
+                },
+                error: function(xhr, status, error) {
+                    // Handle error
+
+                }
+            });
+        });
+        $('#saFormStep3').submit(function(e) {
+            e.preventDefault();  
+            var formData = new FormData(this);
+
+            formData.append('ng2g_id', ng2g_id); 
+            
+            $.ajax({
+                url: '',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                headers: {
+                    'X-CSRF-Token': $('meta[name="csrfToken"]').attr('content') 
+                },
+                success: function(response) {
+                    console.log(response);
+                    //alert(response.message);
+                    if(response.success){
+                        ng2g_id = response.id;
+                        if(response.is_minority_school==1){
+                            $("#bindunamavaliMavakaDawareBox").hide();
+                            $('#mavakCheckListDate').prop('disabled', true);
+                            $('#mavakCheckListFile').prop('disabled', true); 
+                        }                        
+                        activateStep(4);
+                    }
+                    // Handle success
+                },
+                error: function(xhr, status, error) {
+                    // Handle error
+
+                }
+            });
+        });
+        $('#saFormStep4').submit(function(e) {
+            e.preventDefault();  
+            var formData = new FormData(this);
+
+            formData.append('ng2g_id', ng2g_id); 
+            
+            $.ajax({
+                url: '',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                headers: {
+                    'X-CSRF-Token': $('meta[name="csrfToken"]').attr('content') 
+                },
+                success: function(response) {
+                    console.log(response);
+                    //alert(response.message);
+                    if(response.success){
+                        ng2g_id = response.id;
+                        activateStep(5);
+                    }
+                    // Handle success
+                },
+                error: function(xhr, status, error) {
+                    // Handle error
+
+                }
+            });
+        });
+        $('#saFormStep5').submit(function(e) {
+            e.preventDefault();  
+            if (!$("input[name='courtOrder']:checked").length) {
+                alert("सदर प्रकरणासंदर्भात कोणताही न्यायालयीन आदेश निर्गमित झाला आहे का? कृपया “होय” किंवा “नाही” पर्याय निवडा."); // Marathi message
+                return false;
+            }
+            var formData = new FormData(this);
+
+            formData.append('ng2g_id', ng2g_id); 
+            
+            $.ajax({
+                url: '',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                headers: {
+                    'X-CSRF-Token': $('meta[name="csrfToken"]').attr('content') 
+                },
+                success: function(response) {
+                    console.log(response);
+                    //alert(response.message);
+                    if(response.success){
+                        ng2g_id = response.id;
+                        activateStep(6);
+                    }
+                    // Handle success
+                },
+                error: function(xhr, status, error) {
+                    // Handle error
+
+                }
+            });
+        });
+
+        $('#saFormStep6').submit(function(e) {
+            e.preventDefault();  
+            
+            var formData = new FormData(this);
+            sa_forward_to = $('#sa_forward_to').val();
+      
+            if(sa_forward_to == 1 || sa_forward_to == 2){
+                sa_forward_to_target = $('#sa_forward_to_district').val();
+                if(sa_forward_to_target<=0){
+                    alert("Please Select District");
+                    return false;
+                }
+            }
+            else if(sa_forward_to == 3){
+                sa_forward_to_target = $('#sa_forward_to_palika').val();
+                if(sa_forward_to_target<=0){
+                    alert("Please Select Mahanagar Palika");
+                    return false;
+                }
+            }
+            else if(sa_forward_to == 4){
+                sa_forward_to_target = $('#sa_forward_to_region').val();
+                if(sa_forward_to_target<=0){
+                    alert("Please Select Division");
+                    return false;
+                }
+            }
+            formData.append('sa_forward_to_target', sa_forward_to_target);
+
+            formData.append('ng2g_id', ng2g_id); 
+            
+            $.ajax({
+                url: '',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                headers: {
+                    'X-CSRF-Token': $('meta[name="csrfToken"]').attr('content') 
+                },
+                success: function(response) {
+                    console.log(response);
+                    alert(response.message);
+                    if(response.success){
+                        location.reload();
+                    }
+                    /*console.log(response);
+                    //alert(response.message);
+                    if(response.success){
+                        ng2g_id = response.id;
+                        activateStep(6);
+                    }*/
+                    // Handle success
+                },
+                error: function(xhr, status, error) {
+                    // Handle error
+
+                }
+            });
+        });
+
+        $('#saForm').submit(function(e) {
+           
+            e.preventDefault();  
+            var formData = new FormData(this);
+            sa_forward_to = $('#sa_forward_to').val();
+      
+            if(sa_forward_to == 1 || sa_forward_to == 2){
+                sa_forward_to_target = $('#sa_forward_to_district').val();
+                if(sa_forward_to_target<=0){
+                    alert("Please Select District");
+                    return false;
+                }
+            }
+            else if(sa_forward_to == 3){
+                sa_forward_to_target = $('#sa_forward_to_palika').val();
+                if(sa_forward_to_target<=0){
+                    alert("Please Select Mahanagar Palika");
+                    return false;
+                }
+            }
+            else if(sa_forward_to == 4){
+                sa_forward_to_target = $('#sa_forward_to_region').val();
+                if(sa_forward_to_target<=0){
+                    alert("Please Select Division");
+                    return false;
+                }
+            }
+
+
+
+            formData.append('app_id', currentAppId);
+            formData.append('sa_forward_to_target', sa_forward_to_target);
+            
+            
+            $.ajax({
+                url: '',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                headers: {
+                    'X-CSRF-Token': $('meta[name="csrfToken"]').attr('content') 
+                },
+                success: function(response) {
+                    console.log(response);
+                    alert(response.message);
+                    if(response.success){
+                        location.reload();
+                    }
+                    // Handle success
+                },
+                error: function(xhr, status, error) {
+                    // Handle error
+
+                }
+            });
+           
+        });
+
+
+        // ------------------------------
+        // Slider 4: .correctionApplication-open-transfer (targets #correctionApplicationSlider)
+        // ------------------------------
+       
+
+        
+        ng2g_id =0;        
+        $(document).on('click', '.correctionApplication-open-transfer', function () {           
+            const caseId = $(this).data('id');
+            let staffJson = $(this).attr('data-staffObject');   // raw JSON string
+            let staffObject   = JSON.parse(staffJson)
+            currentMode = $(this).attr('data-mode'); 
+            currentAppId = staffObject.id; 
+            //console.log(staffObject);
+            currentStep = $(this).attr('app-step'); 
+            if (currentStep < 2 || currentStep > 6) {
+                currentStep = 1;
+                
+            }
+            ng2g_id = staffObject.ng2g_id;
+
+            ng2g_id = Number(ng2g_id);
+
+            // handle NaN / null / empty
+            if (!Number.isFinite(ng2g_id)) {
+                ng2g_id = 0;
+            }
+            
+            $('#tetdaatadiv').hide(); 
+            $('#ctetdaatadiv').hide(); 
+            toggleDiv('transferCheck','transferDiv');
+            toggleDiv('minorityCheck','minorityDiv');
+            toggleDiv('tetCheck','tetDiv');
+            toggleDiv('ctetCheck','ctetDiv');                
+            activateStep(currentStep);
+            if(staffObject.is_minority_school == 1){
+                $("#bindunamavaliMavakaDawareBox").hide();
+                $('#mavakCheckListDate').prop('disabled', true);
+                $('#mavakCheckListFile').prop('disabled', true);   
+            }
+                        
+            $('#sa_footerBox').show();
+            $('#sa_footerMsgBox').hide();    
+
+           $(document).trigger('correctionApplication:openSlider', [caseId, staffObject]);
+        });
+
+        // Close slider
+        $(document).on('click', '.correctionApplication-close-slider', function () {
+            $(document).trigger('correctionApplication:closeSlider');
+        });
+
+        // Custom event handlers for Slider 2
+        $(document).on('correctionApplication:openSlider', function (e, caseId, staffObject) {
+            loadCorrectionDetails(caseId, staffObject);
+            $('#correctionApplicationSlider').addClass('open').attr('aria-hidden', 'false');
+        });
+
+        $(document).on('correctionApplication:closeSlider', function () {
+            $('#correctionApplicationSlider').removeClass('open').attr('aria-hidden', 'true');
+        });
+
+        function loadCorrectionDetails(caseId,staffObject) {
+          
+            let designation = '';
+
+            if (staffObject && staffObject.post && staffObject.post.name) {
+                designation = staffObject.post.name;
+            }
+
+            if (staffObject && staffObject.current_post) {
+                designation += ' (' + staffObject.current_post + ')';
+            }
+                    
+            $('#staffId').val(staffObject.id);
+            //$('#caseId').text(caseId);
+            
+                
+            $('#empName').text(staffObject.teacher_name);
+            $('#udiseNumber').text(staffObject.udise_code);
+            $('#schoolName').text(staffObject.school_name);           
+            $('#appointmentDate').val(staffObject.date_of_joining);
+
+            
+            
+            staff_type_name = "Teaching";
+            if(staffObject.post_type ==2){
+                staff_type_name = "Non-Teaching";
+            }
+            //jquery format date to dd/mm/yyyy
+             empNameDetails = staffObject.teacher_name +' <span style="color:#333; font-size:12px;"> &nbsp;&nbsp;|&nbsp;&nbsp; '+
+                             staff_type_name+' &nbsp;&nbsp;|&nbsp;&nbsp; '+
+                             staffObject.date_of_joining +' &nbsp;&nbsp;|&nbsp;&nbsp; '+
+                             staffObject.post_name+' &nbsp;&nbsp;|&nbsp;&nbsp; '+staffObject.aid_name+
+                             ' &nbsp;&nbsp;|&nbsp;&nbsp; '+staffObject.email+
+                             ' &nbsp;&nbsp;|&nbsp;&nbsp; '+staffObject.mobile+'</span>';
+            $('#empNameDetails').html(empNameDetails);
+            
+            var correctionFormHtml ='<div class="card shadow"><div class="card-body"><div class="alert alert-warning"><strong>Instructions :</strong> Tick the fields which contain incorrect or incomplete information. Mention the reason in Remarks.</div><table class="table table-bordered table-hover"><thead><tr><th width="60">Select<th width="35%">Field Name<th width="25%">Current Value<th>Remarks<tbody><tr><td class="text-center"><input class="form-check-input item"type="checkbox"><td class="field-name">कर्मचाऱ्याचे नाव (Teacher Name)<td>Rahul Patil<td><textarea class="form-control"rows="2"placeholder="Reason for correction"></textarea><tr><td class="text-center"><input class="form-check-input item"type="checkbox"><td class="field-name">पदनाम (Designation)<td>Assistant Teacher<td><textarea class="form-control"rows="2"></textarea><tr><td class="text-center"><input class="form-check-input item"type="checkbox"><td class="field-name">वेतनश्रेणी (Salary Grade)<td>S-15<td><textarea class="form-control"rows="2"></textarea><tr><td class="text-center"><input class="form-check-input item"type="checkbox"><td class="field-name">अध्यापन विषय (Teaching Subjects)<td>Mathematics<td><textarea class="form-control"rows="2"></textarea><tr><td class="text-center"><input class="form-check-input item"type="checkbox"><td class="field-name">अध्यापन वर्ग (Teaching Classes)<td>Class VIII–X<td><textarea class="form-control"rows="2"></textarea><tr><td class="text-center"><input class="form-check-input item"type="checkbox"><td class="field-name">मूळ आरक्षण प्रवर्ग (Original Reservation)<td>OBC<td><textarea class="form-control"rows="2"></textarea><tr><td class="text-center"><input class="form-check-input item"type="checkbox"><td class="field-name">नियुक्तीचा प्रवर्ग (Appointment Category)<td>Open<td><textarea class="form-control"rows="2"></textarea><tr><td class="text-center"><input class="form-check-input item"type="checkbox"><td class="field-name">PAN Number<td>ABCDE1234F<td><textarea class="form-control"rows="2"></textarea><tr><td class="text-center"><input class="form-check-input item"type="checkbox"><td class="field-name">Aadhaar Number<td>XXXX-XXXX-1234<td><textarea class="form-control"rows="2"></textarea></table></div><div class="card-footer text-end"><button class="btn btn-secondary">Save Draft</button> <button class="btn btn-danger">Return Application</button></div></div>';
+
+            $('#correctionForm').html(correctionFormHtml);
+                              
+           // $('#designation').text(designation);
+            //$('#school').text(staffObject?.caste_category?.category_name);
+            //$('#remarks').text('Case under scrutiny by Education Officer.');
+        }
+
+        $('#correctionForm').submit(function(e) {
+            return false;
+            e.preventDefault();  
+            var selectedClass = $('input[name="teachingClasses"]:checked').val();
+            if(!selectedClass){
+                alert('Please select अध्यापन वर्ग (Teaching Classes)');
+                return false;
+            }
+
+            let storedData = JSON.parse($("#sa_basic_data").val());
+            //console.log(storedData.staff_name);
+
+            let transferSchoolCode = "";
+            let transferSchoolName = "";
+            if ($("#transferCheck").is(":checked")) {    
+
+                let selectedVal = $("#transferSchool").val(); // code
+
+                let selectedText = $("#transferSchool option:selected").text();
+
+                // Split by "|"
+                let parts = selectedText.split("|");
+
+                transferSchoolCode = parts[0].trim();
+                transferSchoolName = parts[1].trim();
+                //console.log("Code:", transferSchoolCode);
+                //console.log("Name:", transferSchoolName);
+            }
+
+            
+
+
+
+            var formData = new FormData(this);
+
+            formData.append('app_id', currentAppId); 
+            formData.append('ng2g_id', ng2g_id); 
+                           
+            formData.append('institution_code', storedData.institution_code);
+            formData.append('institution_name', storedData.institution_name);
+            formData.append('udise_code', storedData.udise_code);
+            formData.append('school_name', storedData.school_name);
+
+            formData.append('emp_name', storedData.staff_name);
+            formData.append('staff_type', storedData.staff_type);
+            formData.append('staff_type_name', storedData.staff_type_name);
+            formData.append('post_name', storedData.post_name);   
+            
+            formData.append('aid_name', storedData.aid_name);
+            formData.append('email', storedData.email);
+            formData.append('mobile', storedData.mobile);
+
+            formData.append('pay_scale', storedData.pay_scale);
+            formData.append('subject_taught', storedData.subject_taught);
+            formData.append('medium', storedData.medium);
+            formData.append('schoolNameAtTransfer', transferSchoolName);
+            
+
+            $.ajax({
+                url: '',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                headers: {
+                    'X-CSRF-Token': $('meta[name="csrfToken"]').attr('content') 
+                },
+                success: function(response) {
+                    console.log(response);
+                    //alert(response.message);
+                    if(response.success){
+                        ng2g_id = response.id;
+                        activateStep(2);
+                    }
+                    // Handle success
+                },
+                error: function(xhr, status, error) {
+                    // Handle error
+
+                }
+            });
+
+
+            
+        });
+        $('#saFormStep2').submit(function(e) {
+            e.preventDefault();  
+            var formData = new FormData(this);
+
+            formData.append('ng2g_id', ng2g_id); 
+            
+            $.ajax({
+                url: '',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                headers: {
+                    'X-CSRF-Token': $('meta[name="csrfToken"]').attr('content') 
+                },
+                success: function(response) {
+                    console.log(response);
+                    //alert(response.message);
+                    if(response.success){
+                        ng2g_id = response.id;
+                        activateStep(3);
+                    }
+                    // Handle success
+                },
+                error: function(xhr, status, error) {
+                    // Handle error
+
+                }
+            });
+        });
+        $('#saFormStep3').submit(function(e) {
+            e.preventDefault();  
+            var formData = new FormData(this);
+
+            formData.append('ng2g_id', ng2g_id); 
+            
+            $.ajax({
+                url: '',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                headers: {
+                    'X-CSRF-Token': $('meta[name="csrfToken"]').attr('content') 
+                },
+                success: function(response) {
+                    console.log(response);
+                    //alert(response.message);
+                    if(response.success){
+                        ng2g_id = response.id;
+                        if(response.is_minority_school==1){
+                            $("#bindunamavaliMavakaDawareBox").hide();
+                            $('#mavakCheckListDate').prop('disabled', true);
+                            $('#mavakCheckListFile').prop('disabled', true); 
+                        }                        
+                        activateStep(4);
+                    }
+                    // Handle success
+                },
+                error: function(xhr, status, error) {
+                    // Handle error
+
+                }
+            });
+        });
+        $('#saFormStep4').submit(function(e) {
+            e.preventDefault();  
+            var formData = new FormData(this);
+
+            formData.append('ng2g_id', ng2g_id); 
+            
+            $.ajax({
+                url: '',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                headers: {
+                    'X-CSRF-Token': $('meta[name="csrfToken"]').attr('content') 
+                },
+                success: function(response) {
+                    console.log(response);
+                    //alert(response.message);
+                    if(response.success){
+                        ng2g_id = response.id;
+                        activateStep(5);
+                    }
+                    // Handle success
+                },
+                error: function(xhr, status, error) {
+                    // Handle error
+
+                }
+            });
+        });
+        $('#saFormStep5').submit(function(e) {
+            e.preventDefault();  
+            if (!$("input[name='courtOrder']:checked").length) {
+                alert("सदर प्रकरणासंदर्भात कोणताही न्यायालयीन आदेश निर्गमित झाला आहे का? कृपया “होय” किंवा “नाही” पर्याय निवडा."); // Marathi message
+                return false;
+            }
+            var formData = new FormData(this);
+
+            formData.append('ng2g_id', ng2g_id); 
+            
+            $.ajax({
+                url: '',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                headers: {
+                    'X-CSRF-Token': $('meta[name="csrfToken"]').attr('content') 
+                },
+                success: function(response) {
+                    console.log(response);
+                    //alert(response.message);
+                    if(response.success){
+                        ng2g_id = response.id;
+                        activateStep(6);
+                    }
+                    // Handle success
+                },
+                error: function(xhr, status, error) {
+                    // Handle error
+
+                }
+            });
+        });
+
+        $('#saFormStep6').submit(function(e) {
+            e.preventDefault();  
+            
+            var formData = new FormData(this);
+            sa_forward_to = $('#sa_forward_to').val();
+      
+            if(sa_forward_to == 1 || sa_forward_to == 2){
+                sa_forward_to_target = $('#sa_forward_to_district').val();
+                if(sa_forward_to_target<=0){
+                    alert("Please Select District");
+                    return false;
+                }
+            }
+            else if(sa_forward_to == 3){
+                sa_forward_to_target = $('#sa_forward_to_palika').val();
+                if(sa_forward_to_target<=0){
+                    alert("Please Select Mahanagar Palika");
+                    return false;
+                }
+            }
+            else if(sa_forward_to == 4){
+                sa_forward_to_target = $('#sa_forward_to_region').val();
+                if(sa_forward_to_target<=0){
+                    alert("Please Select Division");
+                    return false;
+                }
+            }
+            formData.append('sa_forward_to_target', sa_forward_to_target);
+
+            formData.append('ng2g_id', ng2g_id); 
+            
+            $.ajax({
+                url: '<',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                headers: {
+                    'X-CSRF-Token': $('meta[name="csrfToken"]').attr('content') 
+                },
+                success: function(response) {
+                    console.log(response);
+                    alert(response.message);
+                    if(response.success){
+                        location.reload();
+                    }
+                    /*console.log(response);
+                    //alert(response.message);
+                    if(response.success){
+                        ng2g_id = response.id;
+                        activateStep(6);
+                    }*/
+                    // Handle success
+                },
+                error: function(xhr, status, error) {
+                    // Handle error
+
+                }
+            });
+        });
+
+        $('#saForm').submit(function(e) {
+           
+            e.preventDefault();  
+            var formData = new FormData(this);
+            sa_forward_to = $('#sa_forward_to').val();
+      
+            if(sa_forward_to == 1 || sa_forward_to == 2){
+                sa_forward_to_target = $('#sa_forward_to_district').val();
+                if(sa_forward_to_target<=0){
+                    alert("Please Select District");
+                    return false;
+                }
+            }
+            else if(sa_forward_to == 3){
+                sa_forward_to_target = $('#sa_forward_to_palika').val();
+                if(sa_forward_to_target<=0){
+                    alert("Please Select Mahanagar Palika");
+                    return false;
+                }
+            }
+            else if(sa_forward_to == 4){
+                sa_forward_to_target = $('#sa_forward_to_region').val();
+                if(sa_forward_to_target<=0){
+                    alert("Please Select Division");
+                    return false;
+                }
+            }
+
+
+
+            formData.append('app_id', currentAppId);
+            formData.append('sa_forward_to_target', sa_forward_to_target);
+            
+            
+            $.ajax({
+                url: '',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                headers: {
+                    'X-CSRF-Token': $('meta[name="csrfToken"]').attr('content') 
+                },
+                success: function(response) {
+                    console.log(response);
+                    alert(response.message);
+                    if(response.success){
+                        location.reload();
+                    }
+                    // Handle success
+                },
+                error: function(xhr, status, error) {
+                    // Handle error
+
+                }
+            });
+           
+        });
+
+
+        /**
+         * Return Application
+         * 
+         */
+        
+        $(document).on('click', '.returnApplication-open-transfer', function () {
+            const caseId = $(this).data('id');    
+             
+
+           $(document).trigger('returnApplication:openSlider', [caseId]);
+        });
+
+        // Close slider
+        $(document).on('click', '.returnApplication-close-slider', function () {
+            $(document).trigger('returnApplication:closeSlider');
+        });
+
+        // Custom event handlers for Slider 2
+        var return_app_id = 0 ;
+        $(document).on('returnApplication:openSlider', function (e, caseId) {
+            return_app_id = caseId ;
+            loadReturnTransferDetails(caseId);
+            $('#returnApplicationSlider').addClass('open').attr('aria-hidden', 'false');
+        });
+
+        $(document).on('returnApplication:closeSlider', function () {
+            $('#returnApplicationSlider').removeClass('open').attr('aria-hidden', 'true');
+        });
+
+         
+
+        
+
+        
+
+        submitReturnApplication =  function (){
+            const form = $('#returnApplicationForm')[0];
+
+          
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return false;
+            }
+
+            const formData = new FormData(form);
+
+            formData.append('_csrfToken', $('meta[name="csrfToken"]').attr('content'));
+            formData.append('_Token', $('meta[name="csrfToken"]').attr('content'));
+            console.log(Object.fromEntries(formData));
+            
+           $.ajax({
+                url: '<?= $this->Url->build(["controller" => "GeneralUtilities", "action" => "returnApplicationSubmission"]); ?>',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                cache: false,
+                
+                headers: {
+                    'X-CSRF-Token': $('meta[name="csrfToken"]').attr('content'),
+                    '_Token': $('meta[name="csrfToken"]').attr('content') 
+                },
+
+                beforeSend: function () {
+
+                    // Disable button
+                    $('#approvalForm button[type="submit"]')
+                        .prop('disabled', true)
+                        .html(`
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                            Processing...
+                        `);
+                },
+
+                success: function (response) {
+
+                    console.log(response);
+
+                    if(response.success == false){
+                        alert(response.message)
+                    }else{
+                        alert('Application forwarded successfully.');
+                        $('#returnApplicationSlider').removeClass('open').attr('aria-hidden', 'true');
+                        location.reload();
+
+                    }                    
+                },
+
+                error: function (xhr) {
+
+                    console.log(xhr);
+
+                    let errorMessage = 'Something went wrong.';
+
+                    if (xhr.responseJSON?.message) {
+                        errorMessage = xhr.responseJSON.message;
+                    }
+
+                    alert(errorMessage);
+                },
+
+                complete: function () {
+
+                var ev=3;
+                }
+            });
+        }
+
+
+        submitRejectApplication = function () {
+            const form = $('#rejectApplicationForm')[0];
+            if (!form) {
+                alert('Rejection form is not ready.');
+                return false;
+            }
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return false;
+            }
+
+            const formData = new FormData(form);
+            formData.append('_csrfToken', $('meta[name="csrfToken"]').attr('content'));
+            formData.append('_Token', $('meta[name="csrfToken"]').attr('content'));
+            const button = $(form).find('button[onclick="submitRejectApplication()"]');
+            prepareStaffOnboardingRejection(formData, button);
+        };
+        
+        loadReturnTransferDetails = function(caseId){
+
+            $("#returnHtmlForm").html('<div class="dots-loader"><img src="https://edustaff.maharashtra.gov.in/images/logo.png" alt="Maha Logo" class="me-2"> Loading</div>');
+            $.ajax({
+                url: '<?php echo $this->Url->build(["controller" => "GeneralUtilities", "action" => "returnApplicationForm"]); ?>/'+caseId,
+                type: 'GET',
+                headers: {
+                    'X-CSRF-Token': $('meta[name="csrfToken"]').attr('content') 
+                },
+                    success: function (response) {
+                        console.log("&&&&&&&&&&&&&&&&&&&&&&&&&#"+response.data);
+                    if(response.success){
+                        //if(response.data.id>0){
+                            ng2g = response.data;
+                            $("#returnHtmlForm").html(response.html);
+                           
+                        //}                       
+                    }
+                    
+                },
+                error: function () {
+                    $("#returnHtmlForm").html('<option>Error loading data</option>');
+                }
+            });
+        }
+
+
+        // ------------------------------
+        // Global ESC key handler (closes both sliders)
+        // ------------------------------
+        $(document).on('keydown', function (e) {
+            if (e.key === 'Escape') {
+                $(document).trigger('im:closeSlider');
+                $(document).trigger('approveApplication:closeSlider');
+                $(document).trigger('startApplication:closeSlider');
+                $(document).trigger('correctionApplication:closeSlider');
+                $(document).trigger('returnApplication:closeSlider');
+                
+            }
+        });
+
+        
+
+        function formatDate(dateStr) {
+            const parts = dateStr.split('-'); // yyyy-mm-dd
+            return parts[2] + '/' + parts[1] + '/' + parts[0];
+        }
+        function docUrl(filename) {
+            return "<?= $this->Url->build('/', ['fullBase' => true]); ?>" + filename;
+        }
+        
+      
+        
+
+        $('#teacherTransferForm').submit(function(e) {           
+            e.preventDefault();
+             if(currentMode == 1){
+                        $('#actionStatus_'+currentAppId).html('<b style="color:green;">Approved</b>');
+                        $('#footerBox').hide();
+                        $('#footerMsgBox').show();
+                        $('#footerMsgBox').html('The application has been approved successfully and is forwarded for further action to the Block Officer. <button class="btn btn-success btn-sm approveApplication-close-slider">Close</button>');    
+                                        
+                    }else{
+                        $('#actionStatus_'+currentAppId).html('<b style="color:red;">Rejected</b>');
+                        $('#footerBox').hide();
+                        $('#footerMsgBox').show();
+                        $('#footerMsgBox').html('The application has been rejected successfully. <button class="btn btn-danger btn-sm approveApplication-close-slider">Close</button>'); 
+                    }
+                    $('#actionBtns_'+currentAppId).html('');
+                    return;
+            var formData = new FormData(this);
+            
+            formData.append('mode', currentMode);
+            formData.append('app_id', currentAppId); 
+            $.ajax({
+                url: '',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                headers: {
+                    'X-CSRF-Token': $('meta[name="csrfToken"]').attr('content') 
+                },
+                success: function(response) {
+                    if(currentMode == 1){
+                        $('#actionStatus_'+currentAppId).html('<b style="color:green;">Approved</b>');
+                        $('#footerBox').hide();
+                        $('#footerMsgBox').show();
+                        $('#footerMsgBox').html('The application has been approved successfully and is forwarded for further action to the Block Officer. <button class="btn btn-success btn-sm approveApplication-close-slider">Close</button>');    
+                                        
+                    }else{
+                        $('#actionStatus_'+currentAppId).html('<b style="color:red;">Rejected</b>');
+                        $('#footerBox').hide();
+                        $('#footerMsgBox').show();
+                        $('#footerMsgBox').html('The application has been rejected successfully. <button class="btn btn-danger btn-sm approveApplication-close-slider">Close</button>'); 
+                    }
+                    $('#actionBtns_'+currentAppId).html('');
+                },
+                error: function(xhr, status, error) {
+                    // Handle error
+
+                }
+            });
+           
+        });
+
+
+         // File upload functionality
+        function setupFileUpload(uploadAreaId, fileInputId, fileListId) {
+            const uploadArea = document.getElementById(uploadAreaId);
+            const fileInput = document.getElementById(fileInputId);
+            const fileList = document.getElementById(fileListId);
+            
+            uploadArea.addEventListener('click', () => fileInput.click());
+            
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+            
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('dragover');
+            });
+            
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    handleFileSelection(files[0], fileList);
+                }
+            });
+            
+            fileInput.addEventListener('change', (e) => {
+                if (fileInput.files.length > 0) {
+                    handleFileSelection(fileInput.files[0], fileList);
+                }
+            });
+        }
+        
+        function handleFileSelection(file, fileListContainer) {
+            if (file.type !== 'application/pdf') {
+                alert('कृपया फक्त PDF फाइल अपलोड करा.');
+                return;
+            }
+            
+            if (file.size > 5 * 1024 * 1024) {
+                alert('फाइल आकार 5MB पेक्षा जास्त नाही.');
+                return;
+            }
+            
+            const fileItem = document.createElement('div');
+            fileItem.className = 'file-item';
+            fileItem.innerHTML = `
+                <div>
+                    <i class="bi bi-file-earmark-pdf file-icon"></i>
+                    <span>${file.name}</span>
+                    <small class="text-muted d-block">${(file.size / 1024).toFixed(2)} KB</small>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-danger remove-file">
+                    <i class="bi bi-trash"></i>
+                </button>
+            `;
+            
+            fileListContainer.innerHTML = '';
+            fileListContainer.appendChild(fileItem);
+            
+            // Add remove functionality
+            fileItem.querySelector('.remove-file').addEventListener('click', () => {
+                fileListContainer.innerHTML = '';
+                if (fileItem.parentElement.previousElementSibling.querySelector('input[type="file"]')) {
+                    fileItem.parentElement.previousElementSibling.querySelector('input[type="file"]').value = '';
+                }
+            });
+            
+        }
+        
+        // Initialize file uploads
+        
+        setupFileUpload('schoolPermissionOrderUploadArea','schoolPermissionOrderFile','schoolPermissionOrderFileList');
+        setupFileUpload('minorityCertUploadArea','minorityCertOutwardFile','minorityCertOutwardFileList','tetCertificateUploadArea','tetCertificateFile','tetCertificateFileList');
+        setupFileUpload('schoolAtTransferUploadArea','schoolAtTransferFile','schoolAtTransferFileList');
+        // Form submission
+        /*document.getElementById('teacherTransferForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            if (!document.getElementById('declaration').checked) {
+                alert('कृपया घोषणा तपासा.');
+                return;
+            }
+            
+            // Show success message
+            alert('तुमचा अर्ज यशस्वीरित्या सबमिट केला गेला आहे! आवेदन क्रमांक: ' + document.getElementById('applicationId').textContent);
+            
+           
+            
+        });*/
+        
+
+        
+
+        /*$('#teacherTransferForm').submit(function(e) {
+           
+            e.preventDefault();
+            
+            var formData = new FormData(this);
+            
+            $.ajax({
+                url: '',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                headers: {
+                    'X-CSRF-Token': $('meta[name="csrfToken"]').attr('content') 
+                },
+                success: function(response) {
+                    console.log(response);
+                    alert(response.message);
+                    if(response.success){
+                        location.reload();
+                    }
+                    // Handle success
+                },
+                error: function(xhr, status, error) {
+                    // Handle error
+
+                }
+            });
+           
+        });*/
+        
+       
+        
+        // PAN number validation
+       document.getElementById('panNumber').addEventListener('input', function(e) {
+            this.value = this.value.toUpperCase();
+        });
+        
+        // Auto-fill some API fields with sample data (for demo)
+        /*document.addEventListener('DOMContentLoaded', function() {
+            // Sample API data (in real app, this would come from API call)
+            setTimeout(() => {
+                document.getElementById('institutionName').value = "शिवाजी विद्यालय, पुणे";
+                document.getElementById('unaidedSchoolName').value = "ज्ञानदीप विद्यामंदिर, नगर रोड, पुणे";
+                document.getElementById('schoolPermission').value = "परवानगी क्र. 1234/2023, दि. 15/03/2023";
+                document.getElementById('udiseNumber').value = "27250900123";
+                
+              
+                
+            }, 500);
+        });*/
+
+
+});
+
+
+$(document).ready(function() {  
+
+ $(document).on('click', '.rejectApplication-open-transfer', function () {
+          
+            const caseId = $(this).data('id');    
+            let staff = $(this).data('staffobject');
+           $(document).trigger('rejectApplication:openSlider', [caseId, staff]);
+        });
+
+        // Close slider
+        $(document).on('click', '.rejectApplication-close-slider', function () {
+            $(document).trigger('rejectApplication:closeSlider');
+        });
+
+        // Custom event handlers for Slider 2
+        $(document).on('rejectApplication:openSlider', function (e, caseId,staff) {
+            loadRejectTransferDetails(caseId,staff);
+            $('#rejectApplicationSlider').addClass('open').attr('aria-hidden', 'false');
+        });
+
+        $(document).on('rejectApplication:closeSlider', function () {
+            $('#rejectApplicationSlider').removeClass('open').attr('aria-hidden', 'true');
+        });
+
+
+          $(document).on('click', '.approvedApplication-open-transfer', function () {
+            
+            const caseId = $(this).data('id');    
+            let staff = $(this).data('staffobject');
+                        $('#approvalForm')[0].reset();
+                        $('#workOrderFile').empty();
+                        $('#workOrderBtn').prop('disabled', false).show().html('<i class="fas fa-check-circle me-1"></i> वर्क ऑर्डर तयार करा');
+                        $('#approvedBtn').prop('disabled', true).addClass('d-none');
+            $(document).trigger('approvedApplication:openSlider', [caseId, staff]);
+        });
+
+        // Close slider
+        $(document).on('click', '.approvedApplication-close-slider', function () {
+            $(document).trigger('approvedApplication:closeSlider');
+        });
+
+        // Custom event handlers for Slider 2
+        $(document).on('approvedApplication:openSlider', function (e, caseId,staff) {
+            loadApprovedTransferDetails(caseId,staff);
+            $('#approvedApplicationSlider').addClass('open').attr('aria-hidden', 'false');
+        });
+
+        $(document).on('approvedApplication:closeSlider', function () {
+            $('#approvedApplicationSlider').removeClass('open').attr('aria-hidden', 'true');
+        });
+
+
+         loadApprovedTransferDetails = function(caseId,staff){                    
+           
+            loadSaDetails(staff.id,'approve');                        
+
+           
+        }
+
+         loadRejectTransferDetails = function(caseId,staff){
+
+                $("#rejectHtmlForm").html('<div class="dots-loader"><img src="https://edustaff.maharashtra.gov.in/images/logo.png" alt="Maha Logo" class="me-2"> Loading</div>');
+            $.ajax({
+                url: '<?php echo $this->Url->build(["controller" => "GeneralUtilities", "action" => "rejectApplicationForm"]); ?>/'+caseId,
+                type: 'GET',
+                headers: {
+                    'X-CSRF-Token': $('meta[name="csrfToken"]').attr('content') 
+                },
+                    success: function (response) {
+                        
+                    if(response.success){
+                        //if(response.data.id>0){
+                            ng2g = response.data;
+                            $("#rejectHtmlForm").html(response.html);
+                           
+                        //}                       
+                    }
+                    
+                },
+                error: function () {
+                    $("#rejectHtmlForm").html('<option>Error loading data</option>');
+                }
+            });
+           
+            
+
+            //loadSaDetails(staff.id,'reject');
+        }
+
+
+        loadSaDetails = function(staffId,type){
+                $.ajax({
+                url: '<?= $this->Url->build(["controller" => "GeneralUtilities", "action" => "getStaffOnboardingDetails"]); ?>' + '?staff_id=' + encodeURIComponent(staffId),
+                type: 'GET',
+                dataType: 'json',
+                headers: {
+                    'X-CSRF-Token': $('meta[name="csrfToken"]').attr('content')
+                },
+                success: function(response) {
+                    if (!response.success || !response.data) {
+                        return;
+                    }
+
+                    const d = response.data;
+                    console.log("Staff Onboarding Details:", d);
+                     let dbTimestamp = d.created_at;           
+                     let date = new Date(dbTimestamp);
+                     let formattedDate =
+                        String(date.getDate()).padStart(2, '0') + '/' +
+                        String(date.getMonth() + 1).padStart(2, '0') + '/' +
+                        date.getFullYear();
+
+                    if(type == 'reject'){  
+                        $("#reject_sanstha_name").html(d.ng2g.institution_name);
+                        $("#reject_staff_name").html(d.candidate_name);
+                        $("#reject_date").html(formattedDate);
+                        $("#reject_id").html(d.id);
+                        $("#reject_year").html(date.getFullYear());
+                    }else{
+                        $("#app_sanstha_name").html(d.ng2g.institution_name); 
+                        $("#app_staff_name").html(d.candidate_name); 
+                        $("#app_date").html(formattedDate); 
+                        $("#app_id").html(d.id); 
+                        $("#app_year").html(date.getFullYear());
+                    }
+       
+
+                }
+            });
+    }
+
+
+     $('#rejectForm').on('submit', function (e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        const rejectId = $("#reject_id").text().trim();
+        $('#reject_form_id').val(rejectId);
+        $('#reject_form_remark').val($('#reject_remark').val().trim());
+        formData.set('reject_id', rejectId);
+        formData.set('reject_remark', $('#reject_remark').val().trim());
+        formData.append('_csrfToken', $('meta[name="csrfToken"]').attr('content'));
+        const button = $('#rejectForm button[type="submit"]');
+        prepareStaffOnboardingRejection(formData, button);
+    });
+
+          $('#workOrderBtn').on('click', function (e) {
+
+            e.preventDefault();
+            const form = $(this).closest('form')[0];
+
+            if (!form) {
+                console.error('Form not found');
+                return;
+            }
+
+            let formData = new FormData(form);
+            let approvalId = $("#app_id").text().trim();
+            $('#approve_form_id').val(approvalId);
+            $('#approve_form_remark').val($('#app_remark').val().trim());
+            formData = new FormData(form);
+            $.ajax({
+                url: '<?= $this->Url->build(["controller" => "BoardChairman", "action" => "staffOnboardGenrateFile"]); ?>',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                cache: false,
+                headers: {
+                    'X-CSRF-Token': $('meta[name="csrfToken"]').attr('content') 
+                },
+
+                beforeSend: function () {
+
+                    // Disable button
+                    $('#workOrderBtn')
+                        .prop('disabled', true)
+                        .html(`
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                            Processing...
+                        `);
+                },
+
+                success: function (response) {
+
+                    if(response.success == false){
+                        alert(response.message)
+                    }else{
+                      
+                        let pdfUrl = response && response.url ? response.url : '';
+                        let staffId = response && response.staffId ? response.staffId : '';
+
+     pdfUrlToBase64(
+                        pdfUrl
+                    ).then(base64 => {
+                        $("#pdfData").val(base64);
+                        console.log(base64);
+                    }).catch(console.error);
+
+                        if (pdfUrl) {
+                            const $orderContainer = $('<div>', {
+                                class: 'mt-3 p-3 border rounded bg-light'
+                            });
+                            $orderContainer.append($('<div>', {
+                                class: 'fw-bold mb-2',
+                                text: 'Work Order PDF'
+                            }));
+                            $orderContainer.append($('<a>', {
+                                href: pdfUrl,
+                                target: '_blank',
+                                rel: 'noopener noreferrer',
+                                class: 'btn btn-sm btn-primary',
+                                id: 'ViewPDFBtn',
+                                text: 'View PDF'
+                            }).attr('download', `staff_order_${staffId}.pdf`));
+                            $orderContainer.append($('<button>', {
+                                type: 'button',
+                                class: 'btn btn-danger btn-sm signDocBtn ms-2',
+                                id: 'signDocBtn',
+                                text: 'Sign DSC'
+                            }).attr({
+                                'data-staff-id': staffId,
+                                'data-pdf-url': pdfUrl
+                            }));
+                            $('#workOrderFile').empty().append($orderContainer);
+                        }
+
+                        $('#workOrderBtn').hide();
+
+                       
+                    }                    
+                },
+
+                error: function (xhr) {
+
+                    console.log(xhr);
+
+                    $('#workOrderBtn')
+                        .prop('disabled', false)
+                        .show()
+                        .html(`
+                            <i class="fas fa-check-circle me-1"></i>
+                            वर्क ऑर्डर तयार करा
+                        `);
+
+                    let errorMessage = 'Something went wrong.';
+
+                    if (xhr.responseJSON?.message) {
+                        errorMessage = xhr.responseJSON.message;
+                    }
+
+                    alert(errorMessage);
+                },
+
+                complete: function () {}
+            });
+
+        });
+
+
+ async function pdfUrlToBase64(url) {
+    const response = await fetch(url);
+
+    if (!response.ok) {
+        throw new Error("Unable to fetch PDF");
+    }
+
+    const blob = await response.blob();
+
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+
+        reader.onload = () => {
+            resolve(reader.result.split(",")[1]);
+        };
+
+        reader.onerror = reject;
+
+        reader.readAsDataURL(blob);
+    });
+}
+
+window.prepareStaffOnboardingRejection = function (formData, button) {
+    button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i> PDF तयार करत आहे...');
+    $.ajax({
+        url: '<?= $this->Url->build(["controller" => "BoardChairman", "action" => "staffOnboardRejectPrepare"]); ?>',
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        headers: {
+            'X-CSRF-Token': $('meta[name="csrfToken"]').attr('content'),
+            '_Token': $('meta[name="csrfToken"]').attr('content')
+        },
+        success: function (response) {
+            if (!response.success || !response.url || !response.application_id) {
+                alert(response.message || 'Unable to prepare the rejection PDF.');
+                return;
+            }
+
+            window.pendingStaffRejectFormData = formData;
+            formData.set('reject_application_id', response.application_id);
+            window.pendingStaffRejectPdfBase64 = '';
+            window.pendingStaffRejectSignedPdfData = '';
+            $('#staffRejectPdfFrame').attr('src', response.url);
+            $('#staffRejectSignStatus').text('Loading rejection PDF...');
+            $('#staffRejectSignBtn').prop('disabled', true);
+            $('#staffRejectFinalizeBtn').prop('disabled', true);
+            $('#staffRejectSignedDownload').addClass('d-none').attr('href', '#');
+            $('#rejectApplicationSlider').removeClass('open').attr('aria-hidden', 'true');
+            bootstrap.Modal.getOrCreateInstance(
+                document.getElementById('staffRejectSignerModal')
+            ).show();
+
+            pdfUrlToBase64(response.url).then(function (pdfBase64) {
+                window.pendingStaffRejectPdfBase64 = pdfBase64;
+                $('#staffRejectSignStatus').text('Review the PDF, then sign it with your DSC.');
+                $('#staffRejectSignBtn').prop('disabled', false);
+            }).catch(function (error) {
+                console.error('Unable to load staff rejection PDF for signing:', error);
+                $('#staffRejectSignStatus').text('Unable to load the PDF for signing. Close this window and retry.');
+            });
+        },
+        error: function (xhr) {
+            const message = xhr.responseJSON && xhr.responseJSON.message
+                ? xhr.responseJSON.message
+                : 'Unable to prepare the rejection PDF.';
+            alert(message);
+        },
+        complete: function () {
+            button.prop('disabled', false).html('<i class="fas fa-times-circle me-1"></i> नामंजूर करा');
+        }
+    });
+};
+
+
+         $('#approvalForm').on('submit', function (e) {
+
+            e.preventDefault();
+            let formData = new FormData(this);
+            let approvalId = $("#app_id").text().trim();
+            let signedPdfData = $('#signedPdfData').val();
+            $('#approve_form_id').val(approvalId);
+            $('#approve_form_remark').val($('#app_remark').val().trim());
+            let reason = $.trim($('#app_remark').val());
+            formData.append('remark', reason);
+            formData.append('signed_pdf_data', signedPdfData);
+
+            $.ajax({
+                url: '<?= $this->Url->build(["controller" => "BoardChairman", "action" => "staffOnboardApprove"]); ?>',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                cache: false,
+                headers: {
+                    'X-CSRF-Token': $('meta[name="csrfToken"]').attr('content') 
+                },
+
+                beforeSend: function () {
+
+                    // Disable button
+                    $('#approvalForm button[type="button"]')
+                        .prop('disabled', true)
+                        .html(`
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                            Processing...
+                        `);
+                },
+
+                success: function (response) {
+
+                    console.log(response);
+
+                    if(response.success == false){
+                        alert(response.message)
+                    }else{
+                        alert('Application approved successfully.');
+
+                        let pdfUrl = response && response.url ? response.url : '';
+                        if (pdfUrl) {
+                            $('#workOrderFile').html(`
+                                <div class="mt-3 p-3 border rounded bg-light">
+                                    <div class="fw-bold mb-2">Work Order PDF</div>
+                                    <a href="${pdfUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-primary">
+                                        <i class="fas fa-file-pdf me-1"></i> View PDF
+                                    </a>
+                                </div>
+                            `);
+                        }
+
+                        $('#approvalForm button[type="submit"]').hide();
+
+                        $('#approvalForm')[0].reset();
+                        let approvalId = $("#app_id").text().trim();
+                        $('#emp_row_' + approvalId).remove();
+                        $('#approveApplicationSlider').removeClass('open').attr('aria-hidden', 'true');
+                        location.reload();
+                    }                    
+                },
+
+                error: function (xhr) {
+
+                    console.log(xhr);
+
+                    $('#approvalForm button[type="submit"]')
+                        .prop('disabled', false)
+                        .show()
+                        .html(`
+                            <i class="fas fa-check-circle me-1"></i>
+                            पुढे करा
+                        `);
+
+                    let errorMessage = 'Something went wrong.';
+
+                    if (xhr.responseJSON?.message) {
+                        errorMessage = xhr.responseJSON.message;
+                    }
+
+                    alert(errorMessage);
+                },
+
+                complete: function () {}
+            });
+
+        });
+
+
+         formatDate = function (dateStr) {
+            if (!dateStr) return "";
+
+            let parts = dateStr.split("-");
+            if (parts.length !== 3) return dateStr;
+
+            return parts[2] + "-" + parts[1] + "-" + parts[0];
+        }
+
+
+        $('#forwardForm').on('submit', function (e) {
+
+            e.preventDefault();
+            let formData = new FormData(this);
+            let forwardId = $("#app_id").text().trim();
+            formData.append('app_id', forwardId);
+            formData.append('action', 'forward');
+
+            formData.append('_csrfToken', $('meta[name="csrfToken"]').attr('content'));
+            $.ajax({
+                url: '<?= $this->Url->build(["controller" => "BoardChairman", "action" => "staffOnboardForward"]); ?>',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                cache: false,
+                headers: {
+                    'X-CSRF-Token': $('meta[name="csrfToken"]').attr('content') 
+                },
+
+                beforeSend: function () {
+
+                    // Disable button
+                    $('#forwardForm button[type="submit"]')
+                        .prop('disabled', true)
+                        .html(`
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                            Processing...
+                        `);
+                },
+
+                success: function (response) {
+
+                    console.log(response);
+
+                    if(response.success == false){
+                        alert(response.message)
+                    }else{
+                        alert('Application forwarded successfully.');
+                        // Optional
+                        $('#forwardForm')[0].reset();
+                        let forwardId = $("#app_id").text().trim();
+                        $('#emp_row_' + forwardId).remove();
+                        $('#forwardApplicationSlider').removeClass('open').attr('aria-hidden', 'true');
+                        location.reload();
+                    }                    
+                },
+
+                error: function (xhr) {
+
+                    console.log(xhr);
+
+                    let errorMessage = 'Something went wrong.';
+
+                    if (xhr.responseJSON?.message) {
+                        errorMessage = xhr.responseJSON.message;
+                    }
+
+                    alert(errorMessage);
+                },
+
+                complete: function () {
+
+                    // Enable button again
+                    $('#forwardForm button[type="submit"]')
+                        .prop('disabled', false)
+                        .html(`
+                            <i class="fas fa-times-circle me-1"></i>
+                            नामंजूर करा
+                        `);
+                }
+            });
+
+        });
+
+             
+
+        
+        
+});        
+</script>
+<!-- SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="<?= h($this->Url->build('/js/dscapi-conf.js')) ?>?v=<?= (int)filemtime(WWW_ROOT . 'js' . DS . 'dscapi-conf.js') ?>"></script>
+<script src="<?= h($this->Url->build('/js/dsc-signer.js')) ?>?v=<?= (int)filemtime(WWW_ROOT . 'js' . DS . 'dsc-signer.js') ?>"></script>
+<script src="<?= h($this->Url->build('/js/pdfjs/pdf.min.js')) ?>?v=3.11.174"></script>
+<script>
+    // Configure local PDF.js worker
+    if (typeof pdfjsLib !== 'undefined') {
+        pdfjsLib.GlobalWorkerOptions.workerSrc =
+            '<?= h($this->Url->build('/js/pdfjs/pdf.worker.min.js')) ?>?v=3.11.174';
+
+        console.log('PDF.js loaded successfully');
+    } else {
+        console.error('PDF.js library failed to load.');
+    }
+</script>
+
+<div id="panel" style="display:none;"></div>
+<input type="hidden" id="signingReason" value="Staff onboarding work order approval">
+<input type="hidden" id="signingLocation" value="District Office">
+<input type="hidden" id="tsaURL" value="">
+<input type="hidden" id="timeServerURL" value="">
+<input type="hidden" id="stampingX" value="250">
+<input type="hidden" id="stampingY" value="50">
+
+<script>
+function pdfArrayBufferToBase64(buffer) {
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    const chunkSize = 0x8000;
+
+    for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+        binary += String.fromCharCode(...bytes.subarray(offset, offset + chunkSize));
+    }
+
+    return btoa(binary);
+}
+
+function base64ToPdfFile(base64Pdf, fileName) {
+    if (typeof base64Pdf !== 'string' || base64Pdf.trim() === '') {
+        throw new Error('NICDSign did not return signed PDF data. Check that the mToken driver initialized and signing completed.');
+    }
+
+    const cleanBase64 = base64Pdf.replace(/^data:application\/pdf;base64,/i, '');
+    const binary = atob(cleanBase64);
+    const bytes = new Uint8Array(binary.length);
+
+    for (let index = 0; index < binary.length; index++) {
+        bytes[index] = binary.charCodeAt(index);
+    }
+
+    if (bytes.length < 5 || String.fromCharCode(...bytes.subarray(0, 5)) !== '%PDF-') {
+        throw new Error('NICDSign returned an invalid PDF.');
+    }
+
+    if (bytes.length > 10 * 1024 * 1024) {
+        throw new Error('The signed PDF exceeds the 10 MB upload limit.');
+    }
+
+    return new File([bytes], fileName, { type: 'application/pdf' });
+}
+
+function acceptNicdSignedPdf(alias, signedPdf, encryptedKey) {
+    
+console.log('acceptNicdSignedPdf called with alias:', alias, 'signedPdf length:', signedPdf?.length, 'encryptedKey length:', encryptedKey?.length);
+    if (typeof signedPdf !== 'string' || !signedPdf
+        || typeof encryptedKey !== 'string' || !encryptedKey) {
+        const message = 'NICDSign did not return the signed PDF and encryption key.';
+        $('#signedOrderStatus').addClass('text-danger').text(message);
+        $('#panel .dsc-confirm-sign').prop('disabled', false).text('Retry Signing');
+        alert(message);
+        return;
+    }
+
+    $('#signedPdfData').val(signedPdf);
+    $('#lblEncryptedKey').val(encryptedKey);
+    $('#signedOrderStatus')
+        .removeClass('text-danger text-success')
+        .text('Decrypting the signed PDF...');
+
+    $.ajax({
+        url: dscapibaseurl + '/pdfsignature',
+        type: 'POST',
+        dataType: 'json',
+        contentType: 'application/json',
+        data: JSON.stringify({
+            action: 'DECRYPT',
+            en_sig: signedPdf,
+            ek: encryptedKey
+        })
+    }).done(function (response) {
+        try {
+            if (Number(response.status_cd) !== 1 || !response.data) {
+                throw new Error(response.error?.message || 'Unable to decrypt the signed PDF.');
+            }
+
+            const decryptedData = JSON.parse(atob(response.data));
+            if (decryptedData.status !== 'SUCCESS') {
+                throw new Error('NICDSign did not return a successfully decrypted PDF.');
+            }
+
+            const staffId = $('#workOrderFile .signDocBtn').data('staff-id');
+            const signedFile = base64ToPdfFile(
+                decryptedData.sig,
+                `staff_order_${staffId}_signed.pdf`
+            );
+            const fileInput = document.getElementById('signedOrderPdf');
+
+            if (!fileInput || typeof DataTransfer === 'undefined') {
+                throw new Error('This browser cannot attach the signed PDF to the approval form.');
+            }
+
+            const transfer = new DataTransfer();
+            transfer.items.add(signedFile);
+            fileInput.files = transfer.files;
+
+            $('#panel').hide();
+            $('#signedOrderDownload')
+                .attr('href', URL.createObjectURL(signedFile))
+                .attr('download', signedFile.name)
+                .removeClass('d-none');
+            $('#verifyPdfBtn').prop('disabled', false).removeClass('d-none');
+            $('#signedOrderStatus')
+                .removeClass('text-danger')
+                .addClass('text-success')
+                .text(`PDF signed with ${alias} and decrypted. Verify it before forwarding.`);
+        } catch (error) {
+            $('#signedOrderStatus').addClass('text-danger').text(error.message);
+            $('#panel .dsc-confirm-sign').prop('disabled', false).text('Retry Signing');
+            alert(error.message);
+        }
+    }).fail(function (xhr, textStatus) {
+        const message = xhr.responseJSON?.error?.message || `PDF decryption failed: ${textStatus}`;
+        $('#signedOrderStatus').addClass('text-danger').text(message);
+        $('#panel .dsc-confirm-sign').prop('disabled', false).text('Retry Signing');
+        alert(message);
+    });
+}
+
+
+
+</script>
+
+<script>
+
+ $(document).ready(function() {
+    
+window.activeStaffOnboardingDscFlow = 'approve';
+var initConfig = {
+        "preSignCallback" : function() {
+            // do something 
+            // based on the return sign will be invoked
+            return true;
+        },
+        "postSignCallback" : function(alias, sign, key) {
+            $('#lblEncryptedKey').val(key);
+            // Implement signed pdf upload and pdf Download here
+            var requestData = {
+                action : "DECRYPT",
+                en_sig : sign,
+                ek : key
+            };
+            console.log('Request Data for Decryption:', requestData);
+            $
+                    .ajax(
+                            {
+                                url : dscapibaseurl + "/pdfsignature",
+                                type : "post",
+                                dataType : "json",
+                                contentType : 'application/json',
+                                data : JSON.stringify(requestData),
+                                async : false
+                            })
+                    .done(
+                            function(data) {
+                                console.log('Decryption Response:', data);
+                                if (data.status_cd == 1) {
+                                    //get data.data -> decode base64 -> get json->check status == SUCCESS
+                                    //get data.data.sig -> add pdf header and append to link
+                                    var jsonData = JSON.parse(atob(data.data));
+                                    if (jsonData.status === "SUCCESS") {
+                                        var pdfData = jsonData.sig;
+                                        try {
+                                            base64ToPdfFile(pdfData, 'staff_order_signed.pdf');
+                                        } catch (error) {
+                                            if (window.activeStaffOnboardingDscFlow === 'reject') {
+                                                $('#staffRejectSignStatus').text(error.message);
+                                                $('#staffRejectSignBtn').prop('disabled', false);
+                                            } else {
+                                                alert(error.message);
+                                            }
+                                            return;
+                                        }
+
+                                        if (window.activeStaffOnboardingDscFlow === 'reject') {
+                                            window.pendingStaffRejectSignedPdfData = pdfData;
+                                            $('#staffRejectSignedDownload')
+                                                .attr('href', 'data:application/pdf;base64,' + pdfData)
+                                                .removeClass('d-none');
+                                            $('#staffRejectSignStatus').text('Signature applied. Submit the signed rejection to finalize.');
+                                            $('#staffRejectSignBtn').prop('disabled', true);
+                                            $('#staffRejectFinalizeBtn').prop('disabled', false);
+                                            return;
+                                        }
+
+                                        $('#downloadDiv').addClass('btn btn-info');
+                                        $('#signedPdfData').val(pdfData);
+                                        var dlnk = document.getElementById('downloadDiv');
+                                        dlnk.href = 'data:application/pdf;base64,'+ pdfData;
+                                        $("#downloadDiv").text("Download Signed PDF File");
+                                        $('#approvedBtn').prop('disabled', false).removeClass('d-none');
+                                        $('#ViewPDFBtn').prop('disabled', true).addClass('d-none');
+                                        $('#signDocBtn').prop('disabled', true).addClass('d-none');
+           
+
+                                    } else {
+                                        var message = jsonData.message || "The PDF decryption service did not return SUCCESS.";
+                                        if (window.activeStaffOnboardingDscFlow === 'reject') {
+                                            $('#staffRejectSignStatus').text(message);
+                                            $('#staffRejectSignBtn').prop('disabled', false);
+                                        } else {
+                                            alert(message);
+                                        }
+                                    }
+
+                                } else {
+                                    var apiError = data.error || {};
+                                    var errorMessage = apiError.message || data.message
+                                        || "Decryption failed (status code: " + data.status_cd
+                                        + ", error code: " + (apiError.error_cd || "unknown") + ").";
+                                    if (window.activeStaffOnboardingDscFlow === 'reject') {
+                                        $('#staffRejectSignStatus').text(errorMessage);
+                                        $('#staffRejectSignBtn').prop('disabled', false);
+                                    } else {
+                                        alert(errorMessage);
+                                    }
+                                    return false;
+
+                                }
+                            }).fail(
+                            function(jqXHR, textStatus,
+                                    errorThrown) {
+                                if (window.activeStaffOnboardingDscFlow === 'reject') {
+                                    $('#staffRejectSignStatus').text('DSC decryption failed: ' + textStatus);
+                                    $('#staffRejectSignBtn').prop('disabled', false);
+                                } else {
+                                    alert(textStatus);
+                                }
+                            });
+        },
+        signType : 'pdf',
+        mode : 'nostampingv2'
+    //"certificateSno" : 13705892,
+    };
+
+    dscSigner.configure(initConfig);
+
+    async function getDscKeywordPosition(base64Pdf) {
+        const keyword = window.activeStaffOnboardingDscFlow === 'reject'
+            ? 'DSC_REJECT_POSITION_2026'
+            : 'DSC_SIGNATURE_POSITION_2026';
+
+        if (!window.pdfjsLib) {
+            throw new Error('PDF.js library is not loaded.');
+        }
+
+        // Handle both raw Base64 and PDF data URLs.
+        const cleanBase64 = base64Pdf.replace(
+            /^data:application\/pdf;base64,/i,
+            ''
+        ).replace(/\s/g, '');
+
+        const pdfData = Uint8Array.from(
+            atob(cleanBase64),
+            char => char.charCodeAt(0)
+        );
+
+        const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
+
+        for (let pageNo = 1; pageNo <= pdf.numPages; pageNo++) {
+            const page = await pdf.getPage(pageNo);
+            const textContent = await page.getTextContent();
+
+            // Combine text from all PDF.js items and retain item references.
+            let combinedText = '';
+            const characterItems = [];
+
+            for (const item of textContent.items) {
+                if (!item.str) {
+                    continue;
+                }
+
+                for (const char of item.str) {
+                    // Ignore whitespace between split marker fragments.
+                    if (/\s/.test(char)) {
+                        continue;
+                    }
+
+                    combinedText += char;
+                    characterItems.push(item);
+                }
+            }
+
+            const markerIndex = combinedText.indexOf(keyword);
+
+            if (markerIndex !== -1) {
+                // Get the PDF text item where the marker starts.
+                const markerItem = characterItems[markerIndex];
+
+                const x = markerItem.transform[4];
+                const y = markerItem.transform[5];
+
+                const position = {
+                    pageNo: pageNo,
+                    keywordX: x,
+                    keywordY: y,
+                    stampingX: Math.round(x) - 330,
+                    stampingY: Math.round(y - markerItem.height + 10)
+                };
+
+                console.log('DSC Keyword Position:', position);
+
+                return position;
+            }
+        }
+
+        throw new Error(
+            keyword + ' not found in PDF. Please check the PDF content.'
+        );
+    }
+
+    // $(document).on('click', '#signDocBtn', function (e) {
+    // e.preventDefault();
+    //     window.activeStaffOnboardingDscFlow = 'approve';
+    //     initConfig.mode = 'nostampingv2';
+    //     dscSigner.configure(initConfig);
+    //     var data = $("#pdfData").val();
+    //     console.log('PDF Data Length:', data ? data.length : 0);
+    //     if (data != null || data != '') {
+    //         dscSigner.sign(data);
+
+    //        /* $('#downloadDiv').addClass('btn btn-info');
+    //         var pdfData = 'test';
+    //         var dlnk = document.getElementById('downloadDiv');
+    //         dlnk.href = 'data:application/pdf;base64,'+ pdfData;
+    //         $("#downloadDiv").text("Download Signed PDF File");
+    //         $('#approvedBtn').prop('disabled', false).removeClass('d-none');
+    //         $('#ViewPDFBtn').prop('disabled', true).addClass('d-none');
+    //         $('#signDocBtn').prop('disabled', true).addClass('d-none');
+    //         */
+    //     }
+    // });
+
+    $(document).on('click', '#signDocBtn', async function (e) {
+        e.preventDefault();
+
+        window.activeStaffOnboardingDscFlow = 'approve';
+
+        var data = $("#pdfData").val();
+
+        console.log('PDF Data Length:', data ? data.length : 0);
+
+        if (typeof data === 'string' && data.trim() !== '') {
+            try {
+                const position = await getDscKeywordPosition(data);
+
+                console.log('HTML Marker PDF Location:', position);
+
+                dscSigner.sign(data, position);
+
+            } catch (error) {
+                console.error('PDF Marker Error:', error);
+                alert(error.message);
+            }
+        } else {
+            alert('PDF data is empty.');
+        }
+    });
+
+    // $(document).on('click', '#staffRejectSignBtn', function () {
+    //     if (!window.pendingStaffRejectPdfBase64) {
+    //         $('#staffRejectSignStatus').text('The rejection PDF is not ready to sign.');
+    //         return;
+    //     }
+
+    //     const signerPanel = document.getElementById('panel');
+    //     if (signerPanel && signerPanel.parentElement !== document.body) {
+    //         document.body.appendChild(signerPanel);
+    //     }
+    //     $('#panel').css({position: 'fixed', zIndex: 20000});
+
+    //     window.activeStaffOnboardingDscFlow = 'reject';
+    //     initConfig.mode = 'nostampingv2';
+    //     dscSigner.configure(initConfig);
+    //     $('#signingReason').val('Staff onboarding rejection order');
+    //     $('#stampingX').val('360');
+    //     $('#stampingY').val('80');
+    //     $('#staffRejectSignBtn').prop('disabled', true);
+    //     $('#staffRejectSignStatus').text('Waiting for the DSC signer...');
+
+    //     try {
+    //         dscSigner.sign(window.pendingStaffRejectPdfBase64);
+    //     } catch (error) {
+    //         $('#staffRejectSignBtn').prop('disabled', false);
+    //         $('#staffRejectSignStatus').text(error.message || 'Unable to start the DSC signer.');
+    //     }
+    // });
+
+    $(document).on('click', '#staffRejectSignBtn', async function () {
+
+        if (!window.pendingStaffRejectPdfBase64) {
+            $('#staffRejectSignStatus').text(
+                'The rejection PDF is not ready to sign.'
+            );
+            return;
+        }
+
+        const signerPanel = document.getElementById('panel');
+
+        if (signerPanel && signerPanel.parentElement !== document.body) {
+            document.body.appendChild(signerPanel);
+        }
+
+        $('#panel').css({
+            position: 'fixed',
+            zIndex: 20000
+        });
+
+        window.activeStaffOnboardingDscFlow = 'reject';
+
+        $('#signingReason').val('Staff onboarding rejection order');
+
+        $('#staffRejectSignBtn').prop('disabled', true);
+
+        $('#staffRejectSignStatus').text(
+            'Finding rejection signature position...'
+        );
+
+        try {
+
+            // Find DSC signature marker position in PDF
+            const position = await getDscKeywordPosition(
+                window.pendingStaffRejectPdfBase64
+            );
+
+            console.log('Staff Rejection PDF Marker Position:', position);
+
+            $('#staffRejectSignStatus').text(
+                'Waiting for the DSC signer...'
+            );
+
+            // Start DSC signing
+            dscSigner.sign(
+                window.pendingStaffRejectPdfBase64,
+                position
+            );
+
+        } catch (error) {
+
+            console.error('Staff Rejection PDF Marker Error:', error);
+
+            $('#staffRejectSignBtn').prop('disabled', false);
+
+            $('#staffRejectSignStatus').text(
+                error.message || 'Unable to find the rejection signature position.'
+            );
+        }
+    });
+
+    $(document).on('click', '#staffRejectFinalizeBtn', function () {
+        const formData = window.pendingStaffRejectFormData;
+        const signedPdfData = window.pendingStaffRejectSignedPdfData;
+        if (!formData || !signedPdfData) {
+            $('#staffRejectSignStatus').text('Sign the rejection PDF before submitting.');
+            return;
+        }
+
+        formData.delete('signed_pdf_data');
+        formData.append('signed_pdf_data', signedPdfData);
+        const button = $('#staffRejectFinalizeBtn');
+        button.prop('disabled', true).text('Submitting...');
+        $('#staffRejectSignStatus').text('Saving signed rejection...');
+
+        $.ajax({
+            url: '<?= $this->Url->build(["controller" => "BoardChairman", "action" => "staffOnboardReject"]); ?>',
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            headers: {
+                'X-CSRF-Token': $('meta[name="csrfToken"]').attr('content'),
+                '_Token': $('meta[name="csrfToken"]').attr('content')
+            },
+            success: function (response) {
+                if (!response.success) {
+                    $('#staffRejectSignStatus').text(response.message || 'Unable to save the signed rejection.');
+                    button.prop('disabled', false).text('Submit Signed Rejection');
+                    return;
+                }
+
+                bootstrap.Modal.getOrCreateInstance(
+                    document.getElementById('staffRejectSignerModal')
+                ).hide();
+                location.reload();
+            },
+            error: function (xhr) {
+                const message = xhr.responseJSON && xhr.responseJSON.message
+                    ? xhr.responseJSON.message
+                    : 'Unable to save the signed rejection.';
+                $('#staffRejectSignStatus').text(message);
+                button.prop('disabled', false).text('Submit Signed Rejection');
+            }
+        });
+    });
+
+    $('#staffRejectSignerModal').on('hidden.bs.modal', function () {
+        $('#panel').hide();
+        $('#staffRejectPdfFrame').attr('src', 'about:blank');
+        window.pendingStaffRejectFormData = null;
+        window.pendingStaffRejectPdfBase64 = '';
+        window.pendingStaffRejectSignedPdfData = '';
+        window.activeStaffOnboardingDscFlow = 'approve';
+        $('#signingReason').val('Staff onboarding work order approval');
+        $('#stampingX').val('250');
+        $('#stampingY').val('50');
+    });
+
+
+
+    function readURL(input) {
+								if (input.files && input.files[0]) {
+									var reader = new FileReader();
+
+									reader.onload = function(e) {
+										var data = e.target.result;
+										var base64 = data
+												.replace(/^[^,]*,/, '');
+										$("#pdfData").val(base64);
+									}
+
+									reader.readAsDataURL(input.files[0]);
+								}
+							}
+
+							$("#pdfFile").change(function() {
+								readURL(this);
+							});
+
+    });
+
+
+
+</script>
+
+<script>
+
+$(document).ready(function() { 
+
+
+    $(document).on('click', '.startApplicationHistory-open-view', function () {
+
+            const caseId = $(this).data('id');
+            let staffJson = $(this).attr('data-staffObject');   // raw JSON string
+            let staffObject   = JSON.parse(staffJson)
+            currentMode = $(this).attr('data-mode'); 
+            currentAppId = staffObject.id; 
+           
+            $('#saStep12').show();
+            $('#sa_footerBox').show();
+            $('#sa_footerMsgBox').hide();    
+
+           $(document).trigger('startApplicationHistory:openSlider', [caseId, staffObject]);
+        
+
+        });  
+
+          // Close slider
+        // Close slider
+        $(document).on('click', '.startApplicationHistory-close-slider', function () {
+            $(document).trigger('startApplicationHistory:closeSlider');
+        });
+
+        // Custom event handlers for Slider 2
+        $(document).on('startApplicationHistory:openSlider', function (e, caseId, staffObject) {
+            loadReturnHistoryDetails(caseId, staffObject);
+            $('#startApplicationHistorySlider').addClass('open').attr('aria-hidden', 'false');
+        });
+
+        $(document).on('startApplicationHistory:closeSlider', function () {
+            $('#startApplicationHistorySlider').removeClass('open').attr('aria-hidden', 'true');
+        });
+
+
+         loadReturnHistoryDetails = function(caseId,staffObject){
+                  
+        var staffObject = staffObject;
+        console.log(staffObject);
+         var formData = new FormData();
+         formData.append('post_id', staffObject.soa_id);
+
+            $.ajax({
+                url: '<?= $this->Url->build(["prefix" => "Recruit","controller" => "GeneralUtilities", "action" => "getStaffonBoardingHistory"]); ?>',
+                type: 'Post',
+                data: formData,
+                processData: false,
+                contentType: false,
+                headers: {
+                    'X-CSRF-Token': $('meta[name="csrfToken"]').attr('content') 
+                },
+                    success: function (response) {
+                    if(response.success){
+                           
+                            document.getElementById("saTimelineContainer").innerHTML = response.data.auditLogsHistory || '<div class="timeline-item left"><div class="card"><div class="card-body p-4"><h3 class="text-center">No audit history found.</h3></div></div></div>';                          
+                    }                    
+                },
+                error: function () {
+                    $("#returnHtmlForm").html('<option>Error loading data</option>');
+                }
+            });
+        }
+
+
+    $(document).on('click', '.approved-order-pdf', function (event) {
+    event.preventDefault();
+    const pdfTitle = this.dataset.pdfTitle || 'आदेश';
+    $('#approvedOrderPdfModalLabel').text(pdfTitle);
+    $('#approvedOrderPdfFrame').attr('title', pdfTitle + ' PDF');
+    $('#approvedOrderPdfFrame').attr('src', this.href);
+    $('#approvedOrderPdfModal').modal('show');
+    });
+
+    $('#approvedOrderPdfModal').on('hidden.bs.modal', function () {
+        $('#approvedOrderPdfFrame').attr('src', 'about:blank');
+    });
+
+    });
+
+    </script>
